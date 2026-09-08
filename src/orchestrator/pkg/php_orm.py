@@ -41,6 +41,10 @@ if TYPE_CHECKING:
 
 _ELOQUENT_RELATIONS = frozenset({"belongsTo", "hasMany", "hasOne", "belongsToMany"})
 _DOCTRINE_RELATIONS = frozenset({"ManyToOne", "OneToMany", "ManyToMany", "OneToOne"})
+# `belongsTo(self::class, 'parent_id')` — the idiomatic tree relation — names the
+# model itself, not a class called `self`. Resolved as a name it invents
+# `php:entity:App.Models.self`, one phantom per model with a self-relation.
+_RELATIVE_SCOPES = frozenset({"self", "static", "parent"})
 
 
 def _text(node: TSNode, source: bytes) -> str:
@@ -178,6 +182,10 @@ def _add_reference(
     rel: str,
     batch: FactBatch,
 ) -> None:
+    if target_name in _RELATIVE_SCOPES:
+        # A self-relation carries no entity→entity fact `data_layer_link` would keep
+        # (it drops `src == dst`), and `parent`/`static` name a class only at runtime.
+        return
     dotted, _is_guess = _resolve_type_name(target_name, namespace, use_map)
     target_type_id = f"php:{dotted}"
     is_local_entity = target_type_id in entity_ids

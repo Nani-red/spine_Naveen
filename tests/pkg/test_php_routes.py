@@ -120,3 +120,83 @@ def test_symfony_attribute_route_with_class_prefix(tmp_path: Path) -> None:
     assert ("php:endpoint:GET /api/orders", "php:App.Controller.ApiController.index") in exposes
     # a verb-less #[Route] responds to everything — nothing asserted (same D2 as Route::any).
     assert not any("verbLess" in dst for _, dst in exposes)
+
+
+def test_group_prefix_survives_chaining_and_the_array_form(tmp_path: Path) -> None:
+    """Review finding (2026-09-08): only the exact `Route::prefix(lit)->group()` shape kept
+    its prefix; every other group emitted its routes at the wrong path, as grounded facts."""
+    src = (
+        "<?php\n"
+        "namespace App\\Http;\n\n"
+        "use App\\Http\\Controllers\\OrderController;\n\n"
+        "Route::prefix('/v1')->middleware('auth')->group(function () {\n"
+        "    Route::get('/chained', [OrderController::class, 'index']);\n"
+        "});\n"
+        "Route::middleware('auth')->prefix('/v2')->group(function () {\n"
+        "    Route::get('/reversed', [OrderController::class, 'index']);\n"
+        "});\n"
+        "Route::group(['prefix' => 'v3', 'middleware' => 'auth'], function () {\n"
+        "    Route::get('/array', [OrderController::class, 'index']);\n"
+        "});\n"
+        "Route::middleware('auth')->group(function () {\n"
+        "    Route::get('/no-prefix', [OrderController::class, 'index']);\n"
+        "});\n"
+    )
+    endpoints, _ = _graph(tmp_path, src)
+    assert endpoints == {
+        "php:endpoint:GET /v1/chained",
+        "php:endpoint:GET /v2/reversed",
+        "php:endpoint:GET /v3/array",
+        "php:endpoint:GET /no-prefix",
+    }
+
+
+def test_unreadable_group_prefix_emits_nothing_inside(tmp_path: Path) -> None:
+    """A computed prefix, or a receiver that is not the `Route` facade, makes every path in
+    the group unknown — so none is emitted (a wrong path is worse than a missing one)."""
+    src = (
+        "<?php\n"
+        "namespace App\\Http;\n\n"
+        "use App\\Http\\Controllers\\OrderController;\n\n"
+        "Route::prefix($version)->group(function () {\n"
+        "    Route::get('/computed', [OrderController::class, 'index']);\n"
+        "});\n"
+        "Route::group(['prefix' => $version], function () {\n"
+        "    Route::get('/computed-array', [OrderController::class, 'index']);\n"
+        "});\n"
+        "$router->group('/slim', function () {\n"
+        "    Route::get('/foreign-receiver', [OrderController::class, 'index']);\n"
+        "});\n"
+        "Route::get('/outside', [OrderController::class, 'index']);\n"
+    )
+    endpoints, _ = _graph(tmp_path, src)
+    assert endpoints == {"php:endpoint:GET /outside"}
+
+
+def test_symfony_named_path_prefix_and_unreadable_prefix(tmp_path: Path) -> None:
+    """`#[Route(path: '/api')]` is Symfony's documented named form and must compose; a
+    class-level prefix that cannot be read (`self::PREFIX`) silences the whole class."""
+    src = (
+        "<?php\n"
+        "namespace App\\Controller;\n\n"
+        "#[Route(path: '/api')]\n"
+        "class NamedController\n"
+        "{\n"
+        "    #[Route('/orders', methods: ['GET'])]\n"
+        "    public function index(): void\n"
+        "    {\n"
+        "    }\n"
+        "}\n\n"
+        "#[Route(self::PREFIX)]\n"
+        "class ConstantController\n"
+        "{\n"
+        "    public const PREFIX = '/admin';\n\n"
+        "    #[Route('/orders', methods: ['GET'])]\n"
+        "    public function index(): void\n"
+        "    {\n"
+        "    }\n"
+        "}\n"
+    )
+    endpoints, exposes = _graph(tmp_path, src, name="Controllers.php")
+    assert endpoints == {"php:endpoint:GET /api/orders"}
+    assert ("php:endpoint:GET /api/orders", "php:App.Controller.NamedController.index") in exposes

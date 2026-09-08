@@ -137,3 +137,28 @@ def test_data_layer_link_reconciles_against_a_sql_schema(tmp_path: Path) -> None
     php_entities = [n for n in entities if n.id == "php:entity:App.Models.Order"]
     assert sql_entities  # the schema table exists
     assert not php_entities  # the ORM entity collapsed onto it, per link_data_layer's contract
+
+
+def test_self_relation_never_invents_an_entity_called_self(tmp_path: Path) -> None:
+    """`belongsTo(self::class, 'parent_id')` — the idiomatic tree relation — resolved `self`
+    as a class name and invented `php:entity:App.Models.self` (review finding, 2026-09-08)."""
+    src = (
+        "<?php\n"
+        "namespace App\\Models;\n\n"
+        "use Illuminate\\Database\\Eloquent\\Model;\n\n"
+        "class Category extends Model\n"
+        "{\n"
+        "    public function parent()\n"
+        "    {\n"
+        "        return $this->belongsTo(self::class, 'parent_id');\n"
+        "    }\n\n"
+        "    public function children()\n"
+        "    {\n"
+        "        return $this->hasMany(static::class, 'parent_id');\n"
+        "    }\n"
+        "}\n"
+    )
+    batch = _facts(tmp_path, src, name="Category.php")
+    entities = {n.id for n in batch.nodes if n.kind is NodeKind.ENTITY}
+    assert entities == {"php:entity:App.Models.Category"}
+    assert not [e for e in batch.edges if e.kind is EdgeKind.REFERENCES]

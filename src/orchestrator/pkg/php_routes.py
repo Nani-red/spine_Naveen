@@ -209,17 +209,24 @@ def _walk_expr(
         obj = node.child_by_field_name("object")
         name_node = node.child_by_field_name("name")
         method = _text(name_node, source) if name_node is not None else ""
-        if obj is not None and obj.type == "scoped_call_expression" and method == "group":
-            group_prefix = _prefix_group_call(obj, source)
+        if method == "group" and obj is not None:
+            group_prefix = _group_prefix_of_chain(obj, source)
             if group_prefix is not None:
                 args = _call_args(node)
-                closure = _arg_value(args[0]) if args else None
-                if closure is not None:
-                    for child in _closure_body_nodes(closure):
-                        _walk_expr(
-                            child, namespace, use_map, _join_route(prefix, group_prefix), source, rel, routes
-                        )
-                return  # the group's own body was walked with the composed prefix above
+                _walk_group_body(
+                    _arg_value(args[0]) if args else None,
+                    namespace,
+                    use_map,
+                    _join_route(prefix, group_prefix),
+                    source,
+                    rel,
+                    routes,
+                )
+            # else: a prefix this reader cannot resolve (`Route::prefix($v)`, a receiver
+            # that is not the `Route` facade). The body is NOT walked with the outer
+            # prefix: every route inside would be emitted at the wrong path and presented
+            # as grounded — the cross-repo false join go_routes.py refuses the same way.
+            return
         if (
             obj is not None
             and obj.type == "variable_name"
@@ -250,6 +257,28 @@ def _walk_expr(
                 routes,
             )
             return
+        if (
+            scope is not None
+            and scope.type == "name"
+            and _text(scope, source) == "Route"
+            and name_node is not None
+            and _text(name_node, source) == "group"
+        ):
+            # The classic array form: `Route::group(['prefix' => 'v1', ...], fn)`.
+            args = _call_args(node)
+            attrs = _arg_value(args[0]) if args else None
+            group_prefix = _array_prefix(attrs, source) if attrs is not None else None
+            if group_prefix is not None and len(args) > 1:
+                _walk_group_body(
+                    _arg_value(args[1]),
+                    namespace,
+                    use_map,
+                    _join_route(prefix, group_prefix),
+                    source,
+                    rel,
+                    routes,
+                )
+            return  # same rule as above: an unreadable prefix means the body is not walked
         # `Route::any`/`Route::match`/`Route::resource` and anything else — no verb this
         # graph will assert (D2); fall through so a nested closure argument still scans.
 
@@ -257,22 +286,69 @@ def _walk_expr(
         _walk_expr(child, namespace, use_map, prefix, source, rel, routes)
 
 
-def _prefix_group_call(node: TSNode, source: bytes) -> str | None:
-    """``Route::prefix('/v1')`` -> ``'/v1'``, or ``None`` if it's not that call."""
-    scope = node.child_by_field_name("scope")
-    name_node = node.child_by_field_name("name")
-    if (
-        scope is None
-        or scope.type != "name"
-        or _text(scope, source) != "Route"
-        or name_node is None
-        or _text(name_node, source) != "prefix"
-    ):
+def _walk_group_body(
+    closure: TSNode | None,
+    namespace: str,
+    use_map: dict[str, str],
+    prefix: str,
+    source: bytes,
+    rel: str,
+    routes: list[PendingRoute],
+) -> None:
+    if closure is None:
+        return
+    for child in _closure_body_nodes(closure):
+        _walk_expr(child, namespace, use_map, prefix, source, rel, routes)
+
+
+def _group_prefix_of_chain(obj: TSNode, source: bytes) -> str | None:
+    """The literal prefix a ``->group(...)`` receiver chain contributes.
+
+    ``Route::prefix('/v1')->middleware('auth')`` and ``Route::middleware('auth')->prefix('/v1')``
+    both give ``'/v1'``; ``Route::middleware('auth')`` gives ``''``. ``None`` when any link is
+    unreadable — a computed ``prefix($v)``, or a chain that does not root at the ``Route``
+    facade (``$app->group(...)``, ``$router->group(...)``) — because a group whose prefix is
+    unknown makes every path inside it unknown too. Only ``prefix`` moves the path; the other
+    chain methods (``middleware``, ``name``, ``controller``, ``domain``, ``where``) do not.
+    """
+    segments: list[str] = []
+    cur: TSNode | None = obj
+    while cur is not None:
+        name_node = cur.child_by_field_name("name")
+        method = _text(name_node, source) if name_node is not None else ""
+        if method == "prefix":
+            args = _call_args(cur)
+            lit = _literal_string(_arg_value(args[0]), source) if args else None
+            if lit is None:
+                return None
+            segments.append(lit)
+        if cur.type == "member_call_expression":
+            cur = cur.child_by_field_name("object")
+            continue
+        if cur.type == "scoped_call_expression":
+            scope = cur.child_by_field_name("scope")
+            if scope is None or scope.type != "name" or _text(scope, source) != "Route":
+                return None
+            composed = ""
+            for seg in reversed(segments):  # outermost call first
+                composed = _join_route(composed, seg)
+            return composed
         return None
-    args = _call_args(node)
-    if not args:
+    return None
+
+
+def _array_prefix(attrs: TSNode, source: bytes) -> str | None:
+    """``['prefix' => 'v1', 'middleware' => 'auth']`` -> ``'v1'``; ``''`` when there is no
+    ``prefix`` key; ``None`` when the attributes are not a literal array or the prefix is
+    computed."""
+    if attrs.type != "array_creation_expression":
         return None
-    return _literal_string(_arg_value(args[0]), source)
+    for elem in attrs.named_children:
+        if elem.type != "array_element_initializer" or len(elem.named_children) < 2:
+            continue
+        if _literal_string(elem.named_children[0], source) == "prefix":
+            return _literal_string(elem.named_children[1], source)
+    return ""
 
 
 def _closure_body_nodes(closure: TSNode) -> list[TSNode]:
@@ -328,17 +404,24 @@ def scan_symfony_routes(types: list[_TypeRec], source: bytes, rel: str, batch: F
     attribute-controller shape as ASP.NET's `[Route]` in ``csharp_extractor.py``."""
     for rec in types:
         class_prefix = ""
+        unreadable_prefix = False
         for aname, anode in _attributes(rec.node, source):
             if aname == "Route":
-                path = _first_positional_string(anode, source)
-                if path is not None:
+                path = _route_path(anode, source)
+                if path is None:
+                    # `#[Route(self::PREFIX)]`, a constant expression: the prefix exists
+                    # and cannot be read, so every method path under it would be wrong.
+                    unreadable_prefix = True
+                else:
                     class_prefix = path
                 break
+        if unreadable_prefix:
+            continue
         for _mname, mid, mnode in rec.methods:
             for aname, anode in _attributes(mnode, source):
                 if aname != "Route":
                     continue
-                path = _first_positional_string(anode, source)
+                path = _route_path(anode, source)
                 verbs = _string_list(_named_arg(anode, "methods", source), source)
                 if path is None or not verbs:
                     continue  # a verb-less #[Route] responds to everything — nothing (D2)
@@ -390,6 +473,15 @@ def _named_arg(attribute: TSNode, name: str, source: bytes) -> TSNode | None:
         if _arg_name(arg, source) == name:
             return _arg_value(arg)
     return None
+
+
+def _route_path(attribute: TSNode, source: bytes) -> str | None:
+    """A ``#[Route]``'s path — the positional form or Symfony's documented named form
+    ``#[Route(path: '/api')]``. ``None`` for anything computed."""
+    named = _named_arg(attribute, "path", source)
+    if named is not None:
+        return _literal_string(named, source)
+    return _first_positional_string(attribute, source)
 
 
 __all__ = [
