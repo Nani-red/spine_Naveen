@@ -149,7 +149,7 @@
 
 ## Imports
 
-`__future__.annotations`, `ast`, `dataclasses.dataclass`, [`orchestrator.pkg.facts`](../../src/orchestrator/pkg/facts.py#L1), [`orchestrator.pkg.invention`](orchestrator.pkg.invention.md), `pathlib.Path`, `re`
+`__future__.annotations`, `ast`, `dataclasses.dataclass`, [`orchestrator.pkg.facts`](../../src/orchestrator/pkg/facts.py#L1), [`orchestrator.pkg.invention`](../../src/orchestrator/pkg/invention.py#L1), `pathlib.Path`, `re`
 
 ## Imported by
 

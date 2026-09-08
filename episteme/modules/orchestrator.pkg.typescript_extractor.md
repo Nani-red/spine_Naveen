@@ -34,7 +34,7 @@ _18 of the symbols other code depends on here have no test path the graph can se
 
 [`src/orchestrator/pkg/typescript_extractor.py:47`](../../src/orchestrator/pkg/typescript_extractor.py#L47)
 
-- **Called by** (1 production · 8 test): [`default_extractors`](../../src/orchestrator/pkg/extractor.py#L542), [`_facts`](../../tests/pkg/test_typescript_extractor.py#L50), [`test_method_call_on_a_named_import_is_not_a_module_member`](../../tests/pkg/test_typescript_extractor.py#L204), [`test_namespace_import_member_call_still_resolves`](../../tests/pkg/test_typescript_extractor.py#L223), [`test_package_base_type_gets_an_external_node`](../../tests/pkg/test_typescript_extractor.py#L185), [`test_package_call_target_gets_an_external_node`](../../tests/pkg/test_typescript_extractor.py#L168), [`test_relative_import_joins_to_the_first_party_module`](../../tests/pkg/test_typescript_extractor.py#L235), [`test_repo_extractor_dispatches_typescript_by_suffix`](../../tests/pkg/test_typescript_extractor.py#L121), [`test_repo_local_target_is_not_invented`](../../tests/pkg/test_typescript_extractor.py#L194)
+- **Called by** (1 production · 8 test): [`default_extractors`](../../src/orchestrator/pkg/extractor.py#L547), [`_facts`](../../tests/pkg/test_typescript_extractor.py#L50), [`test_method_call_on_a_named_import_is_not_a_module_member`](../../tests/pkg/test_typescript_extractor.py#L204), [`test_namespace_import_member_call_still_resolves`](../../tests/pkg/test_typescript_extractor.py#L223), [`test_package_base_type_gets_an_external_node`](../../tests/pkg/test_typescript_extractor.py#L185), [`test_package_call_target_gets_an_external_node`](../../tests/pkg/test_typescript_extractor.py#L168), [`test_relative_import_joins_to_the_first_party_module`](../../tests/pkg/test_typescript_extractor.py#L235), [`test_repo_extractor_dispatches_typescript_by_suffix`](../../tests/pkg/test_typescript_extractor.py#L121), [`test_repo_local_target_is_not_invented`](../../tests/pkg/test_typescript_extractor.py#L194)
 - **Fields**: `_pending_calls`, `language`, `suffixes`
 - **Documented in**: `docs/specs/typescript-codegen.md#slice-1-typescript-comprehension-ships-first-cheap`, `docs/specs/typescript-codegen.md#where-typescript-stands-today`
 
@@ -155,7 +155,7 @@ _18 of the symbols other code depends on here have no test path the graph can se
 
 [`src/orchestrator/pkg/typescript_extractor.py:741`](../../src/orchestrator/pkg/typescript_extractor.py#L741)
 
-- **Called by** (2): [`_parser_for`](../../src/orchestrator/pkg/scope.py#L466), [`extract`](../../src/orchestrator/pkg/typescript_extractor.py#L101)
+- **Called by** (2): [`_parser_for`](../../src/orchestrator/pkg/scope.py#L468), [`extract`](../../src/orchestrator/pkg/typescript_extractor.py#L101)
 - **Calls** (4): `language_tsx`, `language_typescript`, `tree_sitter.Language`, `tree_sitter.Parser`
 - **Documented in**: `docs/specs/build-documents/PKG-ACC-1-build.md#9-facts-the-generator-needs`
 

@@ -286,7 +286,7 @@ _8 of the symbols other code depends on here have no test path the graph can see
 [`src/orchestrator/plugin/server.py:112`](../../src/orchestrator/plugin/server.py#L112)
 
 - **Called by** (0 production · 2 test): [`test_doctor_returns_readiness_structure`](../../tests/plugin/test_server.py#L43), [`test_doctor_says_which_install_is_answering`](../../tests/plugin/test_server.py#L50)
-- **Calls** (2): [`run_env_checks`](../../src/orchestrator/doctor.py#L130), [`server_identity`](../../src/orchestrator/doctor.py#L166)
+- **Calls** (2): [`run_env_checks`](../../src/orchestrator/doctor.py#L130), [`server_identity`](../../src/orchestrator/doctor.py#L167)
 
 ### `explain_symbol`
 

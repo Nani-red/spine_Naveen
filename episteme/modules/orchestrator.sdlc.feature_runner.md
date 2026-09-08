@@ -153,7 +153,7 @@ _1 of the symbols other code depends on here have no test path the graph can see
 
 - **Called by** (1 production · 1 test): [`run_feature`](../../src/orchestrator/sdlc/feature_runner.py#L623), [`test_resolve_language_detects_go`](../../tests/sdlc/test_feature_runner.py#L553)
 - **Calls** (1): `from_repo`
-- **Documented in**: `docs/specs/go-support-roadmap.md#where-go-already-is-today-it-is-half-wired`, `docs/specs/language-expansion-roadmap.md#the-fixed-recipe-per-language`, `docs/specs/typescript-codegen.md#design-multi-language-support-typescript`, `docs/specs/typescript-codegen.md#language-resolution`, `docs/specs/typescript-codegen.md#where-typescript-stands-today`
+- **Documented in**: `docs/specs/go-support-roadmap.md#where-go-already-is-today-it-is-half-wired`, `docs/specs/language-expansion-roadmap.md#the-fixed-recipe-per-language`, `docs/specs/php-support-roadmap.md#6-files-to-change`, `docs/specs/typescript-codegen.md#design-multi-language-support-typescript`, `docs/specs/typescript-codegen.md#language-resolution`, `docs/specs/typescript-codegen.md#where-typescript-stands-today`
 
 ### `_satisfy_the_ticket`
 

@@ -30,7 +30,7 @@ _17 of the symbols other code depends on here have no test path the graph can se
 
 [`src/orchestrator/pkg/c_extractor.py:63`](../../src/orchestrator/pkg/c_extractor.py#L63)
 
-- **Called by** (1 production · 2 test): [`default_extractors`](../../src/orchestrator/pkg/extractor.py#L542), [`_extract`](../../tests/pkg/test_c_extractor.py#L19), [`test_module_name_is_the_relative_path`](../../tests/pkg/test_c_extractor.py#L68)
+- **Called by** (1 production · 2 test): [`default_extractors`](../../src/orchestrator/pkg/extractor.py#L547), [`_extract`](../../tests/pkg/test_c_extractor.py#L19), [`test_module_name_is_the_relative_path`](../../tests/pkg/test_c_extractor.py#L68)
 - **Fields**: `language`, `suffixes`
 - **Documented in**: `docs/specs/language-support-roadmap.md#track-2-c-c-h-do-second-new-model-but-simplest-language`
 
@@ -48,7 +48,7 @@ _17 of the symbols other code depends on here have no test path the graph can se
 
 [`src/orchestrator/pkg/c_extractor.py:497`](../../src/orchestrator/pkg/c_extractor.py#L497)
 
-- **Called by** (2): [`_parser_for`](../../src/orchestrator/pkg/scope.py#L466), [`extract`](../../src/orchestrator/pkg/c_extractor.py#L73)
+- **Called by** (2): [`_parser_for`](../../src/orchestrator/pkg/scope.py#L468), [`extract`](../../src/orchestrator/pkg/c_extractor.py#L73)
 - **Calls** (3): `language`, `tree_sitter.Language`, `tree_sitter.Parser`
 
 ### `_calls_in`
@@ -165,4 +165,4 @@ _17 of the symbols other code depends on here have no test path the graph can se
 
 ## Imported by
 
-[`orchestrator.pkg.cpp_extractor`](orchestrator.pkg.cpp_extractor.md), [`orchestrator.pkg.extractor`](../../src/orchestrator/pkg/extractor.py#L1), [`orchestrator.pkg.scope`](orchestrator.pkg.scope.md), [`tests.pkg.test_c_extractor`](../../tests/pkg/test_c_extractor.py#L1)
+[`orchestrator.pkg.cpp_extractor`](../../src/orchestrator/pkg/cpp_extractor.py#L1), [`orchestrator.pkg.extractor`](../../src/orchestrator/pkg/extractor.py#L1), [`orchestrator.pkg.scope`](orchestrator.pkg.scope.md), [`tests.pkg.test_c_extractor`](../../tests/pkg/test_c_extractor.py#L1)
