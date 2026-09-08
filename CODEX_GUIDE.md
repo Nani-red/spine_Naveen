@@ -677,8 +677,9 @@ approval — Spine refuses a live write without it. `live=true` needs a reachabl
 
 ## 10. Language support & toolchains
 
-Comprehension covers **eight front-ends**. Spine only needs a language's toolchain when it
-**builds/tests** generated code in that language:
+Comprehension covers **nine front-ends** (PHP has a call graph too, but no codegen yet, so it has
+no row below). Spine only needs a language's toolchain when it **builds/tests** generated code in
+that language:
 
 | Language | Build/test needs on PATH |
 |---|---|

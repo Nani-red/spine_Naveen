@@ -156,6 +156,11 @@ _SOURCES: dict[str, tuple[str, str, str]] = {
         '#include <string>\n\nstd::string greet() {\n  return "hi";\n}\n',
     ),
     ".sql": ("sqlglot", "schema.sql", "CREATE TABLE users (id INT PRIMARY KEY, email TEXT);\n"),
+    ".php": (
+        "tree_sitter_php",
+        "App.php",
+        "<?php\nnamespace App;\n\nclass Greeter {\n    public function greet(): string { return 'hi'; }\n}\n",
+    ),
 }
 
 

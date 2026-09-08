@@ -3,7 +3,7 @@
 **The one document to read.** Verified against source on **2026-09-04**, at the 3.32.0 release
 cut. Every number below was re-measured that day.
 
-> **Why this exists.** `docs/specs/` holds **86** markdown files — **83 specs** plus this
+> **Why this exists.** `docs/specs/` holds **87** markdown files — **84 specs** plus this
 > page, [`README`](README.md) and [`SPEC-INDEX`](SPEC-INDEX.md) — with 6 archived, 10 build
 > documents, and 17 root-level user documents.
 > Answering "where do we stand?" required opening five of them and reconciling three that
@@ -25,12 +25,12 @@ gates (before building, before merging). The product is **Spine**; it ships as
 | | Value | How it is known |
 |---|---|---|
 | Version | **3.32.0** | cutting now; 3.31.0 is the last on PyPI until this ships |
-| Languages extracted | **8** front-ends | Python, Java, TypeScript, C#, C, C++, Go, SQL |
+| Languages extracted | **9** front-ends | Python, Java, TypeScript, C#, C, C++, Go, PHP, SQL |
 | CLI commands | **56** | `grep -c '\.command(' src/orchestrator/cli/*.py`, summed |
-| Source modules | **349** | `find src/orchestrator -name '*.py'` |
-| Test functions | **2,996** across 309 files | `grep -rh '^def test_\|^async def test_' tests`; files via the same pattern with `-rl` |
+| Source modules | **352** | `find src/orchestrator -name '*.py'` |
+| Test functions | **3,029** across 312 files | `grep -rh '^def test_\|^async def test_' tests`; files via the same pattern with `-rl` |
 | Graph precision | **1.00** on every node and edge kind, all 8 front-ends | `orchestrator pkg accuracy` against a hand-labelled corpus |
-| `CALLS` recall | **1.00** (C, SQL) → **0.86** (TypeScript, on 14 labelled edges) | same |
+| `CALLS` recall | **1.00** (C, SQL) → **0.86** (TypeScript, on 14 labelled edges) · **0.50** (PHP, on 8 labelled edges — the misses are P3's typed-receiver rule and the global-namespace fallback, both predicted `known_gaps`, not surprises) | same |
 | Grounding effect, `create` tickets | **29/50 grounded, 0/50 ungrounded** | 200-run controlled A/B, 2 frontier models, 5 passes |
 | Same, across two codebases | **47/68 vs 3/68** | replicated on an unrelated external repo |
 | Control (`edit` tickets, target file named) | **122/124 either arm** | rules out a generic more-context effect |

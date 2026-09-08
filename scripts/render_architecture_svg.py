@@ -449,7 +449,7 @@ def render(f: Facts) -> str:
 def main(argv: list[str]) -> int:
     svg = render(Facts.read())
     if "--check" in argv:
-        if not OUT.is_file() or OUT.read_text() != svg:
+        if not OUT.is_file() or OUT.read_text(encoding="utf-8") != svg:
             print(
                 f"{OUT.relative_to(REPO)} is out of date — run scripts/render_architecture_svg.py",
                 file=sys.stderr,

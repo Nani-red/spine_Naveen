@@ -100,6 +100,11 @@ DEFAULT_IGNORE_DIRS = frozenset(
         ".tox",
         "obj",  # .NET build output (generated *.g.cs, *.AssemblyInfo.cs)
         "bin",  # .NET build output
+        # Composer's `node_modules` (D5, php-support-roadmap.md): a Laravel app carries
+        # ~10k vendored .php files, which would otherwise present a dependency as part
+        # of the repo. Checked against the five pinned comprehension repos before
+        # adding — none has a `vendor/` tree, so this costs no anchored facts there.
+        "vendor",
         # Spine's OWN generated knowledge base (``knowledge/understand.py``'s
         # BANK_DIRNAME and its legacy name). It is output, not source: ingesting it
         # would count our own prose as the repo's documentation, inflate every graph
@@ -542,9 +547,10 @@ class PythonExtractor:
 def default_extractors(*, sql_dialect: str | None = None) -> list[LanguageExtractor]:
     """The language front-ends used when none are passed explicitly.
 
-    Always Python (stdlib ``ast``). Java, TypeScript, C#, C, C++, and Go are added **only
-    when their tree-sitter grammar is importable** (the ``java`` / ``typescript`` /
-    ``csharp`` / ``c`` / ``cpp`` / ``go`` extras) so the base install stays stdlib-only —
+    Always Python (stdlib ``ast``). Java, TypeScript, C#, C, C++, Go, and PHP are added
+    **only when their tree-sitter grammar is importable** (the ``java`` / ``typescript``
+    / ``csharp`` / ``c`` / ``cpp`` / ``go`` / ``php`` extras) so the base install stays
+    stdlib-only —
     this is what makes
     ``understand`` / grounding / ``pkg extract`` multi-language without forcing
     the parser dependency on everyone. ``sql_dialect`` pins the SQL front-end to a
@@ -578,6 +584,10 @@ def default_extractors(*, sql_dialect: str | None = None) -> list[LanguageExtrac
         from orchestrator.pkg.go_extractor import GoExtractor
 
         extractors.append(GoExtractor())
+    if has_tree_sitter and importlib.util.find_spec("tree_sitter_php"):
+        from orchestrator.pkg.php_extractor import PhpExtractor
+
+        extractors.append(PhpExtractor())
     # SQL uses sqlglot (pure-Python, no tree-sitter) behind the ``sql`` extra.
     if importlib.util.find_spec("sqlglot"):
         from orchestrator.pkg.sql_extractor import SqlExtractor

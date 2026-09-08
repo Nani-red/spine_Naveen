@@ -132,6 +132,7 @@ a variable yields no edge, because a wrong edge is worse than an absent one.
 | `c` | ✓ | ✓ | ✓ | ✓ | · | · | · | · |
 | `cpp` | ✓ | ✓ | ✓ | ✓ | · | · | · | · |
 | `go` | ✓ | ✓ | ✓ | ✓ | ✓ | · | · | · |
+| `php` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | · | · |
 | `sql` | ✓ | · | ✓ | ✓ | · | ✓ | · | · |
 
 **Edges**
@@ -145,6 +146,7 @@ a variable yields no edge, because a wrong edge is worse than an absent one.
 | `c` | ✓ | ✓ | ✓ | · | · | · | · | · | ✓ | · | · |
 | `cpp` | ✓ | ✓ | ✓ | ✓ | · | · | · | · | ✓ | · | · |
 | `go` | ✓ | ✓ | ✓ | ✓ | · | · | ✓ | · | ✓ | · | · |
+| `php` | ✓ | ✓ | ✓ | ✓ | · | · | ✓ | · | ✓ | · | · |
 | `sql` | · | ✓ | ✓ | · | ✓ | ✓ | · | · | ✓ | · | · |
 
 Read a `·` as *this front-end has no code that emits that kind* — not as *your repo
@@ -242,6 +244,7 @@ flowchart LR
   | C | ✅ + `#include` graph | `pip install 'synaptixs-spine[c]'` |
   | C++ | ✅ classes/namespaces/inheritance | `pip install 'synaptixs-spine[cpp]'` |
   | Go | ✅ + interface satisfaction (`IMPLEMENTS`) | `pip install 'synaptixs-spine[go]'` |
+  | PHP | ✅ + call graph (traits as `IMPLEMENTS`; `$this`/`self`/`parent`/`new`/static-call resolution, incl. typed receivers) + Laravel/Slim/Symfony routes + Eloquent/Doctrine entities | `pip install 'synaptixs-spine[php]'` |
 
   Java lifts JAX-RS / Jakarta REST resource methods into `Endpoint` nodes with
   `EXPOSES` edges to their handlers. Both `javax.ws.rs` and `jakarta.ws.rs`

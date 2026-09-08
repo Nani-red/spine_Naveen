@@ -34,6 +34,7 @@ _LANG_BY_SUFFIX = {
     ".go": "go",
     ".rb": "ruby",
     ".sql": "sql",
+    ".php": "php",
 }
 
 
@@ -107,7 +108,7 @@ def _detect_languages(root: Path) -> frozenset[str]:
 def _read_markers(root: Path) -> str:
     """Concatenate a few small dependency/manifest files (lowercased) to scan."""
     blobs: list[str] = []
-    for rel in ("pyproject.toml", "package.json", "pom.xml", "build.gradle", "go.mod"):
+    for rel in ("pyproject.toml", "package.json", "pom.xml", "build.gradle", "go.mod", "composer.json"):
         path = root / rel
         if path.is_file():
             blobs.append(_safe_read(path))
@@ -146,6 +147,8 @@ def _detect_framework(markers: str, languages: frozenset[str]) -> str | None:
         ('"react"', "react"),
         ("microsoft.aspnetcore", "aspnet"),
         ("microsoft.net.sdk.web", "aspnet"),
+        ('"laravel/framework"', "laravel"),
+        ('"symfony/', "symfony"),
     ):
         if needle in markers:
             return name
@@ -179,6 +182,10 @@ def _detect_test_runner(root: Path, markers: str, languages: frozenset[str]) -> 
         return "nunit"
     if "mstest" in markers or "microsoft.net.test.sdk" in markers:
         return "mstest"
+    if '"pestphp/pest"' in markers:
+        return "pest"
+    if '"phpunit/phpunit"' in markers:
+        return "phpunit"
     if "python" in languages:
         return "pytest"
     return None

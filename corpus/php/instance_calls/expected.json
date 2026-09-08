@@ -1,0 +1,37 @@
+{
+  "language": "php",
+  "case": "instance_calls",
+  "why": "The documented skip, in PHP's spelling — and now P3's resolution of most of it: `$obj->m()` on a typed property (`$this->handler->run()`) and a typed parameter both resolve via the receiver's declared type (§3.2 rows 7-8); an untyped parameter has no declared type to resolve and stays a permanent miss. Before P3 landed, all three missed in P2 — the identical shape the python/typescript/go/csharp cases exercise, which is what makes the per-language CALLS figures comparable.",
+  "root": ".repo",
+  "nodes": [
+    { "id": "php:App.Svc", "kind": "Module" },
+    { "id": "php:App.Svc.Handler", "kind": "Type" },
+    { "id": "php:App.Svc.Dispatch", "kind": "Type" },
+    { "id": "php:App.Svc.Handler.run", "kind": "Function" },
+    { "id": "php:App.Svc.Dispatch.viaProperty", "kind": "Function" },
+    { "id": "php:App.Svc.Dispatch.viaParameter", "kind": "Function" },
+    { "id": "php:App.Svc.Dispatch.viaUntyped", "kind": "Function" },
+    { "id": "php:App.Svc.Dispatch.handler", "kind": "Field" }
+  ],
+  "edges": [
+    { "src": "php:App.Svc", "dst": "php:App.Svc.Handler", "kind": "CONTAINS" },
+    { "src": "php:App.Svc", "dst": "php:App.Svc.Dispatch", "kind": "CONTAINS" },
+    { "src": "php:App.Svc.Handler", "dst": "php:App.Svc.Handler.run", "kind": "CONTAINS" },
+    { "src": "php:App.Svc.Dispatch", "dst": "php:App.Svc.Dispatch.handler", "kind": "CONTAINS" },
+    { "src": "php:App.Svc.Dispatch", "dst": "php:App.Svc.Dispatch.viaProperty", "kind": "CONTAINS" },
+    { "src": "php:App.Svc.Dispatch", "dst": "php:App.Svc.Dispatch.viaParameter", "kind": "CONTAINS" },
+    { "src": "php:App.Svc.Dispatch", "dst": "php:App.Svc.Dispatch.viaUntyped", "kind": "CONTAINS" },
+    { "src": "php:App.Svc.Dispatch.viaProperty", "dst": "php:App.Svc.Handler.run", "kind": "CALLS" },
+    { "src": "php:App.Svc.Dispatch.viaParameter", "dst": "php:App.Svc.Handler.run", "kind": "CALLS" },
+    { "src": "php:App.Svc.Dispatch.viaUntyped", "dst": "php:App.Svc.Handler.run", "kind": "CALLS" }
+  ],
+  "known_gaps": [
+    {
+      "edge": { "src": "php:App.Svc.Dispatch.viaUntyped", "dst": "php:App.Svc.Handler.run", "kind": "CALLS" },
+      "why": "PREDICTED BEFORE SCORING (and still true after P3). An untyped parameter has no declared type to resolve — permanently unresolved, never guessed. The property-typed and parameter-typed calls above it were also predicted misses before P3 shipped; P3's typed-receiver rule (§3.2 rows 7-8) resolves both now, which is why only this one remains."
+    }
+  ],
+  "false_positives": [],
+  "excluded": [],
+  "open_questions": []
+}

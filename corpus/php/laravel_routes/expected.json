@@ -1,0 +1,32 @@
+{
+  "language": "php",
+  "case": "laravel_routes",
+  "why": "P3's Laravel route reader (§3.3): the array handler form, the string `Ctl@m` form, a `Route::prefix()->group()` composing a path prefix, a closure handler (an `Endpoint` with no `EXPOSES` — no named symbol to point at), and `Route::any` (no `ANY` in this graph, D2 of endpoints-typescript-go.md — nothing registered at all, not even an `Endpoint`).",
+  "root": ".repo",
+  "nodes": [
+    { "id": "php:App.Http", "kind": "Module" },
+    { "id": "php:App.Http.Controllers", "kind": "Module" },
+    { "id": "php:App.Http.Controllers.OrderController", "kind": "Type" },
+    { "id": "php:App.Http.Controllers.OrderController.index", "kind": "Function" },
+    { "id": "php:App.Http.Controllers.OrderController.store", "kind": "Function" },
+    { "id": "php:endpoint:GET /orders", "kind": "Endpoint" },
+    { "id": "php:endpoint:POST /orders", "kind": "Endpoint" },
+    { "id": "php:endpoint:GET /orders/closure", "kind": "Endpoint" },
+    { "id": "php:endpoint:GET /v1/orders", "kind": "Endpoint" }
+  ],
+  "edges": [
+    { "src": "php:App.Http.Controllers", "dst": "php:App.Http.Controllers.OrderController", "kind": "CONTAINS" },
+    { "src": "php:App.Http.Controllers.OrderController", "dst": "php:App.Http.Controllers.OrderController.index", "kind": "CONTAINS" },
+    { "src": "php:App.Http.Controllers.OrderController", "dst": "php:App.Http.Controllers.OrderController.store", "kind": "CONTAINS" },
+    { "src": "php:App.Http", "dst": "php:App.Http.Controllers.OrderController", "kind": "IMPORTS" },
+    { "src": "php:endpoint:GET /orders", "dst": "php:App.Http.Controllers.OrderController.index", "kind": "EXPOSES" },
+    { "src": "php:endpoint:POST /orders", "dst": "php:App.Http.Controllers.OrderController.store", "kind": "EXPOSES" },
+    { "src": "php:endpoint:GET /v1/orders", "dst": "php:App.Http.Controllers.OrderController.index", "kind": "EXPOSES" }
+  ],
+  "known_gaps": [],
+  "false_positives": [],
+  "excluded": [
+    "Route::any('/orders/anything', ...) registers no Endpoint at all — not a miss, a deliberate non-fact (D2: no ANY in this graph)."
+  ],
+  "open_questions": []
+}

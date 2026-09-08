@@ -1,0 +1,21 @@
+{
+  "language": "php",
+  "case": "legacy_require",
+  "why": "D7: no namespace anywhere in this fixture (legacy/WordPress-style PHP has no `use`, so `require`/`include` *is* its import graph). `require_once __DIR__ . '/inc/helpers.php'` is a literal (D7's `__DIR__ . 'string'` shape) and becomes a path-keyed `IMPORTS` edge; the computed `include $driver . '.php'` yields nothing — precision-first, never guessed.",
+  "root": ".repo",
+  "nodes": [
+    { "id": "php:bootstrap.php", "kind": "Module" },
+    { "id": "php:inc/helpers.php", "kind": "Module" },
+    { "id": "php:fmt", "kind": "Function" }
+  ],
+  "edges": [
+    { "src": "php:inc/helpers.php", "dst": "php:fmt", "kind": "CONTAINS" },
+    { "src": "php:bootstrap.php", "dst": "php:inc/helpers.php", "kind": "IMPORTS" }
+  ],
+  "known_gaps": [],
+  "false_positives": [],
+  "excluded": [
+    "the computed `include $driver . '.php'` — not labelled at all: no literal path exists for a human to assert, so there is no fact to miss, only one that could never be claimed"
+  ],
+  "open_questions": []
+}

@@ -1,0 +1,27 @@
+{
+  "language": "php",
+  "case": "traits",
+  "why": "D3: a trait used by two classes, one overriding a trait method. `IMPLEMENTS` fires from both `use Loggable;` sites (the mixin-as-behavioural-claim edge, no vocabulary precedent before PHP); `Job` gets no `log` node of its own (it never redeclares it — the trait's method is the only one), while `Task`'s override is `Task`'s own `Function`, distinct from `Loggable.log`.",
+  "root": ".repo",
+  "nodes": [
+    { "id": "php:App.Svc", "kind": "Module" },
+    { "id": "php:App.Svc.Loggable", "kind": "Type" },
+    { "id": "php:App.Svc.Loggable.log", "kind": "Function" },
+    { "id": "php:App.Svc.Job", "kind": "Type" },
+    { "id": "php:App.Svc.Task", "kind": "Type" },
+    { "id": "php:App.Svc.Task.log", "kind": "Function" }
+  ],
+  "edges": [
+    { "src": "php:App.Svc", "dst": "php:App.Svc.Loggable", "kind": "CONTAINS" },
+    { "src": "php:App.Svc.Loggable", "dst": "php:App.Svc.Loggable.log", "kind": "CONTAINS" },
+    { "src": "php:App.Svc", "dst": "php:App.Svc.Job", "kind": "CONTAINS" },
+    { "src": "php:App.Svc", "dst": "php:App.Svc.Task", "kind": "CONTAINS" },
+    { "src": "php:App.Svc.Task", "dst": "php:App.Svc.Task.log", "kind": "CONTAINS" },
+    { "src": "php:App.Svc.Job", "dst": "php:App.Svc.Loggable", "kind": "IMPLEMENTS" },
+    { "src": "php:App.Svc.Task", "dst": "php:App.Svc.Loggable", "kind": "IMPLEMENTS" }
+  ],
+  "known_gaps": [],
+  "false_positives": [],
+  "excluded": [],
+  "open_questions": []
+}
