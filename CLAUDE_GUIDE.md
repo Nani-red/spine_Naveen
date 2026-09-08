@@ -4,7 +4,8 @@
 engineer you delegate tickets to. From inside **Claude Code** you can ask it to read a
 requirement, ground new code in your repo's real structure, generate and test that code,
 and — when you say so — open a pull request. It works for **greenfield** (fresh) and
-**brownfield** (existing) repos across **Python, Java, TypeScript, C#, C, C++, and Go**.
+**brownfield** (existing) repos across **Python, Java, TypeScript, C#, C, C++, and Go**
+(**PHP** too, for brownfield — comprehension is shipped, codegen is a later phase).
 
 This guide takes you from zero to a delivered feature, entirely through Claude Code.
 

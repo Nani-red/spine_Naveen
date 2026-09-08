@@ -58,12 +58,19 @@ Labelling in the wrong vocabulary scores 0.00 and reads as a catastrophic front-
 | `java` | `java:package` | `java:app.Cart` | `.` |
 | `csharp` | `csharp:Namespace` | `csharp:App.Cart` | `.` |
 | `go` | `go:package` | `go:cart.Cart` | `.` |
+| `php` | `php:App.Svc` | `php:App.Svc.Cart` | `.` |
 | **`c`** | `c:src/cart.c` *(a path)* | — | **bare symbol: `c:subtotal`** |
 | **`cpp`** | `cpp:src/cart.cpp` *(a path)* | **bare: `cpp:Cart`** | **`::`** |
 | `sql` | `sql:schema.sql` | `sql:customer` *(an Entity)* | `.` |
 
 C and C++ ids are **bare symbols, not module-qualified** — a symbol, not a location. Python's
 scheme applied to either scores zero.
+
+PHP's module id is namespace-keyed like C#/Java **only when the file has one**. A file with no
+`namespace` (WordPress-style, legacy code) keys on its repo-relative path instead —
+`php:inc/legacy.php`, not a dotted form — which is also what makes a literal `require`/`include`
+target path-suffix-matchable, C-style. A `legacy_require`-shaped case labels module ids in that
+path form, not the dotted one.
 
 | | form | example |
 |---|---|---|

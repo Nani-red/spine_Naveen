@@ -284,7 +284,7 @@ published in full
 · [replicated on an unrelated codebase](https://github.com/synaptixs/spine/blob/main/docs/specs/external-repo-grounding-results.md)),
 and the harness ships with the package so you can get your own number.
 
-Works across **Python, Java, TypeScript, C#, C, C++ and Go**, plus **SQL** data-layer
+Works across **Python, Java, TypeScript, C#, C, C++, Go and PHP**, plus **SQL** data-layer
 comprehension (schema, queries, stored procedures, migration folding). It reads your
 **documentation** too — Markdown, reST, plain text and **PDF** — folding it in as `Doc` nodes
 linked to the code they describe, so you can ask *which docs cover this symbol* and *where
@@ -392,7 +392,8 @@ see the [Setup guide](https://github.com/synaptixs/spine/blob/main/SETUP.md).
 Comprehension and codegen cover **Python, Java, TypeScript, C#, C, C++ and Go** — each
 front-end going beyond structure into what that stack actually does (Java and C# REST
 endpoints, EF Core entities, C's `#include` graph, C++ templates and namespaces, Go
-interface satisfaction by method-set matching). **SQL** adds data-layer comprehension plus
+interface satisfaction by method-set matching). **PHP** adds a call graph too (namespaces,
+classes, interfaces, traits, `CALLS`) — codegen is a follow-on. **SQL** adds data-layer comprehension plus
 greenfield migration codegen validated against an ephemeral database. **Docs** fold in
 automatically; **media** (diagrams, screenshots, recorded reviews) via the opt-in
 `media extract`. Any LiteLLM provider — Anthropic, OpenAI, Bedrock — or a local Ollama

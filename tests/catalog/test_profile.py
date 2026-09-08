@@ -60,6 +60,19 @@ def test_csharp_aspnet_with_xunit(tmp_path: Path) -> None:
     assert prof.test_runner == "xunit"
 
 
+def test_php_laravel_with_pest(tmp_path: Path) -> None:
+    _write(tmp_path, "app/Http/Controllers/OrderController.php", "<?php\nclass OrderController {}\n")
+    _write(
+        tmp_path,
+        "composer.json",
+        '{"require": {"laravel/framework": "^11.0"}, "require-dev": {"pestphp/pest": "^2.0"}}\n',
+    )
+    prof = ProjectProfile.from_repo(tmp_path)
+    assert "php" in prof.languages
+    assert prof.framework == "laravel"
+    assert prof.test_runner == "pest"
+
+
 def test_greenfield_empty_repo(tmp_path: Path) -> None:
     prof = ProjectProfile.from_repo(tmp_path)
     assert prof.languages == frozenset()

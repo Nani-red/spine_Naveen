@@ -1,0 +1,39 @@
+{
+  "language": "php",
+  "case": "eloquent",
+  "why": "P4's Eloquent reader (§3.4): a real ORM marker (`extends Model`), never the shape of the class — three declared models, `belongsTo`/`hasMany` between two of them, and one relation to a class this repo never declares. The third-party target still gets a `REFERENCES` edge, to an external `Entity` node — 'the third-party target stays external', not silently dropped.",
+  "root": ".repo",
+  "nodes": [
+    { "id": "php:App.Models", "kind": "Module" },
+    { "id": "php:App.Models.Customer", "kind": "Type" },
+    { "id": "php:App.Models.OrderItem", "kind": "Type" },
+    { "id": "php:App.Models.Order", "kind": "Type" },
+    { "id": "php:App.Models.Order.customer", "kind": "Function" },
+    { "id": "php:App.Models.Order.items", "kind": "Function" },
+    { "id": "php:App.Models.Order.notification", "kind": "Function" },
+    { "id": "php:entity:App.Models.Customer", "kind": "Entity" },
+    { "id": "php:entity:App.Models.OrderItem", "kind": "Entity" },
+    { "id": "php:entity:App.Models.Order", "kind": "Entity" }
+  ],
+  "edges": [
+    { "src": "php:App.Models", "dst": "php:App.Models.Customer", "kind": "CONTAINS" },
+    { "src": "php:App.Models", "dst": "php:App.Models.OrderItem", "kind": "CONTAINS" },
+    { "src": "php:App.Models", "dst": "php:App.Models.Order", "kind": "CONTAINS" },
+    { "src": "php:App.Models.Order", "dst": "php:App.Models.Order.customer", "kind": "CONTAINS" },
+    { "src": "php:App.Models.Order", "dst": "php:App.Models.Order.items", "kind": "CONTAINS" },
+    { "src": "php:App.Models.Order", "dst": "php:App.Models.Order.notification", "kind": "CONTAINS" },
+    { "src": "php:App.Models.Customer", "dst": "php:Illuminate.Database.Eloquent.Model", "kind": "IMPLEMENTS" },
+    { "src": "php:App.Models.OrderItem", "dst": "php:Illuminate.Database.Eloquent.Model", "kind": "IMPLEMENTS" },
+    { "src": "php:App.Models.Order", "dst": "php:Illuminate.Database.Eloquent.Model", "kind": "IMPLEMENTS" },
+    { "src": "php:App.Models", "dst": "php:Illuminate.Database.Eloquent.Model", "kind": "IMPORTS" },
+    { "src": "php:entity:App.Models.Order", "dst": "php:entity:App.Models.Customer", "kind": "REFERENCES" },
+    { "src": "php:entity:App.Models.Order", "dst": "php:entity:App.Models.OrderItem", "kind": "REFERENCES" },
+    { "src": "php:entity:App.Models.Order", "dst": "php:entity:Vendor.Notifications.DatabaseNotification", "kind": "REFERENCES" }
+  ],
+  "known_gaps": [],
+  "false_positives": [],
+  "excluded": [
+    "php:entity:Vendor.Notifications.DatabaseNotification is not listed as a node — it's external, and external nodes don't count (corpus/README.md's decided rule); the REFERENCES edge to it above still does."
+  ],
+  "open_questions": []
+}

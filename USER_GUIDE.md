@@ -66,12 +66,15 @@ Optional extras, added when you need them:
 - `pip install 'synaptixs-spine[all]'` — everything below at once: every language front-end,
   the MCP server and doc ingestion. This is the right install for the Claude Code / Codex
   plugin; `[languages]` is the front-ends on their own.
-- `[java]`, `[typescript]`, `[csharp]`, `[c]`, `[cpp]`, `[go]`, `[sql]` — language parsers for
-  comprehension + grounding (Python needs no extra). C# codegen also needs the **.NET SDK**
-  (`dotnet`) on PATH; C / C++ codegen needs a C / C++ compiler plus **CMake** (greenfield) or
+- `[java]`, `[typescript]`, `[csharp]`, `[c]`, `[cpp]`, `[go]`, `[php]`, `[sql]` — language
+  parsers for comprehension + grounding (Python needs no extra). C# codegen also needs the **.NET
+  SDK** (`dotnet`) on PATH; C / C++ codegen needs a C / C++ compiler plus **CMake** (greenfield) or
   **Meson + Ninja** (matching the target repo's build system); **Go** codegen needs the **`go`
   toolchain** on PATH (`go build`/`go test`). `[sql]` adds `.sql`
-  comprehension (schema/queries/procedures + migration folding) — no toolchain needed.
+  comprehension (schema/queries/procedures + migration folding) — no toolchain needed. `[php]`
+  adds `.php` comprehension + a call graph (namespaces, classes/interfaces/traits, `CALLS`,
+  typed-receiver resolution) + Laravel/Slim/Symfony routes + Eloquent/Doctrine entities —
+  codegen is not shipped yet.
 - `[docs]` — **PDF** doc ingestion; `[office]` — **Word/Excel** (`.docx`/`.xlsx`) ingestion.
   Markdown, `.rst`, `.txt` and **HTML** need no extra. Without an extra those files are simply
   skipped, so a base install still ingests everything it can read.
@@ -352,10 +355,12 @@ is: `orchestrator understand .` → commit `episteme/`, then re-run whenever the
 > greenfield projects.
 
 > **Multi-language.** Comprehension covers **Python** out of the box and **Java**,
-> **TypeScript**, **C#**, **C**, **C++**, **Go**, and **SQL** when the matching parser extra is
-> installed (`pip install 'synaptixs-spine[java]'` / `[typescript]` / `[csharp]` / `[c]` /
-> `[cpp]` / `[go]` / `[sql]`). `understand`, codegen grounding, and `pkg extract` then process
-> `.java` / `.ts` / `.cs` / `.c` / `.h` / `.cpp` / `.hpp` / `.go` / `.sql` too. For **SQL**, the
+> **TypeScript**, **C#**, **C**, **C++**, **Go**, **PHP**, and **SQL** when the matching parser
+> extra is installed (`pip install 'synaptixs-spine[java]'` / `[typescript]` / `[csharp]` / `[c]`
+> / `[cpp]` / `[go]` / `[php]` / `[sql]`). `understand`, codegen grounding, and `pkg extract` then
+> process `.java` / `.ts` / `.cs` / `.c` / `.h` / `.cpp` / `.hpp` / `.go` / `.php` / `.sql` too
+> (`.blade.php` is skipped as a template, not PHP source). PHP has a call graph too; only codegen
+> is not shipped yet. For **SQL**, the
 > graph models the **data layer from source** — `CREATE TABLE`/columns → `Entity`/`Field`,
 > foreign keys → `REFERENCES`, views and `SELECT`/`INSERT`/`UPDATE`/`DELETE` → `READS`/
 > `WRITES`, and stored procedures → `Function` + `CALLS`. A `migrations/` folder is folded

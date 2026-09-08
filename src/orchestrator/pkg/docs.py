@@ -90,6 +90,7 @@ _URL_TAILS = frozenset(
         "cc",
         "cpp",
         "rs",
+        "php",
     }
 )
 _SNAKE_RE = re.compile(r"\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b")
