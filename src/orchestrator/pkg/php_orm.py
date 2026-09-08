@@ -21,7 +21,7 @@ model, a dataclass and an ORM model are indistinguishable at field level, so the
   X::class)]`` (``OneToMany``/``ManyToMany``/``OneToOne`` likewise) names the relation.
 
 A relation's target resolves through the same namespace-rule resolver
-(:func:`orchestrator.pkg.php_extractor._resolve_type_name`) every other PHP fact uses. It
+(:func:`orchestrator.pkg.php_names._resolve_type_name`) every other PHP fact uses. It
 always gets a node — grounded when the target is itself a detected entity in this file,
 external otherwise ("the third-party target stays external", the `eloquent` corpus case's
 own wording) — so a `REFERENCES` edge is never left dangling.
@@ -32,12 +32,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from orchestrator.pkg.facts import Edge, EdgeKind, FactBatch, Node, NodeKind, Provenance
-from orchestrator.pkg.php_extractor import _resolve_type_name
+from orchestrator.pkg.php_names import _resolve_type_name
 
 if TYPE_CHECKING:
     from tree_sitter import Node as TSNode
 
-    from orchestrator.pkg.php_extractor import _TypeRec
+    from orchestrator.pkg.php_names import _TypeRec
 
 _ELOQUENT_RELATIONS = frozenset({"belongsTo", "hasMany", "hasOne", "belongsToMany"})
 _DOCTRINE_RELATIONS = frozenset({"ManyToOne", "OneToMany", "ManyToMany", "OneToOne"})
