@@ -28,7 +28,11 @@ build/
 /BACKLOG.md
 
 # Claude Code session lockfiles
-.claude/
+# Per-user Claude Code state stays local; the shared maintainer skills and agents
+# (`/review-pr`, `pr-reviewer`) are tracked so every reviewer runs the same checklist.
+.claude/*
+!.claude/skills/
+!.claude/agents/
 
 # Secrets / local credentials (live integration testing)
 .env
