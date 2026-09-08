@@ -8,6 +8,17 @@ All notable changes to this project are documented here. Format loosely follows
 
 ### Fixed
 
+- **The persistence cache could not tell whether the PHP extra was installed.** The
+  cache key's grammar list (`persistence._GRAMMAR_MODULES`) named every grammar except
+  `tree_sitter_php`, so a graph cached before the extra was installed — with no PHP facts
+  in it — kept being served after, for as long as the commit did not move. Listed now, and
+  a test cross-checks the list against `doctor.EXTRA_PROBES` so the next grammar cannot be
+  forgotten the same way.
+- **The PHP front-end's static import cycle** (CodeQL `py/cyclic-import`, six alerts):
+  `php_routes.py` and `php_orm.py` imported the name resolver and the type record from
+  `php_extractor.py`, which imports them back. The shared pieces now live in a leaf module,
+  `php_names.py`, that imports nothing from the other three — the shape `go_routes.py`
+  has always had. No behaviour change; every PHP fact is emitted exactly as before.
 - **Five ways the PHP front-end asserted a fact the source does not contain**, found
   reviewing #334 and each a wrong *grounded* fact rather than a missing one:
   `new self()` / `new static()` were resolved as classes named `self` and `static`, which

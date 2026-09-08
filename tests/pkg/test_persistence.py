@@ -239,3 +239,16 @@ def test_the_fingerprint_is_in_the_cache_filename(tmp_path: Path) -> None:
     load_or_extract(repo, cache_dir=cache)
     (cache_file,) = list(cache.glob("*.json"))
     assert extractor_fingerprint() in cache_file.name
+
+
+def test_every_grammar_extra_is_in_the_cache_key() -> None:
+    """Review of #334 found `tree_sitter_php` missing from `_GRAMMAR_MODULES`: a graph
+    cached before the extra was installed — with no PHP facts — was served after it,
+    for as long as the commit did not move. `doctor.EXTRA_PROBES` is the one place every
+    extra is enumerated, so the cache key is checked against it here rather than
+    remembered per language."""
+    from orchestrator.doctor import EXTRA_PROBES
+    from orchestrator.pkg.persistence import _GRAMMAR_MODULES
+
+    grammars = {m for m in EXTRA_PROBES.values() if m.startswith("tree_sitter_") or m == "sqlglot"}
+    assert grammars <= set(_GRAMMAR_MODULES), sorted(grammars - set(_GRAMMAR_MODULES))

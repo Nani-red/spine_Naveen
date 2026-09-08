@@ -25,7 +25,7 @@ yields no edge, never a guess:
   resolved FQN, matching that precedent). A `#[Route]` with no `methods:` is verb-less →
   nothing (same D2).
 
-Handler class names resolve through :func:`orchestrator.pkg.php_extractor._resolve_type_name`
+Handler class names resolve through :func:`orchestrator.pkg.php_names._resolve_type_name`
 — the same namespace-rule resolver every other PHP fact uses, so a route handler lands on
 the exact id its own class declaration would produce.
 """
@@ -36,12 +36,12 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from orchestrator.pkg.facts import Edge, EdgeKind, FactBatch, Node, NodeKind, Provenance
-from orchestrator.pkg.php_extractor import _resolve_type_name, _to_dotted, _use_declaration_targets
+from orchestrator.pkg.php_names import _resolve_type_name, _to_dotted, _use_declaration_targets
 
 if TYPE_CHECKING:
     from tree_sitter import Node as TSNode
 
-    from orchestrator.pkg.php_extractor import _TypeRec
+    from orchestrator.pkg.php_names import _TypeRec
 
 _LARAVEL_VERBS = frozenset({"get", "post", "put", "patch", "delete", "options"})
 _SLIM_RECEIVER = "$app"
