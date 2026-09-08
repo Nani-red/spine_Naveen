@@ -49,7 +49,7 @@ _11 of the symbols other code depends on here have no test path the graph can se
 [`src/orchestrator/cli/pkg.py:112`](../../src/orchestrator/cli/pkg.py#L112)
 
 - **Called by** (1): [`pkg_extract`](../../src/orchestrator/cli/pkg.py#L20)
-- **Calls** (6): `Exit`, `echo`, [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L366), [`load_repo_config`](../../src/orchestrator/pkg/repos.py#L191), `orchestrator.pkg.FactStore`, `orchestrator.pkg.RepoCodeExtractor`
+- **Calls** (6): `Exit`, `echo`, [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L367), [`load_repo_config`](../../src/orchestrator/pkg/repos.py#L191), `orchestrator.pkg.FactStore`, `orchestrator.pkg.RepoCodeExtractor`
 
 ### `_invention_oracle`
 
@@ -146,7 +146,7 @@ _11 of the symbols other code depends on here have no test path the graph can se
 
 [`src/orchestrator/cli/pkg.py:128`](../../src/orchestrator/cli/pkg.py#L128)
 
-- **Calls** (6): `Exit`, [`_joins_check`](../../src/orchestrator/cli/pkg.py#L198), [`_joins_propose`](../../src/orchestrator/cli/pkg.py#L170), `echo`, [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L366), [`load_repo_config`](../../src/orchestrator/pkg/repos.py#L191)
+- **Calls** (6): `Exit`, [`_joins_check`](../../src/orchestrator/cli/pkg.py#L198), [`_joins_propose`](../../src/orchestrator/cli/pkg.py#L170), `echo`, [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L367), [`load_repo_config`](../../src/orchestrator/pkg/repos.py#L191)
 
 ### `pkg_labels`
 

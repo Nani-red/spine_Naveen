@@ -5,7 +5,7 @@
 
 **Source:** [`src/orchestrator/pkg/php_extractor.py`](../../src/orchestrator/pkg/php_extractor.py)
 
-3 types · 27 functions · python
+2 types · 21 functions · python
 
 ## Changing this safely
 
@@ -13,16 +13,16 @@
 
 **Most depended-upon here** — a change to these reaches the most code (call graph, ≤4 hops):
 
-- [`_text`](../../src/orchestrator/pkg/php_extractor.py#L1051) — reaches **27** symbols · **no test path visible**
-- [`_to_dotted`](../../src/orchestrator/pkg/php_extractor.py#L82) — reaches **20** symbols · **no test path visible**
-- [`_join`](../../src/orchestrator/pkg/php_extractor.py#L87) — reaches **16** symbols · **no test path visible**
-- [`_resolve_type_name`](../../src/orchestrator/pkg/php_extractor.py#L848) — reaches **16** symbols · **no test path visible**
-- [`_strip_sigil`](../../src/orchestrator/pkg/php_extractor.py#L1033) — reaches **11** symbols · **no test path visible**
-- [`PhpExtractor`](../../src/orchestrator/pkg/php_extractor.py#L130) — reaches **8** symbols
-- [`_type_name`](../../src/orchestrator/pkg/php_extractor.py#L974) — reaches **8** symbols · **no test path visible**
-- [`_use_clause`](../../src/orchestrator/pkg/php_extractor.py#L803) — reaches **6** symbols · **no test path visible**
+- [`_strip_sigil`](../../src/orchestrator/pkg/php_extractor.py#L938) — reaches **11** symbols · **no test path visible**
+- [`PhpExtractor`](../../src/orchestrator/pkg/php_extractor.py#L105) — reaches **8** symbols
+- [`_type_name`](../../src/orchestrator/pkg/php_extractor.py#L879) — reaches **8** symbols · **no test path visible**
+- [`_field_text`](../../src/orchestrator/pkg/php_extractor.py#L951) — reaches **5** symbols · **no test path visible**
+- [`_property_names`](../../src/orchestrator/pkg/php_extractor.py#L854) — reaches **5** symbols · **no test path visible**
+- [`_base_type_names`](../../src/orchestrator/pkg/php_extractor.py#L825) — reaches **4** symbols · **no test path visible**
+- [`_const_names`](../../src/orchestrator/pkg/php_extractor.py#L843) — reaches **4** symbols · **no test path visible**
+- [`_interface_names`](../../src/orchestrator/pkg/php_extractor.py#L832) — reaches **4** symbols · **no test path visible**
 
-_29 of the symbols other code depends on here have no test path the graph can see — worth a second look before changing them. Absence of a path is not proof of absence of a test: calls through an attribute chain (`obj.method()`) are skipped rather than guessed at, so indirect coverage is invisible._
+_22 of the symbols other code depends on here have no test path the graph can see — worth a second look before changing them. Absence of a path is not proof of absence of a test: calls through an attribute chain (`obj.method()`) are skipped rather than guessed at, so indirect coverage is invisible._
 
 ## Documented in
 
@@ -32,7 +32,7 @@ _29 of the symbols other code depends on here have no test path the graph can se
 
 ### `PhpExtractor`
 
-[`src/orchestrator/pkg/php_extractor.py:130`](../../src/orchestrator/pkg/php_extractor.py#L130)
+[`src/orchestrator/pkg/php_extractor.py:105`](../../src/orchestrator/pkg/php_extractor.py#L105)
 
 - **Called by** (1 production · 6 test): [`default_extractors`](../../src/orchestrator/pkg/extractor.py#L547), [`_calls_facts`](../../tests/pkg/test_php_extractor.py#L221), [`_facts`](../../tests/pkg/test_php_extractor.py#L67), [`_facts`](../../tests/pkg/test_php_orm.py#L46), [`_graph`](../../tests/pkg/test_php_routes.py#L19), [`test_end_to_end_via_repo_extractor_resolves_require_by_path_suffix`](../../tests/pkg/test_php_extractor.py#L161), [`test_legacy_require_literal_and_computed`](../../tests/pkg/test_php_extractor.py#L139)
 - **Fields**: `language`, `suffixes`
@@ -40,210 +40,164 @@ _29 of the symbols other code depends on here have no test path the graph can se
 
 ### `_FuncRec`
 
-[`src/orchestrator/pkg/php_extractor.py:119`](../../src/orchestrator/pkg/php_extractor.py#L119)
-
-- **Called by** (1): [`_emit_function`](../../src/orchestrator/pkg/php_extractor.py#L421)
-- **Fields**: `func_id`, `name`, `namespace`, `node`, `use_func_map`, `use_map`
-
-### `_TypeRec`
-
 [`src/orchestrator/pkg/php_extractor.py:94`](../../src/orchestrator/pkg/php_extractor.py#L94)
 
-- **Called by** (1): [`_emit_type`](../../src/orchestrator/pkg/php_extractor.py#L322)
-- **Fields**: `base_name`, `methods`, `name`, `namespace`, `node`, `trait_names`, `type_id`, `typed_props`, `use_func_map`, `use_map`
+- **Called by** (1): [`_emit_function`](../../src/orchestrator/pkg/php_extractor.py#L396)
+- **Fields**: `func_id`, `name`, `namespace`, `node`, `use_func_map`, `use_map`
 
 ## Functions
 
 ### `_base_type_names`
 
-[`src/orchestrator/pkg/php_extractor.py:920`](../../src/orchestrator/pkg/php_extractor.py#L920)
+[`src/orchestrator/pkg/php_extractor.py:825`](../../src/orchestrator/pkg/php_extractor.py#L825)
 
-- **Called by** (1): [`_emit_type`](../../src/orchestrator/pkg/php_extractor.py#L322)
-- **Calls** (1): [`_text`](../../src/orchestrator/pkg/php_extractor.py#L1051)
+- **Called by** (1): [`_emit_type`](../../src/orchestrator/pkg/php_extractor.py#L297)
+- **Calls** (1): [`_text`](../../src/orchestrator/pkg/php_names.py#L26)
 
 ### `_const_names`
 
-[`src/orchestrator/pkg/php_extractor.py:938`](../../src/orchestrator/pkg/php_extractor.py#L938)
+[`src/orchestrator/pkg/php_extractor.py:843`](../../src/orchestrator/pkg/php_extractor.py#L843)
 
-- **Called by** (1): [`_emit_members`](../../src/orchestrator/pkg/php_extractor.py#L374)
-- **Calls** (1): [`_text`](../../src/orchestrator/pkg/php_extractor.py#L1051)
+- **Called by** (1): [`_emit_members`](../../src/orchestrator/pkg/php_extractor.py#L349)
+- **Calls** (1): [`_text`](../../src/orchestrator/pkg/php_names.py#L26)
 
 ### `_effective_methods`
 
-[`src/orchestrator/pkg/php_extractor.py:576`](../../src/orchestrator/pkg/php_extractor.py#L576)
+[`src/orchestrator/pkg/php_extractor.py:551`](../../src/orchestrator/pkg/php_extractor.py#L551)
 
-- **Called by** (1): [`_emit_calls`](../../src/orchestrator/pkg/php_extractor.py#L513)
-- **Calls** (1): [`_resolve_type_name`](../../src/orchestrator/pkg/php_extractor.py#L848)
+- **Called by** (1): [`_emit_calls`](../../src/orchestrator/pkg/php_extractor.py#L488)
+- **Calls** (1): [`_resolve_type_name`](../../src/orchestrator/pkg/php_names.py#L116)
 
 ### `_emit_calls`
 
-[`src/orchestrator/pkg/php_extractor.py:513`](../../src/orchestrator/pkg/php_extractor.py#L513)
+[`src/orchestrator/pkg/php_extractor.py:488`](../../src/orchestrator/pkg/php_extractor.py#L488)
 
-- **Called by** (1): [`extract`](../../src/orchestrator/pkg/php_extractor.py#L188)
-- **Calls** (4): [`_effective_methods`](../../src/orchestrator/pkg/php_extractor.py#L576), [`_resolve_type_name`](../../src/orchestrator/pkg/php_extractor.py#L848), [`_scan_calls_in`](../../src/orchestrator/pkg/php_extractor.py#L596), [`_typed_params_of`](../../src/orchestrator/pkg/php_extractor.py#L1015)
+- **Called by** (1): [`extract`](../../src/orchestrator/pkg/php_extractor.py#L163)
+- **Calls** (4): [`_effective_methods`](../../src/orchestrator/pkg/php_extractor.py#L551), [`_resolve_type_name`](../../src/orchestrator/pkg/php_names.py#L116), [`_scan_calls_in`](../../src/orchestrator/pkg/php_extractor.py#L571), [`_typed_params_of`](../../src/orchestrator/pkg/php_extractor.py#L920)
 
 ### `_emit_receiver_call`
 
-[`src/orchestrator/pkg/php_extractor.py:777`](../../src/orchestrator/pkg/php_extractor.py#L777)
+[`src/orchestrator/pkg/php_extractor.py:752`](../../src/orchestrator/pkg/php_extractor.py#L752)
 
-- **Called by** (1): [`_scan_calls_in`](../../src/orchestrator/pkg/php_extractor.py#L596)
-- **Calls** (4): [`Edge`](../../src/orchestrator/pkg/facts.py#L137), [`Node`](../../src/orchestrator/pkg/facts.py#L121), [`Provenance`](../../src/orchestrator/pkg/facts.py#L81), [`_resolve_type_name`](../../src/orchestrator/pkg/php_extractor.py#L848)
+- **Called by** (1): [`_scan_calls_in`](../../src/orchestrator/pkg/php_extractor.py#L571)
+- **Calls** (4): [`Edge`](../../src/orchestrator/pkg/facts.py#L137), [`Node`](../../src/orchestrator/pkg/facts.py#L121), [`Provenance`](../../src/orchestrator/pkg/facts.py#L81), [`_resolve_type_name`](../../src/orchestrator/pkg/php_names.py#L116)
 
 ### `_field_text`
 
-[`src/orchestrator/pkg/php_extractor.py:1046`](../../src/orchestrator/pkg/php_extractor.py#L1046)
+[`src/orchestrator/pkg/php_extractor.py:951`](../../src/orchestrator/pkg/php_extractor.py#L951)
 
-- **Called by** (3): [`_emit_function`](../../src/orchestrator/pkg/php_extractor.py#L421), [`_emit_members`](../../src/orchestrator/pkg/php_extractor.py#L374), [`_emit_type`](../../src/orchestrator/pkg/php_extractor.py#L322)
-- **Calls** (1): [`_text`](../../src/orchestrator/pkg/php_extractor.py#L1051)
+- **Called by** (3): [`_emit_function`](../../src/orchestrator/pkg/php_extractor.py#L396), [`_emit_members`](../../src/orchestrator/pkg/php_extractor.py#L349), [`_emit_type`](../../src/orchestrator/pkg/php_extractor.py#L297)
+- **Calls** (1): [`_text`](../../src/orchestrator/pkg/php_names.py#L26)
 
 ### `_interface_names`
 
-[`src/orchestrator/pkg/php_extractor.py:927`](../../src/orchestrator/pkg/php_extractor.py#L927)
+[`src/orchestrator/pkg/php_extractor.py:832`](../../src/orchestrator/pkg/php_extractor.py#L832)
 
-- **Called by** (1): [`_emit_type`](../../src/orchestrator/pkg/php_extractor.py#L322)
-- **Calls** (1): [`_text`](../../src/orchestrator/pkg/php_extractor.py#L1051)
+- **Called by** (1): [`_emit_type`](../../src/orchestrator/pkg/php_extractor.py#L297)
+- **Calls** (1): [`_text`](../../src/orchestrator/pkg/php_names.py#L26)
 
 ### `_is_this_property`
 
-[`src/orchestrator/pkg/php_extractor.py:771`](../../src/orchestrator/pkg/php_extractor.py#L771)
+[`src/orchestrator/pkg/php_extractor.py:746`](../../src/orchestrator/pkg/php_extractor.py#L746)
 
-- **Called by** (1): [`_scan_calls_in`](../../src/orchestrator/pkg/php_extractor.py#L596)
-- **Calls** (1): [`_text`](../../src/orchestrator/pkg/php_extractor.py#L1051)
-
-### `_join`
-
-[`src/orchestrator/pkg/php_extractor.py:87`](../../src/orchestrator/pkg/php_extractor.py#L87)
-
-- **Called by** (3): [`_emit_function`](../../src/orchestrator/pkg/php_extractor.py#L421), [`_emit_type`](../../src/orchestrator/pkg/php_extractor.py#L322), [`_resolve_type_name`](../../src/orchestrator/pkg/php_extractor.py#L848)
+- **Called by** (1): [`_scan_calls_in`](../../src/orchestrator/pkg/php_extractor.py#L571)
+- **Calls** (1): [`_text`](../../src/orchestrator/pkg/php_names.py#L26)
 
 ### `_php_parser`
 
-[`src/orchestrator/pkg/php_extractor.py:1057`](../../src/orchestrator/pkg/php_extractor.py#L1057)
+[`src/orchestrator/pkg/php_extractor.py:956`](../../src/orchestrator/pkg/php_extractor.py#L956)
 
-- **Called by** (1): [`extract`](../../src/orchestrator/pkg/php_extractor.py#L188)
+- **Called by** (1): [`extract`](../../src/orchestrator/pkg/php_extractor.py#L163)
 - **Calls** (3): `language_php_only`, `tree_sitter.Language`, `tree_sitter.Parser`
 - **Documented in**: `docs/specs/php-support-roadmap.md#4-phases`
 
 ### `_promoted_param_names`
 
-[`src/orchestrator/pkg/php_extractor.py:960`](../../src/orchestrator/pkg/php_extractor.py#L960)
+[`src/orchestrator/pkg/php_extractor.py:865`](../../src/orchestrator/pkg/php_extractor.py#L865)
 
-- **Called by** (1): [`_emit_members`](../../src/orchestrator/pkg/php_extractor.py#L374)
-- **Calls** (2): [`_strip_sigil`](../../src/orchestrator/pkg/php_extractor.py#L1033), [`_text`](../../src/orchestrator/pkg/php_extractor.py#L1051)
+- **Called by** (1): [`_emit_members`](../../src/orchestrator/pkg/php_extractor.py#L349)
+- **Calls** (2): [`_strip_sigil`](../../src/orchestrator/pkg/php_extractor.py#L938), [`_text`](../../src/orchestrator/pkg/php_names.py#L26)
 
 ### `_property_names`
 
-[`src/orchestrator/pkg/php_extractor.py:949`](../../src/orchestrator/pkg/php_extractor.py#L949)
+[`src/orchestrator/pkg/php_extractor.py:854`](../../src/orchestrator/pkg/php_extractor.py#L854)
 
-- **Called by** (2): [`_emit_members`](../../src/orchestrator/pkg/php_extractor.py#L374), [`_typed_property_names`](../../src/orchestrator/pkg/php_extractor.py#L988)
-- **Calls** (2): [`_strip_sigil`](../../src/orchestrator/pkg/php_extractor.py#L1033), [`_text`](../../src/orchestrator/pkg/php_extractor.py#L1051)
+- **Called by** (2): [`_emit_members`](../../src/orchestrator/pkg/php_extractor.py#L349), [`_typed_property_names`](../../src/orchestrator/pkg/php_extractor.py#L893)
+- **Calls** (2): [`_strip_sigil`](../../src/orchestrator/pkg/php_extractor.py#L938), [`_text`](../../src/orchestrator/pkg/php_names.py#L26)
 
 ### `_require_literal`
 
-[`src/orchestrator/pkg/php_extractor.py:873`](../../src/orchestrator/pkg/php_extractor.py#L873)
+[`src/orchestrator/pkg/php_extractor.py:778`](../../src/orchestrator/pkg/php_extractor.py#L778)
 
-- **Called by** (1): [`_emit_requires`](../../src/orchestrator/pkg/php_extractor.py#L487)
-- **Calls** (2): [`_string_content`](../../src/orchestrator/pkg/php_extractor.py#L1039), [`_text`](../../src/orchestrator/pkg/php_extractor.py#L1051)
+- **Called by** (1): [`_emit_requires`](../../src/orchestrator/pkg/php_extractor.py#L462)
+- **Calls** (2): [`_string_content`](../../src/orchestrator/pkg/php_extractor.py#L944), [`_text`](../../src/orchestrator/pkg/php_names.py#L26)
 
 ### `_resolve_require_target`
 
-[`src/orchestrator/pkg/php_extractor.py:895`](../../src/orchestrator/pkg/php_extractor.py#L895)
+[`src/orchestrator/pkg/php_extractor.py:800`](../../src/orchestrator/pkg/php_extractor.py#L800)
 
-- **Called by** (1): [`_emit_requires`](../../src/orchestrator/pkg/php_extractor.py#L487)
+- **Called by** (1): [`_emit_requires`](../../src/orchestrator/pkg/php_extractor.py#L462)
 - **Calls** (1): `pathlib.PurePosixPath`
-
-### `_resolve_type_name`
-
-[`src/orchestrator/pkg/php_extractor.py:848`](../../src/orchestrator/pkg/php_extractor.py#L848)
-
-- **Called by** (7): [`_add_implements`](../../src/orchestrator/pkg/php_extractor.py#L464), [`_add_reference`](../../src/orchestrator/pkg/php_orm.py#L175), [`_effective_methods`](../../src/orchestrator/pkg/php_extractor.py#L576), [`_emit_calls`](../../src/orchestrator/pkg/php_extractor.py#L513), [`_emit_receiver_call`](../../src/orchestrator/pkg/php_extractor.py#L777), [`_resolve_handler`](../../src/orchestrator/pkg/php_routes.py#L142), [`_scan_calls_in`](../../src/orchestrator/pkg/php_extractor.py#L596)
-- **Calls** (2): [`_join`](../../src/orchestrator/pkg/php_extractor.py#L87), [`_to_dotted`](../../src/orchestrator/pkg/php_extractor.py#L82)
 
 ### `_scan_calls_in`
 
-[`src/orchestrator/pkg/php_extractor.py:596`](../../src/orchestrator/pkg/php_extractor.py#L596)
+[`src/orchestrator/pkg/php_extractor.py:571`](../../src/orchestrator/pkg/php_extractor.py#L571)
 
-- **Called by** (1): [`_emit_calls`](../../src/orchestrator/pkg/php_extractor.py#L513)
-- **Calls** (9): [`Edge`](../../src/orchestrator/pkg/facts.py#L137), [`Node`](../../src/orchestrator/pkg/facts.py#L121), [`Provenance`](../../src/orchestrator/pkg/facts.py#L81), [`_emit_receiver_call`](../../src/orchestrator/pkg/php_extractor.py#L777), [`_is_this_property`](../../src/orchestrator/pkg/php_extractor.py#L771), [`_resolve_type_name`](../../src/orchestrator/pkg/php_extractor.py#L848), [`_strip_sigil`](../../src/orchestrator/pkg/php_extractor.py#L1033), [`_text`](../../src/orchestrator/pkg/php_extractor.py#L1051), [`_to_dotted`](../../src/orchestrator/pkg/php_extractor.py#L82)
+- **Called by** (1): [`_emit_calls`](../../src/orchestrator/pkg/php_extractor.py#L488)
+- **Calls** (9): [`Edge`](../../src/orchestrator/pkg/facts.py#L137), [`Node`](../../src/orchestrator/pkg/facts.py#L121), [`Provenance`](../../src/orchestrator/pkg/facts.py#L81), [`_emit_receiver_call`](../../src/orchestrator/pkg/php_extractor.py#L752), [`_is_this_property`](../../src/orchestrator/pkg/php_extractor.py#L746), [`_resolve_type_name`](../../src/orchestrator/pkg/php_names.py#L116), [`_strip_sigil`](../../src/orchestrator/pkg/php_extractor.py#L938), [`_text`](../../src/orchestrator/pkg/php_names.py#L26), [`_to_dotted`](../../src/orchestrator/pkg/php_names.py#L32)
 
 ### `_string_content`
 
-[`src/orchestrator/pkg/php_extractor.py:1039`](../../src/orchestrator/pkg/php_extractor.py#L1039)
+[`src/orchestrator/pkg/php_extractor.py:944`](../../src/orchestrator/pkg/php_extractor.py#L944)
 
-- **Called by** (1): [`_require_literal`](../../src/orchestrator/pkg/php_extractor.py#L873)
-- **Calls** (1): [`_text`](../../src/orchestrator/pkg/php_extractor.py#L1051)
+- **Called by** (1): [`_require_literal`](../../src/orchestrator/pkg/php_extractor.py#L778)
+- **Calls** (1): [`_text`](../../src/orchestrator/pkg/php_names.py#L26)
 
 ### `_strip_sigil`
 
-[`src/orchestrator/pkg/php_extractor.py:1033`](../../src/orchestrator/pkg/php_extractor.py#L1033)
+[`src/orchestrator/pkg/php_extractor.py:938`](../../src/orchestrator/pkg/php_extractor.py#L938)
 
-- **Called by** (5): [`_promoted_param_names`](../../src/orchestrator/pkg/php_extractor.py#L960), [`_property_names`](../../src/orchestrator/pkg/php_extractor.py#L949), [`_scan_calls_in`](../../src/orchestrator/pkg/php_extractor.py#L596), [`_typed_params_of`](../../src/orchestrator/pkg/php_extractor.py#L1015), [`_typed_promoted_param_names`](../../src/orchestrator/pkg/php_extractor.py#L997)
-
-### `_text`
-
-[`src/orchestrator/pkg/php_extractor.py:1051`](../../src/orchestrator/pkg/php_extractor.py#L1051)
-
-- **Called by** (17): [`_base_type_names`](../../src/orchestrator/pkg/php_extractor.py#L920), [`_const_names`](../../src/orchestrator/pkg/php_extractor.py#L938), [`_field_text`](../../src/orchestrator/pkg/php_extractor.py#L1046), [`_interface_names`](../../src/orchestrator/pkg/php_extractor.py#L927), [`_is_this_property`](../../src/orchestrator/pkg/php_extractor.py#L771), [`_promoted_param_names`](../../src/orchestrator/pkg/php_extractor.py#L960), [`_property_names`](../../src/orchestrator/pkg/php_extractor.py#L949), [`_require_literal`](../../src/orchestrator/pkg/php_extractor.py#L873), [`_scan_calls_in`](../../src/orchestrator/pkg/php_extractor.py#L596), [`_string_content`](../../src/orchestrator/pkg/php_extractor.py#L1039), [`_trait_use_names`](../../src/orchestrator/pkg/php_extractor.py#L934), [`_type_name`](../../src/orchestrator/pkg/php_extractor.py#L974), [`_typed_params_of`](../../src/orchestrator/pkg/php_extractor.py#L1015), [`_typed_promoted_param_names`](../../src/orchestrator/pkg/php_extractor.py#L997), [`_use_clause`](../../src/orchestrator/pkg/php_extractor.py#L803), [`_use_declaration_targets`](../../src/orchestrator/pkg/php_extractor.py#L821), [`_walk`](../../src/orchestrator/pkg/php_extractor.py#L225)
-
-### `_to_dotted`
-
-[`src/orchestrator/pkg/php_extractor.py:82`](../../src/orchestrator/pkg/php_extractor.py#L82)
-
-- **Called by** (6): [`_resolve_type_name`](../../src/orchestrator/pkg/php_extractor.py#L848), [`_scan_calls_in`](../../src/orchestrator/pkg/php_extractor.py#L596), [`_use_declaration_targets`](../../src/orchestrator/pkg/php_extractor.py#L821), [`_walk`](../../src/orchestrator/pkg/php_extractor.py#L225), [`_walk`](../../src/orchestrator/pkg/php_routes.py#L171), [`module_name`](../../src/orchestrator/pkg/php_extractor.py#L136)
+- **Called by** (5): [`_promoted_param_names`](../../src/orchestrator/pkg/php_extractor.py#L865), [`_property_names`](../../src/orchestrator/pkg/php_extractor.py#L854), [`_scan_calls_in`](../../src/orchestrator/pkg/php_extractor.py#L571), [`_typed_params_of`](../../src/orchestrator/pkg/php_extractor.py#L920), [`_typed_promoted_param_names`](../../src/orchestrator/pkg/php_extractor.py#L902)
 
 ### `_trait_use_names`
 
-[`src/orchestrator/pkg/php_extractor.py:934`](../../src/orchestrator/pkg/php_extractor.py#L934)
+[`src/orchestrator/pkg/php_extractor.py:839`](../../src/orchestrator/pkg/php_extractor.py#L839)
 
-- **Called by** (1): [`_emit_members`](../../src/orchestrator/pkg/php_extractor.py#L374)
-- **Calls** (1): [`_text`](../../src/orchestrator/pkg/php_extractor.py#L1051)
+- **Called by** (1): [`_emit_members`](../../src/orchestrator/pkg/php_extractor.py#L349)
+- **Calls** (1): [`_text`](../../src/orchestrator/pkg/php_names.py#L26)
 
 ### `_type_name`
 
-[`src/orchestrator/pkg/php_extractor.py:974`](../../src/orchestrator/pkg/php_extractor.py#L974)
+[`src/orchestrator/pkg/php_extractor.py:879`](../../src/orchestrator/pkg/php_extractor.py#L879)
 
-- **Called by** (4): [`_type_name`](../../src/orchestrator/pkg/php_extractor.py#L974), [`_typed_params_of`](../../src/orchestrator/pkg/php_extractor.py#L1015), [`_typed_promoted_param_names`](../../src/orchestrator/pkg/php_extractor.py#L997), [`_typed_property_names`](../../src/orchestrator/pkg/php_extractor.py#L988)
-- **Calls** (2): [`_text`](../../src/orchestrator/pkg/php_extractor.py#L1051), [`_type_name`](../../src/orchestrator/pkg/php_extractor.py#L974)
+- **Called by** (4): [`_type_name`](../../src/orchestrator/pkg/php_extractor.py#L879), [`_typed_params_of`](../../src/orchestrator/pkg/php_extractor.py#L920), [`_typed_promoted_param_names`](../../src/orchestrator/pkg/php_extractor.py#L902), [`_typed_property_names`](../../src/orchestrator/pkg/php_extractor.py#L893)
+- **Calls** (2): [`_text`](../../src/orchestrator/pkg/php_names.py#L26), [`_type_name`](../../src/orchestrator/pkg/php_extractor.py#L879)
 
 ### `_typed_params_of`
 
-[`src/orchestrator/pkg/php_extractor.py:1015`](../../src/orchestrator/pkg/php_extractor.py#L1015)
+[`src/orchestrator/pkg/php_extractor.py:920`](../../src/orchestrator/pkg/php_extractor.py#L920)
 
-- **Called by** (1): [`_emit_calls`](../../src/orchestrator/pkg/php_extractor.py#L513)
-- **Calls** (3): [`_strip_sigil`](../../src/orchestrator/pkg/php_extractor.py#L1033), [`_text`](../../src/orchestrator/pkg/php_extractor.py#L1051), [`_type_name`](../../src/orchestrator/pkg/php_extractor.py#L974)
+- **Called by** (1): [`_emit_calls`](../../src/orchestrator/pkg/php_extractor.py#L488)
+- **Calls** (3): [`_strip_sigil`](../../src/orchestrator/pkg/php_extractor.py#L938), [`_text`](../../src/orchestrator/pkg/php_names.py#L26), [`_type_name`](../../src/orchestrator/pkg/php_extractor.py#L879)
 
 ### `_typed_promoted_param_names`
 
-[`src/orchestrator/pkg/php_extractor.py:997`](../../src/orchestrator/pkg/php_extractor.py#L997)
+[`src/orchestrator/pkg/php_extractor.py:902`](../../src/orchestrator/pkg/php_extractor.py#L902)
 
-- **Called by** (1): [`_emit_members`](../../src/orchestrator/pkg/php_extractor.py#L374)
-- **Calls** (3): [`_strip_sigil`](../../src/orchestrator/pkg/php_extractor.py#L1033), [`_text`](../../src/orchestrator/pkg/php_extractor.py#L1051), [`_type_name`](../../src/orchestrator/pkg/php_extractor.py#L974)
+- **Called by** (1): [`_emit_members`](../../src/orchestrator/pkg/php_extractor.py#L349)
+- **Calls** (3): [`_strip_sigil`](../../src/orchestrator/pkg/php_extractor.py#L938), [`_text`](../../src/orchestrator/pkg/php_names.py#L26), [`_type_name`](../../src/orchestrator/pkg/php_extractor.py#L879)
 
 ### `_typed_property_names`
 
-[`src/orchestrator/pkg/php_extractor.py:988`](../../src/orchestrator/pkg/php_extractor.py#L988)
+[`src/orchestrator/pkg/php_extractor.py:893`](../../src/orchestrator/pkg/php_extractor.py#L893)
 
-- **Called by** (1): [`_emit_members`](../../src/orchestrator/pkg/php_extractor.py#L374)
-- **Calls** (2): [`_property_names`](../../src/orchestrator/pkg/php_extractor.py#L949), [`_type_name`](../../src/orchestrator/pkg/php_extractor.py#L974)
-
-### `_use_clause`
-
-[`src/orchestrator/pkg/php_extractor.py:803`](../../src/orchestrator/pkg/php_extractor.py#L803)
-
-- **Called by** (1): [`_use_declaration_targets`](../../src/orchestrator/pkg/php_extractor.py#L821)
-- **Calls** (1): [`_text`](../../src/orchestrator/pkg/php_extractor.py#L1051)
-
-### `_use_declaration_targets`
-
-[`src/orchestrator/pkg/php_extractor.py:821`](../../src/orchestrator/pkg/php_extractor.py#L821)
-
-- **Called by** (2): [`_emit_uses`](../../src/orchestrator/pkg/php_extractor.py#L298), [`_walk`](../../src/orchestrator/pkg/php_routes.py#L171)
-- **Calls** (3): [`_text`](../../src/orchestrator/pkg/php_extractor.py#L1051), [`_to_dotted`](../../src/orchestrator/pkg/php_extractor.py#L82), [`_use_clause`](../../src/orchestrator/pkg/php_extractor.py#L803)
+- **Called by** (1): [`_emit_members`](../../src/orchestrator/pkg/php_extractor.py#L349)
+- **Calls** (2): [`_property_names`](../../src/orchestrator/pkg/php_extractor.py#L854), [`_type_name`](../../src/orchestrator/pkg/php_extractor.py#L879)
 
 ## Imports
 
-`__future__.annotations`, `dataclasses.dataclass`, `dataclasses.field`, [`orchestrator.pkg.extractor`](../../src/orchestrator/pkg/extractor.py#L1), [`orchestrator.pkg.facts`](../../src/orchestrator/pkg/facts.py#L1), [`orchestrator.pkg.php_orm`](../../src/orchestrator/pkg/php_orm.py#L1), [`orchestrator.pkg.php_routes`](orchestrator.pkg.php_routes.md), `pathlib.Path`, `pathlib.PurePosixPath`, `re`, `tree_sitter.Language`, `tree_sitter.Node`, `tree_sitter.Parser`, `tree_sitter_php`, `typing.Any`, `typing.TYPE_CHECKING`
+`__future__.annotations`, `dataclasses.dataclass`, [`orchestrator.pkg.extractor`](../../src/orchestrator/pkg/extractor.py#L1), [`orchestrator.pkg.facts`](../../src/orchestrator/pkg/facts.py#L1), [`orchestrator.pkg.php_names`](../../src/orchestrator/pkg/php_names.py#L1), [`orchestrator.pkg.php_orm`](../../src/orchestrator/pkg/php_orm.py#L1), [`orchestrator.pkg.php_routes`](orchestrator.pkg.php_routes.md), `pathlib.Path`, `pathlib.PurePosixPath`, `re`, `tree_sitter.Language`, `tree_sitter.Node`, `tree_sitter.Parser`, `tree_sitter_php`, `typing.Any`, `typing.TYPE_CHECKING`
 
 ## Imported by
 
-[`orchestrator.pkg.extractor`](../../src/orchestrator/pkg/extractor.py#L1), [`orchestrator.pkg.php_orm`](../../src/orchestrator/pkg/php_orm.py#L1), [`orchestrator.pkg.php_routes`](orchestrator.pkg.php_routes.md), [`tests.pkg.test_php_extractor`](../../tests/pkg/test_php_extractor.py#L1), [`tests.pkg.test_php_orm`](../../tests/pkg/test_php_orm.py#L1), [`tests.pkg.test_php_routes`](../../tests/pkg/test_php_routes.py#L1)
+[`orchestrator.pkg.extractor`](../../src/orchestrator/pkg/extractor.py#L1), [`tests.pkg.test_php_extractor`](../../tests/pkg/test_php_extractor.py#L1), [`tests.pkg.test_php_orm`](../../tests/pkg/test_php_orm.py#L1), [`tests.pkg.test_php_routes`](../../tests/pkg/test_php_routes.py#L1)

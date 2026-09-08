@@ -143,7 +143,7 @@ _26 of the symbols other code depends on here have no test path the graph can se
 [`src/orchestrator/pkg/php_routes.py:142`](../../src/orchestrator/pkg/php_routes.py#L142)
 
 - **Called by** (1): [`_register_route`](../../src/orchestrator/pkg/php_routes.py#L364)
-- **Calls** (4): [`_handler_from_array`](../../src/orchestrator/pkg/php_routes.py#L118), [`_handler_from_string`](../../src/orchestrator/pkg/php_routes.py#L134), [`_literal_string`](../../src/orchestrator/pkg/php_routes.py#L81), [`_resolve_type_name`](../../src/orchestrator/pkg/php_extractor.py#L848)
+- **Calls** (4): [`_handler_from_array`](../../src/orchestrator/pkg/php_routes.py#L118), [`_handler_from_string`](../../src/orchestrator/pkg/php_routes.py#L134), [`_literal_string`](../../src/orchestrator/pkg/php_routes.py#L81), [`_resolve_type_name`](../../src/orchestrator/pkg/php_names.py#L116)
 
 ### `_route_path`
 
@@ -170,7 +170,7 @@ _26 of the symbols other code depends on here have no test path the graph can se
 [`src/orchestrator/pkg/php_routes.py:171`](../../src/orchestrator/pkg/php_routes.py#L171)
 
 - **Called by** (2): [`_walk`](../../src/orchestrator/pkg/php_routes.py#L171), [`scan_laravel_routes`](../../src/orchestrator/pkg/php_routes.py#L163)
-- **Calls** (5): [`_text`](../../src/orchestrator/pkg/php_routes.py#L61), [`_to_dotted`](../../src/orchestrator/pkg/php_extractor.py#L82), [`_use_declaration_targets`](../../src/orchestrator/pkg/php_extractor.py#L821), [`_walk`](../../src/orchestrator/pkg/php_routes.py#L171), [`_walk_expr`](../../src/orchestrator/pkg/php_routes.py#L199)
+- **Calls** (5): [`_text`](../../src/orchestrator/pkg/php_routes.py#L61), [`_to_dotted`](../../src/orchestrator/pkg/php_names.py#L32), [`_use_declaration_targets`](../../src/orchestrator/pkg/php_names.py#L89), [`_walk`](../../src/orchestrator/pkg/php_routes.py#L171), [`_walk_expr`](../../src/orchestrator/pkg/php_routes.py#L199)
 
 ### `_walk_expr`
 
@@ -190,26 +190,26 @@ _26 of the symbols other code depends on here have no test path the graph can se
 
 [`src/orchestrator/pkg/php_routes.py:387`](../../src/orchestrator/pkg/php_routes.py#L387)
 
-- **Called by** (1): [`extract`](../../src/orchestrator/pkg/php_extractor.py#L188)
+- **Called by** (1): [`extract`](../../src/orchestrator/pkg/php_extractor.py#L163)
 - **Calls** (2): [`Edge`](../../src/orchestrator/pkg/facts.py#L137), [`Node`](../../src/orchestrator/pkg/facts.py#L121)
 
 ### `scan_laravel_routes`
 
 [`src/orchestrator/pkg/php_routes.py:163`](../../src/orchestrator/pkg/php_routes.py#L163)
 
-- **Called by** (1): [`extract`](../../src/orchestrator/pkg/php_extractor.py#L188)
+- **Called by** (1): [`extract`](../../src/orchestrator/pkg/php_extractor.py#L163)
 - **Calls** (1): [`_walk`](../../src/orchestrator/pkg/php_routes.py#L171)
 
 ### `scan_symfony_routes`
 
 [`src/orchestrator/pkg/php_routes.py:402`](../../src/orchestrator/pkg/php_routes.py#L402)
 
-- **Called by** (1): [`extract`](../../src/orchestrator/pkg/php_extractor.py#L188)
+- **Called by** (1): [`extract`](../../src/orchestrator/pkg/php_extractor.py#L163)
 - **Calls** (8): [`Edge`](../../src/orchestrator/pkg/facts.py#L137), [`Node`](../../src/orchestrator/pkg/facts.py#L121), [`Provenance`](../../src/orchestrator/pkg/facts.py#L81), [`_attributes`](../../src/orchestrator/pkg/php_routes.py#L438), [`_join_route`](../../src/orchestrator/pkg/php_routes.py#L113), [`_named_arg`](../../src/orchestrator/pkg/php_routes.py#L471), [`_route_path`](../../src/orchestrator/pkg/php_routes.py#L478), [`_string_list`](../../src/orchestrator/pkg/php_routes.py#L100)
 
 ## Imports
 
-`__future__.annotations`, `dataclasses.dataclass`, [`orchestrator.pkg.facts`](../../src/orchestrator/pkg/facts.py#L1), [`orchestrator.pkg.php_extractor`](orchestrator.pkg.php_extractor.md), `tree_sitter.Node`, `typing.TYPE_CHECKING`
+`__future__.annotations`, `dataclasses.dataclass`, [`orchestrator.pkg.facts`](../../src/orchestrator/pkg/facts.py#L1), [`orchestrator.pkg.php_names`](../../src/orchestrator/pkg/php_names.py#L1), `tree_sitter.Node`, `typing.TYPE_CHECKING`
 
 ## Imported by
 

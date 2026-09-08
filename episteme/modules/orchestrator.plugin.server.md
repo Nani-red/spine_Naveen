@@ -123,7 +123,7 @@ _8 of the symbols other code depends on here have no test path the graph can see
 [`src/orchestrator/plugin/server.py:340`](../../src/orchestrator/plugin/server.py#L340)
 
 - **Called by** (2): [`_in_repos_store`](../../src/orchestrator/plugin/server.py#L366), [`pkg_joins`](../../src/orchestrator/plugin/server.py#L575)
-- **Calls** (3): [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L366), [`load_repo_config`](../../src/orchestrator/pkg/repos.py#L191), `orchestrator.pkg.FactStore`
+- **Calls** (3): [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L367), [`load_repo_config`](../../src/orchestrator/pkg/repos.py#L191), `orchestrator.pkg.FactStore`
 
 ### `_open_repo`
 
