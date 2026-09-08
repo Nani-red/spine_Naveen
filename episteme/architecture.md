@@ -156,14 +156,14 @@ _The repo's own prose folded into the graph (`Doc` nodes + `MENTIONS` edges). A 
 
 | The docs claim… | …in |
 |---|---|
-| `persistence._GRAMMAR_MODULES` | CHANGELOG.md |
-| `tree_sitter_php` | CHANGELOG.md |
-| `doctor.EXTRA_PROBES` | CHANGELOG.md |
-| `Route` | CHANGELOG.md |
 | `belongsTo` | CHANGELOG.md |
 | `hasMany` | CHANGELOG.md |
 | `hasOne` | CHANGELOG.md |
 | `belongsToMany` | CHANGELOG.md |
+| `OneToMany` | CHANGELOG.md |
+| `ManyToMany` | CHANGELOG.md |
+| `OneToOne` | CHANGELOG.md |
+| `persistence._GRAMMAR_MODULES` | CHANGELOG.md |
 | … | _+923 more_ |
 
 ## Possibly unused
