@@ -74,7 +74,7 @@ Plenty of tools read your codebase. The difference is what they'll let themselve
 about it.
 
 **1 · The graph is built by parsers, not by a model — and its accuracy is published.**
-Eight language front-ends, every fact carrying `file:line`. Scored against a hand-labelled
+Nine language front-ends, every fact carrying `file:line`. Scored against a hand-labelled
 corpus in CI: **precision 1.00 on every node and edge kind**. Where it's weaker, that's
 published too — `CALLS` recall runs 1.00 on C and SQL down to 0.86 on TypeScript, reported
 separately rather than averaged into something flattering.
@@ -113,7 +113,17 @@ the product.** Where it can't know something, it says so and stops.
 
 ## What's new
 
-**3.32.0 (current)** — **the plugin speaks the whole protocol.** Spine's MCP server now carries
+**3.33.0 (current)** — **a PHP codebase gets the whole graph.** PHP is the ninth front-end:
+namespaces, classes, interfaces, traits and enums onto the universal vocabulary; a precision-first
+call graph (`$this->`, `self::`, `parent::`, `new`, static calls, typed receivers — never a guessed
+global function or a method named by a variable); Laravel, Slim and Symfony routes as `Endpoint`s,
+so a PHP service can be the provider in a cross-repository join; Eloquent and Doctrine models as
+`Entity`s. It arrived from a contributor and went through the first run of a maintainer review
+that now ships with the repository as `/review-pr` — which found, and this release fixes, five
+ways the front-end asserted facts the source did not contain, and a cache key that could not tell
+whether the PHP grammar was installed. `pip install 'synaptixs-spine[php]'`.
+
+**3.32.0** — **the plugin speaks the whole protocol.** Spine's MCP server now carries
 more than tools. Five **prompts** hand Codex, Claude Desktop and claude.ai the same "which tool, in
 which order" workflow a Claude Code skill gives; five `spine://` **resources** make the committed
 knowledge base, the build documents and the state report readable by URI. The long tools report
@@ -428,7 +438,7 @@ fixture.
 
 | If you want to… | Look at |
 |---|---|
-| **Add a language** | `pkg/*_extractor.py`. Eight front-ends today; each is one file plus a labelled corpus case. Rust, Kotlin and Ruby are the obvious next three. |
+| **Add a language** | `pkg/*_extractor.py`. Nine front-ends today; each is one file plus a labelled corpus case. Rust, Kotlin, Ruby and Perl are the obvious next four. |
 | **Improve accuracy** | `corpus/` — hand-written fixtures with expected facts. Adding a case that *fails* is a real contribution; it's how the last four front-end bugs were found. |
 | **Fix something we've written down** | [`STATE-OF-SPINE` §8](https://github.com/synaptixs/spine/blob/main/docs/specs/STATE-OF-SPINE.md) is a standing list of what's broken or missing, kept honest at each release. |
 | **Work on a bigger idea** | [`docs/specs/`](https://github.com/synaptixs/spine/tree/main/docs/specs) — every design record, including the ones we closed *unshipped* and why. |
