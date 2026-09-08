@@ -4,7 +4,35 @@ All notable changes to this project are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); the package is `synaptixs-spine`
 (import/CLI stay `orchestrator`).
 
-## Unreleased
+## 3.33.0 — a PHP codebase gets the whole graph
+
+### Added
+
+- **PHP is the 9th PKG front-end — comprehension, a call graph, framework routes, and now
+  Eloquent/Doctrine entities (P1-P4, all four phases).**
+  `PhpExtractor` maps namespaces, classes/interfaces/traits/enums, promoted constructor
+  properties, and class constants onto the universal `Module`/`Type`/`Function`/`Field`
+  vocabulary, plus `IMPORTS` (`use`, and a literal `require`/`include` — resolved by path
+  suffix like C's `#include`), `CONTAINS`, and `IMPLEMENTS` (`extends`/`implements`, and a
+  trait `use` inside a class body — the first mixin-as-behavioural-claim edge in the graph).
+  `.blade.php` is skipped as a template, not PHP source. `CALLS` resolves `$this->`/`self::`/
+  `static::` (a same-file trait's method counts as the class's own, unless overridden),
+  `parent::`, `new X()`, `X::m()`, a same-file or `use function`-imported bare call, and a
+  typed property/parameter receiver (`$this->prop->m()`, `$obj->m()` on a type-hinted
+  parameter) — PHP's global-namespace fallback for a bare function, and any untyped
+  receiver, are never guessed (the invention risk this front-end holds to zero by
+  construction). Laravel (`Route::get`, array/string/closure handlers, `Route::prefix()->
+  group()`), Slim/Lumen (`$app->get(...)`), and Symfony (`#[Route]` attributes, with a
+  class-level prefix) all lift into `Endpoint` + `EXPOSES`, so a PHP service can be a
+  provider in the multi-repo `http` join. Eloquent models (`extends Model`, with
+  `belongsTo`/`hasMany`/`hasOne`/`belongsToMany` relations) and Doctrine entities
+  (`#[ORM\Entity]`, with `#[ORM\ManyToOne]`/`OneToMany`/`ManyToMany`/`OneToOne` relations)
+  become `Entity` nodes + entity→entity `REFERENCES` — a relation to a class this repo
+  never declares still gets an edge, to an external `Entity`, never a dangling one.
+  `data_layer_link` reconciles them against a real `.sql` schema in the same repo with no
+  PHP-specific code at all. `state` reports "Call graph: available" on a PHP codebase; only
+  codegen remains a later phase. `pip install 'synaptixs-spine[php]'`. See
+  [php-support-roadmap.md](docs/specs/php-support-roadmap.md).
 
 ### Fixed
 
@@ -48,31 +76,6 @@ All notable changes to this project are documented here. Format loosely follows
 
 ### Added
 
-- **PHP is the 9th PKG front-end — comprehension, a call graph, framework routes, and now
-  Eloquent/Doctrine entities (P1-P4, all four phases).**
-  `PhpExtractor` maps namespaces, classes/interfaces/traits/enums, promoted constructor
-  properties, and class constants onto the universal `Module`/`Type`/`Function`/`Field`
-  vocabulary, plus `IMPORTS` (`use`, and a literal `require`/`include` — resolved by path
-  suffix like C's `#include`), `CONTAINS`, and `IMPLEMENTS` (`extends`/`implements`, and a
-  trait `use` inside a class body — the first mixin-as-behavioural-claim edge in the graph).
-  `.blade.php` is skipped as a template, not PHP source. `CALLS` resolves `$this->`/`self::`/
-  `static::` (a same-file trait's method counts as the class's own, unless overridden),
-  `parent::`, `new X()`, `X::m()`, a same-file or `use function`-imported bare call, and a
-  typed property/parameter receiver (`$this->prop->m()`, `$obj->m()` on a type-hinted
-  parameter) — PHP's global-namespace fallback for a bare function, and any untyped
-  receiver, are never guessed (the invention risk this front-end holds to zero by
-  construction). Laravel (`Route::get`, array/string/closure handlers, `Route::prefix()->
-  group()`), Slim/Lumen (`$app->get(...)`), and Symfony (`#[Route]` attributes, with a
-  class-level prefix) all lift into `Endpoint` + `EXPOSES`, so a PHP service can be a
-  provider in the multi-repo `http` join. Eloquent models (`extends Model`, with
-  `belongsTo`/`hasMany`/`hasOne`/`belongsToMany` relations) and Doctrine entities
-  (`#[ORM\Entity]`, with `#[ORM\ManyToOne]`/`OneToMany`/`ManyToMany`/`OneToOne` relations)
-  become `Entity` nodes + entity→entity `REFERENCES` — a relation to a class this repo
-  never declares still gets an edge, to an external `Entity`, never a dangling one.
-  `data_layer_link` reconciles them against a real `.sql` schema in the same repo with no
-  PHP-specific code at all. `state` reports "Call graph: available" on a PHP codebase; only
-  codegen remains a later phase. `pip install 'synaptixs-spine[php]'`. See
-  [php-support-roadmap.md](docs/specs/php-support-roadmap.md).
 - **Every MCP tool advertises what it returns.** A type per tool
   (`plugin/outputs.py`) with no required key, attached to the registered function
   so the SDK derives an output schema and validates the result while the tool
