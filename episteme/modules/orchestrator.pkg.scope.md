@@ -19,14 +19,14 @@
 - [`Scope`](../../src/orchestrator/pkg/scope.py#L64) — reaches **3** symbols
 - [`_declarator_name`](../../src/orchestrator/pkg/scope.py#L378) — reaches **2** symbols · **no test path visible**
 - [`_named_fields`](../../src/orchestrator/pkg/scope.py#L204) — reaches **2** symbols · **no test path visible**
-- [`_parser_for`](../../src/orchestrator/pkg/scope.py#L466) — reaches **2** symbols
+- [`_parser_for`](../../src/orchestrator/pkg/scope.py#L468) — reaches **2** symbols
 - [`_ts_pattern_names`](../../src/orchestrator/pkg/scope.py#L223) — reaches **2** symbols · **no test path visible**
 
 _8 of the symbols other code depends on here have no test path the graph can see — worth a second look before changing them. Absence of a path is not proof of absence of a test: calls through an attribute chain (`obj.method()`) are skipped rather than guessed at, so indirect coverage is invisible._
 
 ## Documented in
 
-`CHANGELOG.md`, `docs/specs/invention-oracle-cross-language.md#what-phase-1-built`, `docs/specs/parsing-and-the-pkg.md#the-same-class-in-four-more-front-ends-found-2026-08-24`
+`CHANGELOG.md`, `docs/specs/invention-oracle-cross-language.md#what-phase-1-built`, `docs/specs/parsing-and-the-pkg.md#the-same-class-in-four-more-front-ends-found-2026-08-24`, `docs/specs/php-support-roadmap.md#0-decisions-surfaced-up-front`, `docs/specs/php-support-roadmap.md#6-files-to-change`
 
 ## Types
 
@@ -127,9 +127,9 @@ _8 of the symbols other code depends on here have no test path the graph can see
 
 ### `_parser_for`
 
-[`src/orchestrator/pkg/scope.py:466`](../../src/orchestrator/pkg/scope.py#L466)
+[`src/orchestrator/pkg/scope.py:468`](../../src/orchestrator/pkg/scope.py#L468)
 
-- **Called by** (1): [`scopes_for_source`](../../src/orchestrator/pkg/scope.py#L491)
+- **Called by** (1): [`scopes_for_source`](../../src/orchestrator/pkg/scope.py#L493)
 - **Calls** (5): [`_c_parser`](../../src/orchestrator/pkg/c_extractor.py#L497), [`_cpp_parser`](../../src/orchestrator/pkg/cpp_extractor.py#L515), [`_csharp_parser`](../../src/orchestrator/pkg/csharp_extractor.py#L727), [`_go_parser`](../../src/orchestrator/pkg/go_extractor.py#L513), [`_ts_parser`](../../src/orchestrator/pkg/typescript_extractor.py#L741)
 
 ### `_text`
@@ -149,20 +149,20 @@ _8 of the symbols other code depends on here have no test path the graph can see
 
 [`src/orchestrator/pkg/scope.py:146`](../../src/orchestrator/pkg/scope.py#L146)
 
-- **Called by** (1): [`scopes_for_source`](../../src/orchestrator/pkg/scope.py#L491)
+- **Called by** (1): [`scopes_for_source`](../../src/orchestrator/pkg/scope.py#L493)
 - **Calls** (3): [`FileScopes`](../../src/orchestrator/pkg/scope.py#L94), [`Scope`](../../src/orchestrator/pkg/scope.py#L64), [`_Open`](../../src/orchestrator/pkg/scope.py#L139)
 
 ### `scopes_for_source`
 
-[`src/orchestrator/pkg/scope.py:491`](../../src/orchestrator/pkg/scope.py#L491)
+[`src/orchestrator/pkg/scope.py:493`](../../src/orchestrator/pkg/scope.py#L493)
 
 - **Called by** (1 production · 2 test): [`scopes_for`](../../src/orchestrator/pkg/invention.py#L287), [`_bare`](../../tests/pkg/test_scope.py#L34), [`_shadowed`](../../tests/pkg/test_scope.py#L28)
-- **Calls** (2): [`_parser_for`](../../src/orchestrator/pkg/scope.py#L466), [`collect`](../../src/orchestrator/pkg/scope.py#L146)
+- **Calls** (2): [`_parser_for`](../../src/orchestrator/pkg/scope.py#L468), [`collect`](../../src/orchestrator/pkg/scope.py#L146)
 
 ## Imports
 
-`__future__.annotations`, `collections.abc.Iterable`, `collections.abc.Iterator`, `dataclasses.dataclass`, `dataclasses.field`, [`orchestrator.pkg.c_extractor`](orchestrator.pkg.c_extractor.md), [`orchestrator.pkg.cpp_extractor`](orchestrator.pkg.cpp_extractor.md), [`orchestrator.pkg.csharp_extractor`](orchestrator.pkg.csharp_extractor.md), [`orchestrator.pkg.go_extractor`](orchestrator.pkg.go_extractor.md), [`orchestrator.pkg.typescript_extractor`](orchestrator.pkg.typescript_extractor.md), `tree_sitter.Node`, `typing.Any`, `typing.Protocol`, `typing.TYPE_CHECKING`
+`__future__.annotations`, `collections.abc.Iterable`, `collections.abc.Iterator`, `dataclasses.dataclass`, `dataclasses.field`, [`orchestrator.pkg.c_extractor`](orchestrator.pkg.c_extractor.md), [`orchestrator.pkg.cpp_extractor`](../../src/orchestrator/pkg/cpp_extractor.py#L1), [`orchestrator.pkg.csharp_extractor`](orchestrator.pkg.csharp_extractor.md), [`orchestrator.pkg.go_extractor`](orchestrator.pkg.go_extractor.md), [`orchestrator.pkg.typescript_extractor`](orchestrator.pkg.typescript_extractor.md), `tree_sitter.Node`, `typing.Any`, `typing.Protocol`, `typing.TYPE_CHECKING`
 
 ## Imported by
 
-[`orchestrator.pkg.invention`](orchestrator.pkg.invention.md), [`tests.pkg.test_scope`](../../tests/pkg/test_scope.py#L1)
+[`orchestrator.pkg.invention`](../../src/orchestrator/pkg/invention.py#L1), [`tests.pkg.test_scope`](../../tests/pkg/test_scope.py#L1)

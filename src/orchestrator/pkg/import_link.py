@@ -27,6 +27,21 @@ Only the matching rule is per-language:
 - **c / cpp** — an include the front-end could not resolve is matched as a
   path-suffix of exactly one first-party translation unit (the ``-I
   include-dir`` case); an ambiguous suffix is left alone rather than guessed.
+- **php** — two shapes share the ``php:`` prefix (D2 vs. D7 of
+  ``php-support-roadmap.md``), and only one of them is this module's problem.
+  A ``use``-import target's id is the symbol's *exact, complete* namespace-
+  qualified name (the PHP RFC's own resolution rule — D2), so an in-repo target
+  already joins via the ``FactBatch`` dedup alone, with **no prefix walk**: PHP
+  has no `__init__`-style re-export, so a grounded module that is merely a
+  dotted *prefix* of the target (e.g. the importing file's own namespace,
+  ``App.Svc``, prefixing an unrelated sibling namespace ``App.Svc.Support``) is
+  not a plausible re-export source the way a Python package is — deliberately
+  excluded from ``_DOTTED_PREFIXES`` for exactly this reason (a real corpus
+  false positive: ``App.Svc`` swallowing its own ``use App\\Svc\\Support\\Formatter``
+  import). A literal ``require``/``include`` target (only emitted when the
+  importing file has no namespace) is a repo-relative path ending in ``.php``,
+  matched as a path-suffix exactly like C's ``#include`` — genuinely this
+  module's job, since D7's target is deliberately *not* the exact grounded id.
 """
 
 from __future__ import annotations
@@ -55,6 +70,12 @@ class _Index:
             self.c_paths[prefix] = sorted(
                 mid[len(marker) :] for mid in self.modules if mid.startswith(marker)
             )
+        # PHP modules with no namespace key on their repo-relative path (D2), which is
+        # what makes them path-suffix-matchable; a namespace-keyed module id is dotted
+        # and never ends in ``.php``, so this list holds exactly the path-shaped ones.
+        self.php_paths: list[str] = sorted(
+            mid[len("php:") :] for mid in self.modules if mid.startswith("php:") and mid.endswith(".php")
+        )
         self.go_module = self._read_go_module(root)
 
     @staticmethod
@@ -131,8 +152,22 @@ def _match_c(dst_id: str, idx: _Index) -> str | None:
     return hits[0] if len(hits) == 1 else None
 
 
+def _match_php_path(dst_id: str, idx: _Index) -> str | None:
+    """A literal ``require``/``include`` target (D7 of php-support-roadmap.md) — the
+    same path-suffix discipline as ``_match_c``, over the path-shaped subset of PHP
+    module ids."""
+    raw = dst_id.partition(":")[2]
+    hits = [f"php:{body}" for body in idx.php_paths if body == raw or body.endswith("/" + raw)]
+    return hits[0] if len(hits) == 1 else None
+
+
 def _resolve(edge: Edge, idx: _Index) -> str | None:
-    prefix = edge.dst.partition(":")[0]
+    prefix, _, body = edge.dst.partition(":")
+    # Checked before the dotted-prefix branch below (php IS in _DOTTED_PREFIXES, for its
+    # `use`-import targets): a `.php`-suffixed body is a D7 require/include path, never
+    # a dotted namespace, so it needs the C-style matcher instead.
+    if prefix == "php" and body.endswith(".php"):
+        return _match_php_path(edge.dst, idx)
     if prefix in _DOTTED_PREFIXES:
         return _match_dotted(edge.dst, idx)
     if prefix == "ts":

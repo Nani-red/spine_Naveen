@@ -35,7 +35,7 @@ _11 of the symbols other code depends on here have no test path the graph can se
 [`scripts/render_architecture_svg.py:61`](../../scripts/render_architecture_svg.py#L61)
 
 - **Fields**: `commands`, `edge_kinds`, `languages`, `node_kinds`, `verifiers`, `version`
-- **Documented in**: `docs/specs/go-support-roadmap.md#design-plan-adding-go-to-the-pkg-8th-language`, `docs/specs/language-expansion-roadmap.md#the-fixed-recipe-per-language`, `docs/specs/language-support-roadmap.md#design-plan-adding-c-c-and-c-to-the-pkg-sequential-per-language`
+- **Documented in**: `docs/specs/go-support-roadmap.md#design-plan-adding-go-to-the-pkg-8th-language`, `docs/specs/language-expansion-roadmap.md#the-fixed-recipe-per-language`, `docs/specs/language-support-roadmap.md#design-plan-adding-c-c-and-c-to-the-pkg-sequential-per-language`, `docs/specs/php-support-roadmap.md#design-plan-adding-php-to-the-pkg-9th-language-comprehension-first`
 
 ## Functions
 

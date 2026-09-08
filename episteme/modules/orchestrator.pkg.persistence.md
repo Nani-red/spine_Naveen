@@ -13,14 +13,14 @@
 
 **Most depended-upon here** — a change to these reaches the most code (call graph, ≤4 hops):
 
-- [`load_or_extract`](../../src/orchestrator/pkg/persistence.py#L225) — reaches **35** symbols
+- [`load_or_extract`](../../src/orchestrator/pkg/persistence.py#L226) — reaches **35** symbols
 - [`repo_state`](../../src/orchestrator/pkg/persistence.py#L144) — reaches **34** symbols
-- [`_cache_path`](../../src/orchestrator/pkg/persistence.py#L218) — reaches **30** symbols
+- [`_cache_path`](../../src/orchestrator/pkg/persistence.py#L219) — reaches **30** symbols
 - [`default_cache_dir`](../../src/orchestrator/pkg/persistence.py#L154) — reaches **30** symbols
 - [`load_facts`](../../src/orchestrator/pkg/persistence.py#L123) — reaches **25** symbols
 - [`save_facts`](../../src/orchestrator/pkg/persistence.py#L116) — reaches **25** symbols
 - [`_git`](../../src/orchestrator/pkg/persistence.py#L137) — reaches **24** symbols
-- [`extractor_fingerprint`](../../src/orchestrator/pkg/persistence.py#L177) — reaches **17** symbols
+- [`extractor_fingerprint`](../../src/orchestrator/pkg/persistence.py#L178) — reaches **17** symbols
 
 ## Documented in
 
@@ -37,17 +37,17 @@
 
 ### `MergedFacts`
 
-[`src/orchestrator/pkg/persistence.py:274`](../../src/orchestrator/pkg/persistence.py#L274)
+[`src/orchestrator/pkg/persistence.py:275`](../../src/orchestrator/pkg/persistence.py#L275)
 
-- **Called by** (1): [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L366)
+- **Called by** (1): [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L367)
 - **Fields**: `batch`, `joins`, `repos`
 - **Documented in**: `docs/specs/enhancement-index.md#e2-multi-repo-comprehension`, `docs/specs/multi-repo-roadmap.md#trust-is-a-property-of-the-whole-graph`
 
 ### `RepoState`
 
-[`src/orchestrator/pkg/persistence.py:258`](../../src/orchestrator/pkg/persistence.py#L258)
+[`src/orchestrator/pkg/persistence.py:259`](../../src/orchestrator/pkg/persistence.py#L259)
 
-- **Called by** (1): [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L366)
+- **Called by** (1): [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L367)
 - **Fields**: `cached`, `dirty`, `key`, `root`, `sha`
 - **Documented in**: `docs/specs/multi-repo-roadmap.md#trust-is-a-property-of-the-whole-graph`
 
@@ -55,17 +55,17 @@
 
 ### `_cache_path`
 
-[`src/orchestrator/pkg/persistence.py:218`](../../src/orchestrator/pkg/persistence.py#L218)
+[`src/orchestrator/pkg/persistence.py:219`](../../src/orchestrator/pkg/persistence.py#L219)
 
-- **Called by** (2): [`load_or_extract`](../../src/orchestrator/pkg/persistence.py#L225), [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L366)
-- **Calls** (2): [`extractor_fingerprint`](../../src/orchestrator/pkg/persistence.py#L177), `sha256`
+- **Called by** (2): [`load_or_extract`](../../src/orchestrator/pkg/persistence.py#L226), [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L367)
+- **Calls** (2): [`extractor_fingerprint`](../../src/orchestrator/pkg/persistence.py#L178), `sha256`
 - **Documented in**: `docs/specs/python-frontend-parity.md#62-fingerprint-the-extractor-set-into-the-cache-key`
 
 ### `_calls_sidecar`
 
-[`src/orchestrator/pkg/persistence.py:316`](../../src/orchestrator/pkg/persistence.py#L316)
+[`src/orchestrator/pkg/persistence.py:317`](../../src/orchestrator/pkg/persistence.py#L317)
 
-- **Called by** (1): [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L366)
+- **Called by** (1): [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L367)
 
 ### `_git`
 
@@ -76,9 +76,9 @@
 
 ### `_load_calls`
 
-[`src/orchestrator/pkg/persistence.py:345`](../../src/orchestrator/pkg/persistence.py#L345)
+[`src/orchestrator/pkg/persistence.py:346`](../../src/orchestrator/pkg/persistence.py#L346)
 
-- **Called by** (1): [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L366)
+- **Called by** (1): [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L367)
 - **Calls** (3): [`PendingCall`](../../src/orchestrator/pkg/python_client.py#L44), [`Provenance`](../../src/orchestrator/pkg/facts.py#L81), `loads`
 
 ### `_prov_from_dict`
@@ -96,23 +96,23 @@
 
 ### `_save_calls`
 
-[`src/orchestrator/pkg/persistence.py:327`](../../src/orchestrator/pkg/persistence.py#L327)
+[`src/orchestrator/pkg/persistence.py:328`](../../src/orchestrator/pkg/persistence.py#L328)
 
-- **Called by** (1): [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L366)
+- **Called by** (1): [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L367)
 - **Calls** (1): `dumps`
 
 ### `default_cache_dir`
 
 [`src/orchestrator/pkg/persistence.py:154`](../../src/orchestrator/pkg/persistence.py#L154)
 
-- **Called by** (2): [`load_or_extract`](../../src/orchestrator/pkg/persistence.py#L225), [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L366)
+- **Called by** (2): [`load_or_extract`](../../src/orchestrator/pkg/persistence.py#L226), [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L367)
 - **Calls** (1): `home`
 
 ### `extractor_fingerprint`
 
-[`src/orchestrator/pkg/persistence.py:177`](../../src/orchestrator/pkg/persistence.py#L177)
+[`src/orchestrator/pkg/persistence.py:178`](../../src/orchestrator/pkg/persistence.py#L178)
 
-- **Called by** (1 production · 5 test): [`_cache_path`](../../src/orchestrator/pkg/persistence.py#L218), [`test_a_cache_from_a_different_extractor_is_not_read`](../../tests/pkg/test_persistence.py#L210), [`test_changing_an_extractor_changes_the_fingerprint`](../../tests/pkg/test_persistence.py#L192), [`test_the_fingerprint_is_in_the_cache_filename`](../../tests/pkg/test_persistence.py#L235), [`test_the_fingerprint_is_stable_across_processes`](../../tests/pkg/test_persistence.py#L173), [`test_the_fingerprint_is_stable_within_a_process`](../../tests/pkg/test_persistence.py#L169)
+- **Called by** (1 production · 5 test): [`_cache_path`](../../src/orchestrator/pkg/persistence.py#L219), [`test_a_cache_from_a_different_extractor_is_not_read`](../../tests/pkg/test_persistence.py#L210), [`test_changing_an_extractor_changes_the_fingerprint`](../../tests/pkg/test_persistence.py#L192), [`test_the_fingerprint_is_in_the_cache_filename`](../../tests/pkg/test_persistence.py#L235), [`test_the_fingerprint_is_stable_across_processes`](../../tests/pkg/test_persistence.py#L173), [`test_the_fingerprint_is_stable_within_a_process`](../../tests/pkg/test_persistence.py#L169)
 - **Calls** (2): `pathlib.Path`, `sha256`
 
 ### `facts_from_dict`
@@ -133,30 +133,30 @@
 
 [`src/orchestrator/pkg/persistence.py:123`](../../src/orchestrator/pkg/persistence.py#L123)
 
-- **Called by** (1): [`load_or_extract`](../../src/orchestrator/pkg/persistence.py#L225)
+- **Called by** (1): [`load_or_extract`](../../src/orchestrator/pkg/persistence.py#L226)
 - **Calls** (4): [`FactCacheError`](../../src/orchestrator/pkg/persistence.py#L44), [`facts_from_dict`](../../src/orchestrator/pkg/persistence.py#L89), `loads`, `pathlib.Path`
 
 ### `load_or_extract`
 
-[`src/orchestrator/pkg/persistence.py:225`](../../src/orchestrator/pkg/persistence.py#L225)
+[`src/orchestrator/pkg/persistence.py:226`](../../src/orchestrator/pkg/persistence.py#L226)
 
-- **Called by** (4): [`_baseline_drift`](../../src/orchestrator/codereview/checkout.py#L134), [`analyse`](../../src/orchestrator/knowledge/analysis.py#L50), [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L366), [`score_label`](../../src/orchestrator/evals/localization.py#L73)
-- **Calls** (7): [`RepoCodeExtractor`](../../src/orchestrator/pkg/extractor.py#L589), [`_cache_path`](../../src/orchestrator/pkg/persistence.py#L218), [`default_cache_dir`](../../src/orchestrator/pkg/persistence.py#L154), [`load_facts`](../../src/orchestrator/pkg/persistence.py#L123), `pathlib.Path`, [`repo_state`](../../src/orchestrator/pkg/persistence.py#L144), [`save_facts`](../../src/orchestrator/pkg/persistence.py#L116)
+- **Called by** (4): [`_baseline_drift`](../../src/orchestrator/codereview/checkout.py#L134), [`analyse`](../../src/orchestrator/knowledge/analysis.py#L50), [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L367), [`score_label`](../../src/orchestrator/evals/localization.py#L73)
+- **Calls** (7): [`RepoCodeExtractor`](../../src/orchestrator/pkg/extractor.py#L599), [`_cache_path`](../../src/orchestrator/pkg/persistence.py#L219), [`default_cache_dir`](../../src/orchestrator/pkg/persistence.py#L154), [`load_facts`](../../src/orchestrator/pkg/persistence.py#L123), `pathlib.Path`, [`repo_state`](../../src/orchestrator/pkg/persistence.py#L144), [`save_facts`](../../src/orchestrator/pkg/persistence.py#L116)
 - **Documented in**: `docs/specs/comprehension-skill-spec.md#phases`, `docs/specs/design-and-comprehension-milestones.md#what-it-does-all-existing-deterministic-no-llm`, `docs/specs/multi-language-java.md#slice-1-java-comprehension-this-build`, `docs/specs/multi-repo-roadmap.md#exit-3a-met-3bs-own-results-are-in-the-section-below`, `docs/specs/project-comprehension-memory-bank.md#two-branches-same-output-shape`, `docs/specs/python-frontend-parity.md#9-explicitly-out-of-scope`
 
 ### `load_or_extract_repos`
 
-[`src/orchestrator/pkg/persistence.py:366`](../../src/orchestrator/pkg/persistence.py#L366)
+[`src/orchestrator/pkg/persistence.py:367`](../../src/orchestrator/pkg/persistence.py#L367)
 
 - **Called by** (4 production · 11 test): [`_extract_repos`](../../src/orchestrator/cli/pkg.py#L112), [`_merged_store`](../../src/orchestrator/plugin/server.py#L340), [`investigate`](../../src/orchestrator/cli/change.py#L128), [`pkg_joins`](../../src/orchestrator/cli/pkg.py#L128), [`test_a_non_git_directory_is_untrusted_not_merely_uncached`](../../tests/pkg/test_multi_repo_load.py#L136), [`test_a_repo_that_did_not_change_is_served_from_cache`](../../tests/pkg/test_multi_repo_load.py#L75), [`test_a_shared_extractor_does_not_carry_one_repos_calls_into_another`](../../tests/pkg/test_join_link.py#L353), [`test_an_intra_repo_call_stays_inside_its_own_repo`](../../tests/pkg/test_multi_repo_load.py#L64), [`test_no_joins_declared_means_no_report_not_a_clean_one`](../../tests/pkg/test_join_link.py#L206), [`test_one_dirty_repo_makes_the_whole_merged_graph_untrusted`](../../tests/pkg/test_multi_repo_load.py#L119), [`test_the_join_survives_a_warm_cache`](../../tests/pkg/test_join_link.py#L179), [`test_the_merged_graph_does_not_depend_on_declaration_order`](../../tests/pkg/test_multi_repo_load.py#L101), [`test_the_merged_graph_gains_a_cross_repo_edge`](../../tests/pkg/test_join_link.py#L194), [`test_the_merged_graph_has_no_dangling_edges`](../../tests/pkg/test_multi_repo_load.py#L57), [`test_two_repos_defining_the_same_symbols_stay_two_nodes`](../../tests/pkg/test_multi_repo_load.py#L44)
-- **Calls** (12): [`MergedFacts`](../../src/orchestrator/pkg/persistence.py#L274), [`RepoCodeExtractor`](../../src/orchestrator/pkg/extractor.py#L589), [`RepoState`](../../src/orchestrator/pkg/persistence.py#L258), [`_cache_path`](../../src/orchestrator/pkg/persistence.py#L218), [`_calls_sidecar`](../../src/orchestrator/pkg/persistence.py#L316), [`_load_calls`](../../src/orchestrator/pkg/persistence.py#L345), [`_save_calls`](../../src/orchestrator/pkg/persistence.py#L327), [`default_cache_dir`](../../src/orchestrator/pkg/persistence.py#L154), [`link_joins`](../../src/orchestrator/pkg/join_link.py#L150), [`load_or_extract`](../../src/orchestrator/pkg/persistence.py#L225), [`merge_repos`](../../src/orchestrator/pkg/scoping.py#L150), [`repo_state`](../../src/orchestrator/pkg/persistence.py#L144)
+- **Calls** (12): [`MergedFacts`](../../src/orchestrator/pkg/persistence.py#L275), [`RepoCodeExtractor`](../../src/orchestrator/pkg/extractor.py#L599), [`RepoState`](../../src/orchestrator/pkg/persistence.py#L259), [`_cache_path`](../../src/orchestrator/pkg/persistence.py#L219), [`_calls_sidecar`](../../src/orchestrator/pkg/persistence.py#L317), [`_load_calls`](../../src/orchestrator/pkg/persistence.py#L346), [`_save_calls`](../../src/orchestrator/pkg/persistence.py#L328), [`default_cache_dir`](../../src/orchestrator/pkg/persistence.py#L154), [`link_joins`](../../src/orchestrator/pkg/join_link.py#L150), [`load_or_extract`](../../src/orchestrator/pkg/persistence.py#L226), [`merge_repos`](../../src/orchestrator/pkg/scoping.py#L150), [`repo_state`](../../src/orchestrator/pkg/persistence.py#L144)
 - **Documented in**: `docs/specs/multi-repo-roadmap.md#invariants`, `docs/specs/multi-repo-roadmap.md#where-it-was-blocked-and-what-still-is`
 
 ### `repo_state`
 
 [`src/orchestrator/pkg/persistence.py:144`](../../src/orchestrator/pkg/persistence.py#L144)
 
-- **Called by** (6): [`_per_repo`](../../src/orchestrator/plugin/server.py#L975), [`_render_state_html`](../../src/orchestrator/cli/understand.py#L275), [`check_memory_bank`](../../src/orchestrator/knowledge/understand.py#L314), [`load_or_extract`](../../src/orchestrator/pkg/persistence.py#L225), [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L366), [`render_memory_bank`](../../src/orchestrator/knowledge/understand.py#L122)
+- **Called by** (6): [`_per_repo`](../../src/orchestrator/plugin/server.py#L975), [`_render_state_html`](../../src/orchestrator/cli/understand.py#L275), [`check_memory_bank`](../../src/orchestrator/knowledge/understand.py#L314), [`load_or_extract`](../../src/orchestrator/pkg/persistence.py#L226), [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L367), [`render_memory_bank`](../../src/orchestrator/knowledge/understand.py#L122)
 - **Calls** (2): [`_git`](../../src/orchestrator/pkg/persistence.py#L137), `pathlib.Path`
 - **Documented in**: `docs/specs/pkg-accuracy-gaps.md#6-operational-open-right-now`
 
@@ -164,7 +164,7 @@
 
 [`src/orchestrator/pkg/persistence.py:116`](../../src/orchestrator/pkg/persistence.py#L116)
 
-- **Called by** (1): [`load_or_extract`](../../src/orchestrator/pkg/persistence.py#L225)
+- **Called by** (1): [`load_or_extract`](../../src/orchestrator/pkg/persistence.py#L226)
 - **Calls** (3): `dumps`, [`facts_to_dict`](../../src/orchestrator/pkg/persistence.py#L63), `pathlib.Path`
 
 ## Imports

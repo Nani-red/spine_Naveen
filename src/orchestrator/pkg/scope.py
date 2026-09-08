@@ -460,6 +460,8 @@ NOT_APPLICABLE: dict[str, str] = {
     "java": "variables and methods occupy separate namespaces (JLS 6.5.7) — a local cannot shadow a method",
     "sql": "the CALL/PERFORM fallback matches two keywords; there is no lexical scope to shadow",
     "python": "measured by the stdlib-ast detector in `invention`, not by a tree-sitter walk",
+    "php": "variables carry a `$` sigil — `f()` and `$f()` are distinct CST node shapes, so a "
+    "local cannot shadow a bare call (D8, php-support-roadmap.md)",
 }
 
 

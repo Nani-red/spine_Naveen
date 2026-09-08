@@ -3,7 +3,7 @@
 
 [← Episteme](../README.md) · [Architecture](../architecture.md)
 
-**`orchestrator.pkg`** is one of 53 areas in this repo, in the `orchestrator` zone. It holds 45 modules — 105 types and 354 functions. It sits in the middle of the graph: 1 area below it, 16 above. Changes here can reach both ways.
+**`orchestrator.pkg`** is one of 53 areas in this repo, in the `orchestrator` zone. It holds 49 modules — 109 types and 418 functions. It sits in the middle of the graph: 1 area below it, 16 above. Changes here can reach both ways.
 
 ```mermaid
 flowchart LR
@@ -37,7 +37,7 @@ _Showing 9 of 17 neighbouring areas._
 - [`orchestrator.pkg.accuracy`](../modules/orchestrator.pkg.accuracy.md)
 - [`orchestrator.pkg.c_extractor`](../modules/orchestrator.pkg.c_extractor.md)
 - [`orchestrator.pkg.capabilities`](../../src/orchestrator/pkg/capabilities.py#L1)
-- [`orchestrator.pkg.cpp_extractor`](../modules/orchestrator.pkg.cpp_extractor.md)
+- [`orchestrator.pkg.cpp_extractor`](../../src/orchestrator/pkg/cpp_extractor.py#L1)
 - [`orchestrator.pkg.csharp_extractor`](../modules/orchestrator.pkg.csharp_extractor.md)
 - [`orchestrator.pkg.data_layer_link`](../../src/orchestrator/pkg/data_layer_link.py#L1)
 - [`orchestrator.pkg.doc_link`](../../src/orchestrator/pkg/doc_link.py#L1)
@@ -51,7 +51,7 @@ _Showing 9 of 17 neighbouring areas._
 - [`orchestrator.pkg.graph_export`](../../src/orchestrator/pkg/graph_export.py#L1)
 - [`orchestrator.pkg.import_link`](../../src/orchestrator/pkg/import_link.py#L1)
 - [`orchestrator.pkg.intent_link`](../../src/orchestrator/pkg/intent_link.py#L1)
-- [`orchestrator.pkg.invention`](../modules/orchestrator.pkg.invention.md)
+- [`orchestrator.pkg.invention`](../../src/orchestrator/pkg/invention.py#L1)
 - [`orchestrator.pkg.java_extractor`](../modules/orchestrator.pkg.java_extractor.md)
 - [`orchestrator.pkg.join_link`](../../src/orchestrator/pkg/join_link.py#L1)
 - [`orchestrator.pkg.joins_propose`](../../src/orchestrator/pkg/joins_propose.py#L1)
@@ -61,6 +61,10 @@ _Showing 9 of 17 neighbouring areas._
 - [`orchestrator.pkg.migrations`](../../src/orchestrator/pkg/migrations.py#L1)
 - [`orchestrator.pkg.overview`](../../src/orchestrator/pkg/overview.py#L1)
 - [`orchestrator.pkg.persistence`](../modules/orchestrator.pkg.persistence.md)
+- [`orchestrator.pkg.php_extractor`](../modules/orchestrator.pkg.php_extractor.md)
+- [`orchestrator.pkg.php_names`](../../src/orchestrator/pkg/php_names.py#L1)
+- [`orchestrator.pkg.php_orm`](../../src/orchestrator/pkg/php_orm.py#L1)
+- [`orchestrator.pkg.php_routes`](../modules/orchestrator.pkg.php_routes.md)
 - [`orchestrator.pkg.python_client`](../../src/orchestrator/pkg/python_client.py#L1)
 - [`orchestrator.pkg.python_orm`](../modules/orchestrator.pkg.python_orm.md)
 - [`orchestrator.pkg.python_routes`](../modules/orchestrator.pkg.python_routes.md)

@@ -52,6 +52,12 @@ def test_default_includes_go_when_available() -> None:
     assert ("go" in langs) == have_go
 
 
+def test_default_includes_php_when_available() -> None:
+    have_php = importlib.util.find_spec("tree_sitter_php") is not None
+    langs = {e.language for e in default_extractors()}
+    assert ("php" in langs) == have_php
+
+
 def test_repo_extractor_default_handles_go(tmp_path: Path) -> None:
     pytest.importorskip("tree_sitter_go", reason="install the 'go' extra")
     pkg = tmp_path / "trace"
@@ -123,4 +129,15 @@ def test_repo_extractor_default_handles_cpp(tmp_path: Path) -> None:
     )
     batch = RepoCodeExtractor().extract(tmp_path)
     types = {n.name for n in batch.nodes if n.kind is NodeKind.TYPE and n.language == "cpp"}
+    assert "Widget" in types
+
+
+def test_repo_extractor_default_handles_php(tmp_path: Path) -> None:
+    pytest.importorskip("tree_sitter_php", reason="install the 'php' extra")
+    (tmp_path / "Widget.php").write_text(
+        "<?php\nnamespace Demo;\n\nclass Widget {\n    public function score(): int { return 1; }\n}\n"
+    )
+    # Default RepoCodeExtractor (no explicit extractors) must now pick up .php.
+    batch = RepoCodeExtractor().extract(tmp_path)
+    types = {n.name for n in batch.nodes if n.kind is NodeKind.TYPE and n.language == "php"}
     assert "Widget" in types

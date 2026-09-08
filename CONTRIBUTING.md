@@ -38,6 +38,13 @@ published release notes.
 For larger features, the core team often develops them ahead of time and publishes
 them on a release cadence — so opening an issue first avoids duplicated effort.
 
+**Reviewing a pull request as a maintainer.** From Claude Code in this checkout, run
+`/review-pr <number>` (add `--promote` for a release-cut check). It is the checklist a merge
+decision needs — the gate with CI's extras, fan-out code review, a real-repository smoke test
+for front-end changes, and a mechanical audit that every user-facing document the change
+obliges was updated (`.claude/skills/review-pr/`). The same procedure is available as the
+`pr-reviewer` subagent.
+
 ## Opening a pull request
 
 1. Fork the repo and create a branch from `main` (e.g. `fix/email-validator-edge-case`).

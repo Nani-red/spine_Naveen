@@ -135,6 +135,11 @@ _FIXTURES: dict[str, tuple[str, str]] = {
         "sample.cpp",
         '#include <cstdio>\n\nclass Thing { public: int n; void go() { printf("x"); } };\n',
     ),
+    "php": (
+        "sample.php",
+        "<?php\nnamespace Demo;\n\nuse Demo\\Base;\n\nclass Thing extends Base {\n"
+        "    public function go(): void {}\n}\n",
+    ),
 }
 
 

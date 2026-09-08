@@ -1,0 +1,31 @@
+{
+  "language": "php",
+  "case": "global_fallback",
+  "why": "The one PHP-shaped invention risk (§3.2): `Job::run()` calls bare `helper()`, and `App\\Svc\\helper` does not exist — only the truly global `\\helper` (declared with no namespace, in another file) does, and PHP falls back to it at runtime. Guessing that fallback would be a fabrication if the namespaced function existed and just happened to be declared elsewhere; the extractor never guesses it, so this is a predicted recall miss, not a false positive. `local()` in the same file/namespace is the control that must still hit.",
+  "root": ".repo",
+  "nodes": [
+    { "id": "php:global.php", "kind": "Module" },
+    { "id": "php:helper", "kind": "Function" },
+    { "id": "php:App.Svc", "kind": "Module" },
+    { "id": "php:App.Svc.Job", "kind": "Type" },
+    { "id": "php:App.Svc.Job.run", "kind": "Function" },
+    { "id": "php:App.Svc.local", "kind": "Function" }
+  ],
+  "edges": [
+    { "src": "php:global.php", "dst": "php:helper", "kind": "CONTAINS" },
+    { "src": "php:App.Svc", "dst": "php:App.Svc.Job", "kind": "CONTAINS" },
+    { "src": "php:App.Svc.Job", "dst": "php:App.Svc.Job.run", "kind": "CONTAINS" },
+    { "src": "php:App.Svc", "dst": "php:App.Svc.local", "kind": "CONTAINS" },
+    { "src": "php:App.Svc.Job.run", "dst": "php:helper", "kind": "CALLS" },
+    { "src": "php:App.Svc.Job.run", "dst": "php:App.Svc.local", "kind": "CALLS" }
+  ],
+  "known_gaps": [
+    {
+      "edge": { "src": "php:App.Svc.Job.run", "dst": "php:helper", "kind": "CALLS" },
+      "why": "PREDICTED BEFORE SCORING. The global-namespace fallback for a bare function call is never guessed (§3.2) — an edge to `php:App.Svc.helper` would be a false positive (no such function exists), so this stays a recall miss instead."
+    }
+  ],
+  "false_positives": [],
+  "excluded": [],
+  "open_questions": []
+}
