@@ -63,6 +63,10 @@ _TYPE_DECLS = frozenset(
     }
 )
 
+# Reserved words that stand for a class without naming one. `_resolve_type_name` must
+# never see them: resolved as names they become `php:NS.self`, which nothing declares.
+_RELATIVE_SCOPES = frozenset({"self", "static", "parent"})
+
 # `require`/`require_once`/`include`/`include_once` — all four read the same shape
 # (a single expression argument), so one handler covers them (D7).
 _REQUIRE_KINDS = frozenset(
@@ -547,6 +551,7 @@ def _emit_calls(
                 source,
                 rel,
                 batch,
+                self_type_id=rec.type_id,
             )
 
     for f in free_funcs:
@@ -603,9 +608,24 @@ def _scan_calls_in(
     source: bytes,
     rel: str,
     batch: FactBatch,
+    *,
+    self_type_id: str | None = None,
 ) -> None:
     """Walk one function/method body for the six P2 call shapes (§3.2 rows 1-6) plus
     P3's typed-receiver rows 7-8.
+
+    ``self_type_id`` is the enclosing class (``None`` for a free function): it is what
+    ``new self()`` / ``new static()`` name. Without it those two read as classes called
+    ``self`` and ``static``, and ``finalize`` — seeing a target nothing declares —
+    "repoints" them to one external ``Type`` per name that every factory method in the
+    repository then appears to call. Reserved words are never class names.
+
+    Three shapes are refused outright, because the source does not say what they call:
+    a method named by a variable (``X::$m()``, ``$obj->$m()``, ``$this->p->$m()`` — the
+    name child is a ``variable_name``, not a ``name``), ``new parent()`` with no verified
+    base, and anything inside an anonymous class body, whose ``$this`` is the anonymous
+    class and not the enclosing one (its methods have no node, so its calls have no
+    caller either — the walk does not descend into it).
 
     Descends into closures/arrow functions too (their calls are attributed to the
     enclosing method/function, matching the C# front-end's precedent) — but never
@@ -633,7 +653,11 @@ def _scan_calls_in(
         if node.type == "member_call_expression":
             obj = node.child_by_field_name("object")
             name_node = node.child_by_field_name("name")
-            callee_name = _text(name_node, source) if name_node is not None else ""
+            # A `variable_name` here is `$obj->$m()` — the method is whatever `$m` holds
+            # at runtime. An empty callee makes every branch below fall through.
+            callee_name = (
+                _text(name_node, source) if name_node is not None and name_node.type == "name" else ""
+            )
             if (
                 obj is not None
                 and obj.type == "variable_name"
@@ -673,7 +697,8 @@ def _scan_calls_in(
         elif node.type == "scoped_call_expression":
             scope = node.child_by_field_name("scope")
             name_node = node.child_by_field_name("name")
-            if scope is not None and name_node is not None:
+            # `X::$m()` has a `variable_name` where the method name should be — skipped.
+            if scope is not None and name_node is not None and name_node.type == "name":
                 callee = _text(name_node, source)
                 if scope.type == "relative_scope":
                     scope_text = _text(scope, source)
@@ -697,7 +722,15 @@ def _scan_calls_in(
 
         elif node.type == "object_creation_expression":
             name_node = next((c for c in node.named_children if c.type in ("name", "qualified_name")), None)
-            if name_node is not None:  # else `new $class(...)` — dynamic, never guessed
+            first = node.named_children[0] if node.named_children else None
+            relative = _text(first, source) if first is not None else ""
+            if relative in _RELATIVE_SCOPES:
+                # `new self()` / `new static()` name the enclosing class; `new parent()`
+                # its verified base. Not a class name, so never resolved as one.
+                target = base_target if relative == "parent" else self_type_id
+                if target is not None:
+                    batch.add_edge(Edge(caller_id, target, EdgeKind.CALLS, Provenance(rel, line)))
+            elif name_node is not None:  # else `new $class(...)` — dynamic, never guessed
                 dotted, is_guess = _resolve_type_name(_text(name_node, source), namespace, use_map)
                 target_type = f"php:{dotted}"
                 if not is_guess:
@@ -731,7 +764,8 @@ def _scan_calls_in(
             # A qualified (non-fully) function name, `$obj->$name()`, `call_user_func`,
             # a string/array callable — never: fabrication (§3.2's last row).
 
-        stack.extend(node.named_children)
+        if node.type != "anonymous_class":
+            stack.extend(node.named_children)
 
 
 def _is_this_property(member_access: TSNode, source: bytes) -> bool:

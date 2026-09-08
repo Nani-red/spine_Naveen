@@ -4,6 +4,27 @@ All notable changes to this project are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); the package is `synaptixs-spine`
 (import/CLI stay `orchestrator`).
 
+## Unreleased
+
+### Fixed
+
+- **Five ways the PHP front-end asserted a fact the source does not contain**, found
+  reviewing #334 and each a wrong *grounded* fact rather than a missing one:
+  `new self()` / `new static()` were resolved as classes named `self` and `static`, which
+  `finalize` then materialised as one phantom `Type` per name that every factory method
+  appeared to call — they now resolve to the enclosing class (`new parent()` to its verified
+  base, else nothing); a method named by a variable (`X::$m()`, `$obj->$m()`,
+  `$this->prop->$m()`) produced a `CALLS` edge to a function called `$m` — now skipped;
+  `$this->` inside an anonymous class was attributed to the enclosing class — the walk no
+  longer descends into one; a Laravel route group whose prefix was chained
+  (`Route::prefix('/v1')->middleware(...)->group(...)`), written in the array form
+  (`Route::group(['prefix' => 'v1'], ...)`), or computed emitted every route inside at the
+  **wrong path** — chained and array prefixes now compose, and an unreadable prefix or a
+  non-`Route` receiver means nothing inside the group is emitted; a Symfony class-level
+  `#[Route(path: '/api')]` was ignored and `#[Route(self::PREFIX)]` dropped — the named
+  form composes, the unreadable one silences the class; and `belongsTo(self::class)` invented
+  an `Entity` called `self` — self-relations now emit nothing. Regression tests for each.
+
 ## 3.32.0 — the plugin speaks the whole protocol
 
 ### Removed

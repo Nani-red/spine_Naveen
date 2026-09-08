@@ -381,3 +381,41 @@ def test_calls_new_x_with_a_wrong_guess_is_repointed_by_finalize(tmp_path: Path)
     assert ("php:App.Svc.Cart.run", "php:Logger") in calls
     target = next(n for n in batch.nodes if n.id == "php:Logger")
     assert target.external
+
+
+def test_calls_never_fabricate_relative_scopes_dynamic_names_or_anonymous_this(tmp_path: Path) -> None:
+    """Three fabrication shapes found in review (2026-09-08), each a wrong grounded fact:
+    `new self()`/`new static()` read as classes called `self`/`static` (which `finalize` then
+    materialised as one phantom `Type` per name); `X::$m()` / `$p->$m()` read `$m` as a
+    method name; an anonymous class's `$this->helper()` was attributed to the enclosing
+    class. `new parent()` with no verified base yields nothing, like `parent::m()`."""
+    src = (
+        "<?php\n"
+        "namespace App\\Svc;\n\n"
+        "use App\\Ext\\Vendor;\n\n"
+        "class Handler {\n"
+        "    public function helper(): void {}\n"
+        "    public function run(Handler $p): void {\n"
+        "        $a = new self();\n"
+        "        $b = new static();\n"
+        "        $c = new parent();\n"
+        "        $m = 'helper';\n"
+        "        Handler::$m();\n"
+        "        Vendor::$m();\n"
+        "        $p->$m();\n"
+        "        $anon = new class {\n"
+        "            public function go(): void { $this->helper(); }\n"
+        "            public function helper(): void {}\n"
+        "        };\n"
+        "    }\n"
+        "}\n"
+    )
+    batch = _calls_facts(tmp_path, src=src, name="Handler.php")
+    ids = {n.id for n in batch.nodes}
+    calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
+    run = "php:App.Svc.Handler.run"
+    assert not {i for i in ids if i.rsplit(".", 1)[-1] in ("self", "static", "parent", "$m")}
+    assert not any(dst.endswith("$m") for _, dst in calls)
+    assert (run, "php:App.Svc.Handler.helper") not in calls  # the anonymous class's own $this
+    # `new self()` and `new static()` are calls to the enclosing type; nothing else survives.
+    assert calls == {(run, "php:App.Svc.Handler")}
