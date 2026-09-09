@@ -113,13 +113,24 @@ the product.** Where it can't know something, it says so and stops.
 
 ## What's new
 
-**3.33.0 (current)** — **a PHP codebase gets the whole graph.** PHP is the ninth front-end:
+**3.33.1 (current)** — **the documents say only what is true, and the help screen shows only
+what you need.** A housekeeping release. `SETUP.md` is the contributor's zero-to-running page
+again — it had described the platform before the comprehension and SDLC work existed. The
+documentation audit now follows every link and hunts every mention of a removed feature, and its
+first full run over the tree fixed fifteen stale claims, from "8 front-ends" written before PHP to a
+terminal UI that had left two releases earlier. Thirteen platform-substrate and gold-set commands
+leave `--help` (hidden, not deleted); the cheap rungs — `investigate`, `design`, `localize` — say
+that `sdlc plan` and `rca` are their composites; eight documented commands get their first CLI
+tests. The maintainer review skill moves out of the repository; the audit script and the
+documentation matrix it relies on stay, at `scripts/` and `docs/reviewing/`.
+
+**3.33.0** — **a PHP codebase gets the whole graph.** PHP is the ninth front-end:
 namespaces, classes, interfaces, traits and enums onto the universal vocabulary; a precision-first
 call graph (`$this->`, `self::`, `parent::`, `new`, static calls, typed receivers — never a guessed
 global function or a method named by a variable); Laravel, Slim and Symfony routes as `Endpoint`s,
 so a PHP service can be the provider in a cross-repository join; Eloquent and Doctrine models as
 `Entity`s. It arrived from a contributor and went through the first run of a maintainer review
-that now ships with the repository as `/review-pr` — which found, and this release fixes, five
+(the `/review-pr` skill, tracked in the repository until 3.33.1) — which found, and this release fixes, five
 ways the front-end asserted facts the source did not contain, and a cache key that could not tell
 whether the PHP grammar was installed. `pip install 'synaptixs-spine[php]'`.
 
