@@ -1,5 +1,7 @@
 # User-facing documentation matrix — what a change obliges you to update
 
+*Maintainer reference. The mechanical half is `scripts/docs_audit.py` (stdlib only; runs on any ref); this page is the judgement half a reviewer walks. Both are used by the local `/review-pr` Claude skill, which is not tracked in this repository.*
+
 Read across: if the diff matches the trigger, every document in the row must change in this
 PR, and say the right thing. "Says the right thing" means the reviewer opens the line, not
 just sees the file in the diff. Root-level `*.md` files are the user documentation; `docs/specs/`
@@ -18,8 +20,8 @@ are design records and count separately.
 | Registry / web UI change (`registry/`) | `OPERATIONS.md`, `USER_GUIDE.md` operator section, `docs/specs/unified-ui.md` | no build step introduced |
 | Deploy / env / config change | `OPERATIONS.md`, `SETUP.md`, `.env.example` if present | variable name and default |
 | Contribution process change | `CONTRIBUTING.md`, `.github/pull_request_template.md` | |
-| Release cut | `pyproject.toml` version and the lockfile's own entry, **every plugin manifest** (`_MANIFESTS` in `tests/plugin/test_manifests.py` — three, one at the repo root), `CHANGELOG.md` header, `README.md` "What's new", both SVGs, `STATE-OF-SPINE.md` version row, `CLI_REFERENCE.md` banner, `capability-matrix.md` header, the reusable-workflow tag in `gap4-adoption-distribution-roadmap.md`, `SPEC-INDEX.md` recount line; `grep` for the previous version string across `*.md` **and** `*.json` | see SKILL.md §7 |
-| New maintainer tooling (`.claude/skills`, `.claude/agents`, `scripts/`) | `CONTRIBUTING.md` (how to run it) | one line is enough |
+| Release cut | `pyproject.toml` version and the lockfile's own entry, **every plugin manifest** (`_MANIFESTS` in `tests/plugin/test_manifests.py` — three, one at the repo root), `CHANGELOG.md` header, `README.md` "What's new", both SVGs, `STATE-OF-SPINE.md` version row, `CLI_REFERENCE.md` banner, `capability-matrix.md` header, the reusable-workflow tag in `gap4-adoption-distribution-roadmap.md`, `SPEC-INDEX.md` recount line; `grep` for the previous version string across `*.md` **and** `*.json` | see CONTRIBUTING.md's release-cut notes and the `release-cut-checklist` |
+| New maintainer tooling (`scripts/`, `docs/reviewing/`) | `CONTRIBUTING.md` (how to run it) | one line is enough |
 | **Removed feature or surface** (a CLI command, an MCP tool, an extra, a UI, a workflow) | every root document that named it — the audit lists them: `docs_audit.py --base <base> --head <head> --removed "<name>,<synonym>,<synonym>"`; the skill; any spec whose status restates it; `CHANGELOG.md` Removed | the name **and its synonyms** ("terminal UI" outlived "tui" by two releases); a mention inside a version-stamped paragraph is history and may stay |
 
 ## Counts that rot

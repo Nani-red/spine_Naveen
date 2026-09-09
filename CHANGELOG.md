@@ -6,6 +6,17 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## Unreleased
 
+### Changed
+
+- **The maintainer review skill leaves the repository; its reusable halves stay.**
+  The Claude Code `/review-pr` skill and the `pr-reviewer` subagent (#337) are
+  local tooling and are no longer tracked — `.gitignore` covers `.claude/` again.
+  What any maintainer or CI can use without an assistant moves to neutral paths:
+  the documentation audit to `scripts/docs_audit.py`, beside the other gates, and
+  the docs matrix and the language-front-end checklist to `docs/reviewing/`.
+  CONTRIBUTING describes the review checklist in prose and points at those.
+  Nothing a user installs is affected — the wheel never carried `.claude/`.
+
 ### Added
 
 - **Eight documented commands get their first CLI-level test.** `sdlc explain`,

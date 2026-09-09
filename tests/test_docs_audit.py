@@ -9,9 +9,7 @@ from types import ModuleType
 
 import pytest
 
-_SCRIPT = (
-    Path(__file__).resolve().parents[1] / ".claude" / "skills" / "review-pr" / "scripts" / "docs_audit.py"
-)
+_SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "docs_audit.py"
 
 
 @pytest.fixture
@@ -148,5 +146,5 @@ def test_registry_parsers_read_what_the_diff_check_compares(audit: ModuleType) -
 
 
 def test_the_matrix_names_the_removed_surface_trigger() -> None:
-    matrix = (_SCRIPT.parents[1] / "docs-matrix.md").read_text(encoding="utf-8")
+    matrix = (_SCRIPT.parents[1] / "docs" / "reviewing" / "docs-matrix.md").read_text(encoding="utf-8")
     assert "Removed feature" in matrix and "--removed" in matrix
