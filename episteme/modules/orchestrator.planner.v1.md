@@ -35,7 +35,6 @@ _8 of the symbols other code depends on here have no test path the graph can see
 [`src/orchestrator/planner/v1.py:72`](../../src/orchestrator/planner/v1.py#L72)
 
 - **Fields**: `_default_model`, `_llm`
-- **Documented in**: `SETUP.md#10-project-layout`
 
 ### `_InferredGlossaryEntry`
 
