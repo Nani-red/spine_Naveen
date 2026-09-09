@@ -234,7 +234,7 @@ _8 of the symbols other code depends on here have no test path the graph can see
 
 - **Called by** (0 production · 1 test): [`test_audit_repo_needs_a_model_and_then_reports_findings`](../../tests/plugin/test_server.py#L683)
 - **Calls** (3): [`_open_repo`](../../src/orchestrator/plugin/server.py#L248), [`load_local_env`](../../src/orchestrator/core/env.py#L20), [`resolve_codegen_model`](../../src/orchestrator/sdlc/codegen.py#L45)
-- **Documented in**: `CHANGELOG.md`, `CLAUDE_GUIDE.md#6-the-tools-spine-exposes`, `CLAUDE_GUIDE.md#progress-from-the-long-tools`, `CLAUDE_GUIDE.md#who-did-what-over-http`, `CODEX_GUIDE.md#progress-from-the-long-tools`, `CODEX_GUIDE.md#who-did-what-over-http`
+- **Documented in**: `CHANGELOG.md`, `CLAUDE_GUIDE.md#6-the-tools-spine-exposes`, `CLAUDE_GUIDE.md#progress-from-the-long-tools`, `CLAUDE_GUIDE.md#who-did-what-over-http`, `CODEX_GUIDE.md#6-the-tools-spine-exposes`, `CODEX_GUIDE.md#progress-from-the-long-tools`
 
 ### `blast_radius`
 
@@ -272,7 +272,7 @@ _8 of the symbols other code depends on here have no test path the graph can see
 
 - **Called by** (0 production · 3 test): [`test_design_change_is_grounded_and_never_writes`](../../tests/plugin/test_server.py#L491), [`test_design_change_refuses_a_bad_spec_naming_the_valid_fields`](../../tests/plugin/test_server.py#L512), [`test_design_change_with_llm_needs_a_model`](../../tests/plugin/test_server.py#L520)
 - **Calls** (5): [`_open_repo`](../../src/orchestrator/plugin/server.py#L248), [`load_local_env`](../../src/orchestrator/core/env.py#L20), `orchestrator.core.llm.LiteLLMClient`, [`resolve_codegen_model`](../../src/orchestrator/sdlc/codegen.py#L45), [`validate_spec`](../../src/orchestrator/sdlc/spec_file.py#L60)
-- **Documented in**: `CHANGELOG.md`, `CLAUDE_GUIDE.md#6-the-tools-spine-exposes`, `README.md#whats-new`, `docs/specs/mcp-plugin-surface.md#2-the-32-tools-in-three-tiers-plus-an-operator-set`, `docs/specs/mcp-plugin-surface.md#3-the-gaps`, `docs/specs/mcp-plugin-surface.md#4-proposals`
+- **Documented in**: `CHANGELOG.md`, `CLAUDE_GUIDE.md#6-the-tools-spine-exposes`, `CODEX_GUIDE.md#6-the-tools-spine-exposes`, `README.md#whats-new`, `docs/specs/mcp-plugin-surface.md#2-the-32-tools-in-three-tiers-plus-an-operator-set`, `docs/specs/mcp-plugin-surface.md#3-the-gaps`
 
 ### `docs_for`
 
@@ -347,7 +347,7 @@ _8 of the symbols other code depends on here have no test path the graph can see
 
 - **Called by** (0 production · 1 test): [`test_profile_repo_reads_the_project`](../../tests/plugin/test_server.py#L483)
 - **Calls** (1): [`_in_repo`](../../src/orchestrator/plugin/server.py#L316)
-- **Documented in**: `CHANGELOG.md`, `CLAUDE_GUIDE.md#6-the-tools-spine-exposes`, `docs/specs/mcp-plugin-surface.md#2-the-32-tools-in-three-tiers-plus-an-operator-set`, `docs/specs/mcp-plugin-surface.md#3-the-gaps`, `docs/specs/mcp-plugin-surface.md#4-proposals`, `docs/specs/mcp-plugin-surface.md#phase-1-retire-the-gaps`
+- **Documented in**: `CHANGELOG.md`, `CLAUDE_GUIDE.md#6-the-tools-spine-exposes`, `CODEX_GUIDE.md#6-the-tools-spine-exposes`, `docs/specs/mcp-plugin-surface.md#2-the-32-tools-in-three-tiers-plus-an-operator-set`, `docs/specs/mcp-plugin-surface.md#3-the-gaps`, `docs/specs/mcp-plugin-surface.md#4-proposals`
 
 ### `read_memory_bank`
 
@@ -362,7 +362,7 @@ _8 of the symbols other code depends on here have no test path the graph can see
 
 - **Called by** (0 production · 1 test): [`test_registry_approvals_lists_what_waits`](../../tests/plugin/test_server.py#L750)
 - **Calls** (1): [`_registry`](../../src/orchestrator/plugin/server.py#L1537)
-- **Documented in**: `CHANGELOG.md`, `CLAUDE_GUIDE.md#6-the-tools-spine-exposes`, `CLAUDE_GUIDE.md#operating-runs-registry-runs-friends`, `CLAUDE_GUIDE.md#prompts-and-resources-the-workflow-and-the-documents-through-the-protocol`, `CODEX_GUIDE.md#prompts-and-resources-the-workflow-and-the-documents-through-the-protocol`, `docs/specs/mcp-plugin-surface.md#2-the-32-tools-in-three-tiers-plus-an-operator-set`
+- **Documented in**: `CHANGELOG.md`, `CLAUDE_GUIDE.md#6-the-tools-spine-exposes`, `CLAUDE_GUIDE.md#operating-runs-registry-runs-friends`, `CLAUDE_GUIDE.md#prompts-and-resources-the-workflow-and-the-documents-through-the-protocol`, `CODEX_GUIDE.md#6-the-tools-spine-exposes`, `CODEX_GUIDE.md#prompts-and-resources-the-workflow-and-the-documents-through-the-protocol`
 
 ### `registry_decide`
 
@@ -370,7 +370,7 @@ _8 of the symbols other code depends on here have no test path the graph can see
 
 - **Called by** (0 production · 2 test): [`test_registry_decide_posts_the_action`](../../tests/plugin/test_server.py#L776), [`test_registry_decide_refuses_a_bad_action_before_any_call`](../../tests/plugin/test_server.py#L795)
 - **Calls** (1): [`_registry`](../../src/orchestrator/plugin/server.py#L1537)
-- **Documented in**: `CHANGELOG.md`, `CLAUDE_GUIDE.md#6-the-tools-spine-exposes`, `CLAUDE_GUIDE.md#operating-runs-registry-runs-friends`, `CLAUDE_GUIDE.md#prompts-and-resources-the-workflow-and-the-documents-through-the-protocol`, `CLAUDE_GUIDE.md#who-did-what-over-http`, `CODEX_GUIDE.md#prompts-and-resources-the-workflow-and-the-documents-through-the-protocol`
+- **Documented in**: `CHANGELOG.md`, `CLAUDE_GUIDE.md#6-the-tools-spine-exposes`, `CLAUDE_GUIDE.md#operating-runs-registry-runs-friends`, `CLAUDE_GUIDE.md#prompts-and-resources-the-workflow-and-the-documents-through-the-protocol`, `CLAUDE_GUIDE.md#who-did-what-over-http`, `CODEX_GUIDE.md#6-the-tools-spine-exposes`
 
 ### `registry_runs`
 
@@ -378,7 +378,7 @@ _8 of the symbols other code depends on here have no test path the graph can see
 
 - **Called by** (0 production · 1 test): [`test_registry_runs_lists_with_a_table`](../../tests/plugin/test_server.py#L728)
 - **Calls** (1): [`_registry`](../../src/orchestrator/plugin/server.py#L1537)
-- **Documented in**: `CHANGELOG.md`, `CLAUDE_GUIDE.md#6-the-tools-spine-exposes`, `CLAUDE_GUIDE.md#operating-runs-registry-runs-friends`, `docs/specs/mcp-plugin-surface.md#2-the-32-tools-in-three-tiers-plus-an-operator-set`, `docs/specs/mcp-plugin-surface.md#3-the-gaps`, `docs/specs/mcp-plugin-surface.md#4-proposals`
+- **Documented in**: `CHANGELOG.md`, `CLAUDE_GUIDE.md#6-the-tools-spine-exposes`, `CLAUDE_GUIDE.md#operating-runs-registry-runs-friends`, `CODEX_GUIDE.md#6-the-tools-spine-exposes`, `docs/specs/mcp-plugin-surface.md#2-the-32-tools-in-three-tiers-plus-an-operator-set`, `docs/specs/mcp-plugin-surface.md#3-the-gaps`
 
 ### `registry_trace`
 
@@ -386,7 +386,7 @@ _8 of the symbols other code depends on here have no test path the graph can see
 
 - **Called by** (0 production · 1 test): [`test_registry_trace_is_bounded_and_says_so`](../../tests/plugin/test_server.py#L806)
 - **Calls** (1): [`_registry`](../../src/orchestrator/plugin/server.py#L1537)
-- **Documented in**: `CHANGELOG.md`, `CLAUDE_GUIDE.md#6-the-tools-spine-exposes`, `CLAUDE_GUIDE.md#operating-runs-registry-runs-friends`, `CLAUDE_GUIDE.md#prompts-and-resources-the-workflow-and-the-documents-through-the-protocol`, `CLAUDE_GUIDE.md#who-did-what-over-http`, `CODEX_GUIDE.md#prompts-and-resources-the-workflow-and-the-documents-through-the-protocol`
+- **Documented in**: `CHANGELOG.md`, `CLAUDE_GUIDE.md#6-the-tools-spine-exposes`, `CLAUDE_GUIDE.md#operating-runs-registry-runs-friends`, `CLAUDE_GUIDE.md#prompts-and-resources-the-workflow-and-the-documents-through-the-protocol`, `CLAUDE_GUIDE.md#who-did-what-over-http`, `CODEX_GUIDE.md#6-the-tools-spine-exposes`
 
 ### `regression_gaps`
 
@@ -510,7 +510,7 @@ _8 of the symbols other code depends on here have no test path the graph can see
 
 - **Called by** (0 production · 7 test): [`test_a_built_bank_is_readable_by_index_and_by_section`](../../tests/plugin/test_resources.py#L53), [`test_a_section_cannot_escape_the_bank`](../../tests/plugin/test_resources.py#L64), [`test_resources_reach_the_host_and_read_back`](../../tests/plugin/test_resources.py#L117), [`test_understand_repo_builds_the_bank_and_names_where_to_start`](../../tests/plugin/test_server.py#L433), [`test_understand_repo_check_is_current_then_stale`](../../tests/plugin/test_server.py#L449), [`test_understand_repo_refuses_to_build_into_a_clone_that_vanishes`](../../tests/plugin/test_server.py#L464), [`test_understand_repo_writes_where_out_says`](../../tests/plugin/test_server.py#L473)
 - **Calls** (5): [`Reporter`](../../src/orchestrator/plugin/progress.py#L68), [`Settings`](../../src/orchestrator/registry/api/config.py#L44), [`_in_repo`](../../src/orchestrator/plugin/server.py#L316), `pathlib.Path`, [`resolve_repo_source`](../../src/orchestrator/registry/api/workspace.py#L166)
-- **Documented in**: `CHANGELOG.md`, `CLAUDE_GUIDE.md#6-the-tools-spine-exposes`, `CLAUDE_GUIDE.md#progress-from-the-long-tools`, `CLAUDE_GUIDE.md#prompts-and-resources-the-workflow-and-the-documents-through-the-protocol`, `CODEX_GUIDE.md#progress-from-the-long-tools`, `CODEX_GUIDE.md#prompts-and-resources-the-workflow-and-the-documents-through-the-protocol`
+- **Documented in**: `CHANGELOG.md`, `CLAUDE_GUIDE.md#6-the-tools-spine-exposes`, `CLAUDE_GUIDE.md#progress-from-the-long-tools`, `CLAUDE_GUIDE.md#prompts-and-resources-the-workflow-and-the-documents-through-the-protocol`, `CODEX_GUIDE.md#6-the-tools-spine-exposes`, `CODEX_GUIDE.md#progress-from-the-long-tools`
 
 ## Imports
 
