@@ -639,6 +639,10 @@ The KG-grounded engineering commands: design a change, research a ticket, and tr
 
 Grounded feature design: spec × knowledge graph → a design with blast radius.
 
+> One rung of a ladder: `sdlc plan` produces the same design as one of its twelve sections,
+> alongside the investigation, blast radius, files and cost. Run this alone for the design
+> without writing anything under `.spine/`.
+
 Produces the M2 design for one feature anchored to the repo's real structure,
 and annotates it with its **blast radius** (which modules it touches, who
 depends on them, the call hotspots) and any **unverified references** (named
@@ -667,6 +671,9 @@ orchestrator design [PATH] [OPTIONS]
 ### `orchestrator investigate`
 
 Investigation brief: a ticket × the codebase, before you design.
+
+> The read-only rung: `sdlc plan` carries this brief as its first sections and writes the
+> build document. Run this alone when nothing should be written yet.
 
 Researches where a ticket lands in the code (knowledge-graph retrieval, with
 `file:line` + caller counts), the relevant committed `episteme/` knowledge,
@@ -700,6 +707,9 @@ orchestrator investigate [PATH] [OPTIONS]
 ### `orchestrator localize`
 
 Fault localization: a stack trace → the repo symbols it names.
+
+> `rca` runs this same localization and adds ranked hypotheses, a regression surface and a fix
+> approach. Run this alone when the fault site is all you need, in a second.
 
 Parses a Python traceback / pytest failure, resolves each frame to a
 knowledge-graph symbol (`file:line`), and points at the likely fault site

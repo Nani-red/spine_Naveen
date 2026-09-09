@@ -297,11 +297,34 @@ def score_runs(records: list[Any]) -> RunMetrics:
     return metrics
 
 
+def baseline_summary(gate: GateScore, runs: RunMetrics) -> dict[str, Any]:
+    """The numbers as one JSON-shaped object — what ``sdlc baseline --json`` prints and the
+    plugin's ``sdlc_baseline`` returns, from one place so the two cannot disagree on a key."""
+    return {
+        "gate": {
+            "accuracy": gate.accuracy,
+            "cases": len(gate.results),
+            "false_refusals": gate.false_refusals,
+            "missed_refusals": gate.missed_refusals,
+        },
+        "runs": {
+            "runs": runs.runs,
+            "completed": runs.completed,
+            "parked": runs.parked,
+            "failed": runs.failed,
+            "completion_rate": runs.completion_rate,
+            "intervention_rate": runs.intervention_rate,
+            "mean_cost_usd": runs.mean_cost_usd,
+        },
+    }
+
+
 def render_report(gate: GateScore, runs: RunMetrics) -> str:
     return "\n\n".join(["# Agent baseline", gate.render(), runs.render()])
 
 
 __all__ = [
+    "baseline_summary",
     "CORPUS",
     "Case",
     "CaseResult",

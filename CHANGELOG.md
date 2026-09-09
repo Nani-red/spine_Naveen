@@ -8,6 +8,18 @@ All notable changes to this project are documented here. Format loosely follows
 
 ### Changed
 
+- **The cheap rungs say what supersedes them.** `investigate`, `design` and
+  `localize` — the read-only first steps — now say in `--help` and in
+  CLI_REFERENCE that `sdlc plan` and `rca` are the composites that run them and
+  add the rest, and when to run the rung alone. The CLI review found no dead
+  command, only a ladder nobody had labelled.
+- **One reader, one summary.** The `episteme/` pages a design draws on were read
+  by two identical functions, one in the CLI and one in the plugin; they are
+  `sdlc.design.design_bank` now. The `sdlc baseline --json` object and the
+  plugin's `sdlc_baseline` result were assembled twice from the same scores;
+  they are `evals.agent_corpus.baseline_summary` now. Neither surface changed
+  its output.
+
 - **Thirteen commands leave the help screen.** The platform substrate — `task submit`
   and the ten `template` / `contract` commands — predates the comprehension and
   SDLC surfaces and is driven today by the integration tests, not by users; the
