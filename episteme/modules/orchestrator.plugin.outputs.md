@@ -18,7 +18,7 @@
 
 ## Documented in
 
-`CHANGELOG.md`, `docs/specs/mcp-plugin-surface.md#4-proposals`
+`CHANGELOG.md`, `docs/reviewing/docs-matrix.md#user-facing-documentation-matrix-what-a-change-obliges-you-to-update`, `docs/specs/mcp-plugin-surface.md#4-proposals`
 
 ## Types
 

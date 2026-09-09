@@ -3,7 +3,7 @@
 
 [← Episteme](../README.md) · [Architecture](../architecture.md)
 
-**`orchestrator.core`** is one of 53 areas in this repo, in the `orchestrator` zone. It holds 16 modules — 33 types and 31 functions. It sits in the middle of the graph: 1 area below it, 25 above. Changes here can reach both ways.
+**`orchestrator.core`** is one of 54 areas in this repo, in the `orchestrator` zone. It holds 16 modules — 33 types and 31 functions. It sits in the middle of the graph: 1 area below it, 25 above. Changes here can reach both ways.
 
 ```mermaid
 flowchart LR
@@ -28,7 +28,7 @@ flowchart LR
   n0 --> n9
 ```
 
-**In the diagram:** **`orchestrator.core`** (this area) · [`orchestrator.agentic`](orchestrator.agentic.md) · [`orchestrator.cli`](orchestrator.cli.md) · [`orchestrator.codereview`](orchestrator.codereview.md) · [`orchestrator.evals`](orchestrator.evals.md) · [`orchestrator.gateway`](orchestrator.gateway.md) · `orchestrator.init_scaffold` · [`orchestrator.intake`](orchestrator.intake.md) · [`orchestrator.knowledge`](orchestrator.knowledge.md) · [`orchestrator.obs`](orchestrator.obs.md)
+**In the diagram:** **`orchestrator.core`** (this area) · [`orchestrator.agentic`](orchestrator.agentic.md) · [`orchestrator.cli`](orchestrator.cli.md) · [`orchestrator.codereview`](orchestrator.codereview.md) · [`orchestrator.evals`](orchestrator.evals.md) · [`orchestrator.gateway`](orchestrator.gateway.md) · `orchestrator.init_scaffold` · [`orchestrator.intake`](orchestrator.intake.md) · [`orchestrator.knowledge`](orchestrator.knowledge.md) · `orchestrator.obs`
 
 _Showing 9 of 26 neighbouring areas._
 
@@ -53,7 +53,7 @@ _Showing 9 of 26 neighbouring areas._
 
 ## Depends on
 
-[`orchestrator.obs`](orchestrator.obs.md)
+`orchestrator.obs`
 
 ## Depended on by
 

@@ -3,7 +3,7 @@
 
 [← Episteme](../README.md) · [Architecture](../architecture.md)
 
-**`orchestrator.codereview`** is one of 53 areas in this repo, in the `orchestrator` zone. It holds 12 modules — 34 types and 25 functions. It sits in the middle of the graph: 4 areas below it, 4 above. Changes here can reach both ways.
+**`orchestrator.codereview`** is one of 54 areas in this repo, in the `orchestrator` zone. It holds 12 modules — 34 types and 25 functions. It sits in the middle of the graph: 4 areas below it, 4 above. Changes here can reach both ways.
 
 ```mermaid
 flowchart LR
@@ -36,7 +36,7 @@ flowchart LR
 - [`orchestrator.codereview.github_client`](../../src/orchestrator/codereview/github_client.py#L1)
 - [`orchestrator.codereview.grounding`](../../src/orchestrator/codereview/grounding.py#L1)
 - [`orchestrator.codereview.models`](../../src/orchestrator/codereview/models.py#L1)
-- [`orchestrator.codereview.reviewer`](../modules/orchestrator.codereview.reviewer.md)
+- [`orchestrator.codereview.reviewer`](../../src/orchestrator/codereview/reviewer.py#L1)
 - [`orchestrator.codereview.semgrep`](../../src/orchestrator/codereview/semgrep.py#L1)
 - [`orchestrator.codereview.verifiers`](../../src/orchestrator/codereview/verifiers.py#L1)
 - [`orchestrator.codereview.webhook`](../../src/orchestrator/codereview/webhook.py#L1)

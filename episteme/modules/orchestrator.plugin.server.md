@@ -26,7 +26,7 @@ _7 of the symbols other code depends on here have no test path the graph can see
 
 ## Documented in
 
-`CHANGELOG.md`, `docs/specs/autonomous-run-agent.md#9-open-decisions`, `docs/specs/codex-plugin-keyless-roadmap.md#1-what-is-actually-true-in-3181`, `docs/specs/codex-plugin-keyless-roadmap.md#tools-that-genuinely-need-a-model-2`, `docs/specs/comprehension-skill-spec.md#phases`, `docs/specs/comprehension-skill-spec.md#what-already-exists-reuse-dont-rebuild`
+`CHANGELOG.md`, `docs/reviewing/docs-matrix.md#user-facing-documentation-matrix-what-a-change-obliges-you-to-update`, `docs/specs/autonomous-run-agent.md#9-open-decisions`, `docs/specs/codex-plugin-keyless-roadmap.md#1-what-is-actually-true-in-3181`, `docs/specs/codex-plugin-keyless-roadmap.md#tools-that-genuinely-need-a-model-2`, `docs/specs/comprehension-skill-spec.md#phases`
 
 ## Types
 

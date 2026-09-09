@@ -24,7 +24,7 @@
 
 ## Documented in
 
-`CLAUDE.md#invariants-break-these-and-things-get-subtly-wrong`, `docs/specs/PRODUCT-KNOWLEDGE-GRAPH.md#4-risks-open-items-for-phase-2`, `docs/specs/build-document.md#5-document-identity-name-place-and-the-commit-it-was-derived-at`, `docs/specs/comprehension-test-plan.md#urlfileusersfalconprojectsaispinedir-infoeditabletrue`, `docs/specs/design-and-comprehension-milestones.md#what-it-does-all-existing-deterministic-no-llm`, `docs/specs/knowledge-graph-architecture.md#4-cache-a-build-artifact-not-a-crawl`
+`CLAUDE.md#invariants-break-these-and-things-get-subtly-wrong`, `docs/reviewing/language-frontend-checklist.md#registration-src`, `docs/specs/PRODUCT-KNOWLEDGE-GRAPH.md#4-risks-open-items-for-phase-2`, `docs/specs/build-document.md#5-document-identity-name-place-and-the-commit-it-was-derived-at`, `docs/specs/comprehension-test-plan.md#urlfileusersfalconprojectsaispinedir-infoeditabletrue`, `docs/specs/design-and-comprehension-milestones.md#what-it-does-all-existing-deterministic-no-llm`
 
 ## Types
 

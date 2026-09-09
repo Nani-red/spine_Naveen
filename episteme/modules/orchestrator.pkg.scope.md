@@ -26,7 +26,7 @@ _8 of the symbols other code depends on here have no test path the graph can see
 
 ## Documented in
 
-`CHANGELOG.md`, `docs/specs/invention-oracle-cross-language.md#what-phase-1-built`, `docs/specs/parsing-and-the-pkg.md#the-same-class-in-four-more-front-ends-found-2026-08-24`, `docs/specs/php-support-roadmap.md#0-decisions-surfaced-up-front`, `docs/specs/php-support-roadmap.md#6-files-to-change`
+`CHANGELOG.md`, `docs/reviewing/language-frontend-checklist.md#registration-src`, `docs/specs/invention-oracle-cross-language.md#what-phase-1-built`, `docs/specs/parsing-and-the-pkg.md#the-same-class-in-four-more-front-ends-found-2026-08-24`, `docs/specs/php-support-roadmap.md#0-decisions-surfaced-up-front`, `docs/specs/php-support-roadmap.md#6-files-to-change`
 
 ## Types
 

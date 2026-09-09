@@ -26,7 +26,7 @@ _1 of the symbols other code depends on here have no test path the graph can see
 
 ## Documented in
 
-`docs/specs/catalog-then-compose-roadmap.md#phase-3-plan-at-the-gate`, `docs/specs/catalog-then-compose-roadmap.md#phase-overview`, `docs/specs/cross-run-semantic-memory.md#phasing`, `docs/specs/go-support-roadmap.md#where-go-already-is-today-it-is-half-wired`, `docs/specs/intake-backlog-progress.md#components`, `docs/specs/intake-backlog-progress.md#testing`
+`docs/reviewing/language-frontend-checklist.md#registration-src`, `docs/specs/catalog-then-compose-roadmap.md#phase-3-plan-at-the-gate`, `docs/specs/catalog-then-compose-roadmap.md#phase-overview`, `docs/specs/cross-run-semantic-memory.md#phasing`, `docs/specs/go-support-roadmap.md#where-go-already-is-today-it-is-half-wired`, `docs/specs/intake-backlog-progress.md#components`
 
 ## Types
 
