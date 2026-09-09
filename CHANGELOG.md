@@ -6,6 +6,21 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## Unreleased
 
+### Changed
+
+- **`SETUP.md` is the contributor's zero-to-running page again, and says only
+  what is true.** It described the platform before the comprehension and SDLC
+  work existed — sprint-numbered sections, an eleven-package layout where the
+  tree has twenty, a `docs/` "gitignored" that is tracked, six links to files
+  that no longer exist, and a "common workflows" section that was the pre-SDLC
+  agent-template and task-submit curls. Now: prerequisites, install from source,
+  the gate (linked to CONTRIBUTING, the single source), a no-key first run on
+  the checkout itself (`state`, `understand`), `orchestrator up` for the full
+  stack, tracing, three day-one environment variables with the rest linked, and
+  troubleshooting — 371 lines to about 210, every path and anchor checked.
+- **README no longer lists a terminal UI** among the surfaces; it was removed in
+  3.31.0 and two sentences had outlived it.
+
 ### Fixed
 
 - **The persistence cache could not tell whether the PHP extra was installed.** The

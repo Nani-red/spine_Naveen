@@ -313,7 +313,7 @@ loop step, and tool call, joined to the audit log — so you can debug a run, no
 read its result.
 
 **Use it your way.** A **CLI** for scripting and CI, a **web dashboard** (delegate
-runs, watch them live, approve gates inline), a **terminal UI**, and **MCP** in both
+runs, watch them live, approve gates inline), and **MCP** in both
 directions — consume external MCP tools, or expose the whole pipeline *as* an MCP
 server to Claude Code, Codex, or your IDE.
 
@@ -406,7 +406,8 @@ spend budget, an append-only audit trail, and human approval before any push or 
 
 **CLI or web UI?**
 Either — they drive the same engine and the same API. Use the CLI for scripting/CI,
-the web UI (or terminal UI) for watching runs and approving gates by hand.
+the web UI for watching runs and approving gates by hand — or ask your assistant, which
+has the same operator tools over MCP.
 
 **Can other tools call it?**
 Yes. It speaks MCP both ways: it can use external MCP servers, and it can run *as* an
