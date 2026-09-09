@@ -1,6 +1,7 @@
 /docs/*
 !/docs/specs/
 !/docs/evals/
+!/docs/reviewing/
 
 # Python
 __pycache__/
