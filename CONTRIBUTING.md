@@ -38,6 +38,13 @@ published release notes.
 For larger features, the core team often develops them ahead of time and publishes
 them on a release cadence — so opening an issue first avoids duplicated effort.
 
+**Auditing the documentation a change obliges.** `uv run --frozen python
+.claude/skills/review-pr/scripts/docs_audit.py --base develop --head HEAD` cross-checks the
+user documents against what the code registers (front-end counts, extras, CLI commands, MCP
+tools), follows every relative link, and — add `--removed "<name>,<synonym>"` — finds mentions
+of a feature you took out. Stdlib only; runs on any ref. The reviewer runs it on every PR
+(`.claude/skills/review-pr/docs-matrix.md` says which document each kind of change obliges).
+
 **Reviewing a pull request as a maintainer.** From Claude Code in this checkout, run
 `/review-pr <number>` (add `--promote` for a release-cut check). It is the checklist a merge
 decision needs — the gate with CI's extras, fan-out code review, a real-repository smoke test
