@@ -15,9 +15,12 @@ from __future__ import annotations
 from . import build, change, media, pkg, registry, sdlc, start, understand  # noqa: F401  (register commands)
 from ._app import PANEL_BUILD, PANEL_GRAPH, PANEL_PLUMBING, app
 
-app.add_typer(registry.template_app, name="template", rich_help_panel=PANEL_PLUMBING)
-app.add_typer(registry.contract_app, name="contract", rich_help_panel=PANEL_PLUMBING)
-app.add_typer(registry.task_app, name="task", rich_help_panel=PANEL_PLUMBING)
+# The platform substrate — agent templates, tool contracts, the generic task API — predates the
+# comprehension and SDLC surfaces and is driven today by the integration tests, not by users.
+# Hidden from `--help`, still invocable and documented (CLI_REFERENCE "Hidden" map).
+app.add_typer(registry.template_app, name="template", rich_help_panel=PANEL_PLUMBING, hidden=True)
+app.add_typer(registry.contract_app, name="contract", rich_help_panel=PANEL_PLUMBING, hidden=True)
+app.add_typer(registry.task_app, name="task", rich_help_panel=PANEL_PLUMBING, hidden=True)
 app.add_typer(sdlc.sdlc_app, name="sdlc", rich_help_panel=PANEL_BUILD)
 app.add_typer(registry.mcp_app, name="mcp", rich_help_panel=PANEL_PLUMBING)
 app.add_typer(registry.catalog_app, name="catalog", rich_help_panel=PANEL_PLUMBING)

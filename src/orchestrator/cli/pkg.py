@@ -800,7 +800,7 @@ def _scoreboard(repo: str, write: bool, as_json: bool, pinned_corpus: bool = Fal
         raise typer.Exit(code=1)
 
 
-@pkg_app.command("fix-sites")
+@pkg_app.command("fix-sites", hidden=True)  # G6 gold-set tooling: maintainers, not users
 def pkg_fix_sites(
     repo: Annotated[str, typer.Argument(help="A repo name from the G6 corpus manifest.")],
     commit: Annotated[str, typer.Argument(help="The full 40-character commit that fixed the issue.")],
@@ -863,7 +863,7 @@ def pkg_fix_sites(
     )
 
 
-@pkg_app.command("labels")
+@pkg_app.command("labels", hidden=True)  # G6 gold-set tooling: maintainers, not users
 def pkg_labels(
     check: Annotated[
         bool, typer.Option("--check", help="Validate the gold set and exit non-zero on a problem.")

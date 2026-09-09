@@ -9,10 +9,13 @@
 ## Command map
 
 **Getting started & operations** — Set up your environment and run the platform.  
-`init` · `doctor` · `models` · `up` · `task submit`
+`init` · `doctor` · `models` · `up`
+
+**Hidden — maintainer & platform plumbing** — Registered and documented, but off `--help`: the platform substrate that predates the comprehension and SDLC surfaces (driven by the integration tests, not by users), and the G6 gold-set tooling.  
+`task submit` · `template register|list|show|publish|deprecate` · `contract register|list|show|publish|deprecate` · `pkg labels` · `pkg fix-sites`
 
 **Understand a codebase — the Knowledge Graph** — Extract and read the Product Knowledge Graph (PKG). Deterministic, no LLM. All accept a local path OR a git URL.  
-`understand` · `state` · `profile` · `catalog list` · `catalog plan` · `pkg extract` · `pkg export` · `pkg docs` · `pkg capabilities` · `pkg verify` · `pkg accuracy` · `pkg labels` · `pkg fix-sites` · `pkg joins` · `media extract`
+`understand` · `state` · `profile` · `catalog list` · `catalog plan` · `pkg extract` · `pkg export` · `pkg docs` · `pkg capabilities` · `pkg verify` · `pkg accuracy` · `pkg joins` · `media extract`
 
 **Grounded design, debugging & RCA** — The KG-grounded engineering commands: design a change, research a ticket, and trace/analyze bugs — all anchored to real code.  
 `design` · `investigate` · `localize` · `rca` · `regression` · `audit`
@@ -150,6 +153,9 @@ orchestrator up [OPTIONS]
 | `--compose-file` | Override the docker compose file to use. |
 
 ### `orchestrator task submit`
+
+> Hidden from `--help` — the platform substrate's generic task API, kept for the integration
+> tests that drive it. Still invocable.
 
 Submit a task to the orchestrator and print the final state.
 
@@ -558,7 +564,7 @@ is not computable from a trace, and the report says so on every run.
 
 ### `orchestrator pkg labels` · `orchestrator pkg fix-sites`
 
-**The G6 gold set — maintainer tooling.** `pkg accuracy`'s localization oracle scores
+**The G6 gold set — maintainer tooling, hidden from `--help`.** `pkg accuracy`'s localization oracle scores
 `investigate` against tickets whose fixing commit is known. These two commands are how that
 gold set is built and kept honest; a user of Spine never needs them.
 
@@ -1395,6 +1401,9 @@ orchestrator mcp ingest-db [OPTIONS]
 ---
 
 ## Registry — templates & contracts
+
+> Hidden from `--help` — agent templates and tool contracts are the platform substrate that
+> predates the comprehension and SDLC surfaces. Registered, documented, still invocable.
 
 Manage reusable capability templates and API contracts in the registry service.
 
