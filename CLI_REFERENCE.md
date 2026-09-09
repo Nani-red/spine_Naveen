@@ -12,7 +12,7 @@
 `init` · `doctor` · `models` · `up` · `task submit`
 
 **Understand a codebase — the Knowledge Graph** — Extract and read the Product Knowledge Graph (PKG). Deterministic, no LLM. All accept a local path OR a git URL.  
-`understand` · `state` · `profile` · `catalog list` · `catalog plan` · `pkg extract` · `pkg export` · `pkg docs` · `pkg capabilities` · `pkg verify` · `pkg accuracy` · `pkg joins` · `media extract`
+`understand` · `state` · `profile` · `catalog list` · `catalog plan` · `pkg extract` · `pkg export` · `pkg docs` · `pkg capabilities` · `pkg verify` · `pkg accuracy` · `pkg labels` · `pkg fix-sites` · `pkg joins` · `media extract`
 
 **Grounded design, debugging & RCA** — The KG-grounded engineering commands: design a change, research a ticket, and trace/analyze bugs — all anchored to real code.  
 `design` · `investigate` · `localize` · `rca` · `regression` · `audit`
@@ -515,8 +515,8 @@ orchestrator pkg accuracy [PATH] [OPTIONS]
 | `--tests` | Test target(s) for `--oracle runtime`; defaults to the repo's own. |
 | `--dialect` | SQL dialect (postgres\|mysql\|tsql\|oracle\|…); default: auto-detect. |
 
-**Current corpus results** (19 fixture cases, 8 front-ends). Precision is **1.00 on every node
-kind and every edge kind in all 8 languages**; recall is 1.00 on every kind except `CALLS`:
+**Current corpus results** (38 fixture cases — 34 single-language, 4 multi-repo — across all 9
+front-ends). Precision is **1.00 on every node kind and every edge kind in all 9 languages**; recall is 1.00 on every kind except `CALLS`:
 
 | language | `CALLS` recall |
 |---|---|
@@ -548,13 +548,31 @@ is not computable from a trace, and the report says so on every run.
 **Two coverage limits worth knowing before you quote a number:**
 
 - **`--oracle runtime` is Python-only.** It uses `sys.monitoring` (PEP 669), which has no
-  equivalent in the other seven front-ends. "Runtime-verified" means "runtime-verified for
+  equivalent in the other eight front-ends. "Runtime-verified" means "runtime-verified for
   Python".
 - **`--oracle invention` only examines Python.** It resolves caller-scope bindings with
   Python's `ast`, so calls in other languages are counted as *unexaminable* rather than
   scored. On a C repository it reports `0 (0.00% of all calls)` with every candidate
   unexaminable — that is "not measured", not "clean". The corpus catches invention in the
   other front-ends; this repo-scale oracle does not.
+
+### `orchestrator pkg labels` · `orchestrator pkg fix-sites`
+
+**The G6 gold set — maintainer tooling.** `pkg accuracy`'s localization oracle scores
+`investigate` against tickets whose fixing commit is known. These two commands are how that
+gold set is built and kept honest; a user of Spine never needs them.
+
+```
+orchestrator pkg labels [--check] [--paths]
+orchestrator pkg fix-sites <repo> <commit>
+```
+
+| Command | What it does |
+|---|---|
+| `pkg labels` | The gold set as it stands: what is labelled, what was excluded and why. `--check` validates it and exits non-zero on a problem; `--paths` also verifies every labelled path exists in the pinned tree. |
+| `pkg fix-sites` | What a fixing commit changed — paths and change counts straight from git — the raw material for one label. **It does not choose for you**: deciding which of a commit's changes *is* the fix is the judgement the hand-labelled set exists to capture, and a candidate picked the way `investigate` reads a ticket would not be independent of the thing being scored. |
+
+---
 
 ### `orchestrator media extract`
 

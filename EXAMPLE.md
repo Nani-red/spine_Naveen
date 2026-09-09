@@ -173,8 +173,8 @@ Every step above trusted the graph. That trust should be earned with a number, n
 orchestrator pkg accuracy
 ```
 
-It scores the extractor against a committed corpus of 19 hand-labelled repositories covering all
-eight front-ends. **Precision is 1.00 on every node kind and every edge kind, in every language** —
+It scores the extractor against a committed corpus of 38 hand-labelled cases covering all
+nine front-ends. **Precision is 1.00 on every node kind and every edge kind, in every language** —
 so nothing you saw in steps 3–6 was invented. Recall is 1.00 on everything except `CALLS`:
 
 | language | `CALLS` recall |

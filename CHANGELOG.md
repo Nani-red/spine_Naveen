@@ -6,6 +6,20 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## Unreleased
 
+### Fixed
+
+- **The first full run of the documentation audit, and what it found.** Ten
+  "8 front-ends" counts written before PHP became the ninth (FEATURES,
+  USER_GUIDE, KNOWLEDGE_GRAPH, CLAUDE_GUIDE, CLI_REFERENCE, EXAMPLE) now say
+  nine and quote the corpus as it is — 38 fixture cases, 34 single-language and
+  4 multi-repo, where "19" had stood; BENCHMARK's two counts are pinned to the
+  3.29.0 measurement they describe rather than renumbered. CODEX_GUIDE's tool
+  table gains the twelve rows CLAUDE_GUIDE gained in 3.31.0 (`understand_repo`,
+  `profile_repo`, `design_change`, `sdlc_baseline`, the four `registry_*`
+  operator tools, and the four that close the loop after the PR). `pkg labels`
+  and `pkg fix-sites`, the G6 gold-set tooling, are documented in
+  CLI_REFERENCE as what they are: maintainer commands.
+
 ### Added
 
 - **The documentation audit follows links and hunts removed surfaces.** The review
