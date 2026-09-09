@@ -4,6 +4,22 @@ All notable changes to this project are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); the package is `synaptixs-spine`
 (import/CLI stay `orchestrator`).
 
+## Unreleased
+
+### Added
+
+- **The documentation audit follows links and hunts removed surfaces.** The review
+  skill's `docs_audit.py` now fails on any relative link in a user document whose
+  file or anchor does not resolve (under GitHub's slug rules — an em dash yields a
+  double hyphen), and, given `--base/--head`, lists what the diff removed from the
+  CLI, MCP and extras registries and reports every remaining mention; `--removed
+  "terminal UI,TUI"` adds the names and synonyms of a feature that had no registry
+  entry. A mention inside a version-stamped paragraph is history, not a finding.
+  Six dead links in `SETUP.md` and two README sentences about a removed terminal
+  UI are what it would have caught. The docs matrix gains a "removed feature"
+  row; the script gains `--root` and its first tests. The release-cut guidance in
+  the skill now names the lockfile's own entry and every plugin manifest.
+
 ## 3.33.0 — a PHP codebase gets the whole graph
 
 ### Added

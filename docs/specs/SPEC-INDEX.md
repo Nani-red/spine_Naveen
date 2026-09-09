@@ -81,7 +81,7 @@ Graphify-gap series only. This file is the complete inventory.
 | [java-codegen](java-codegen.md) | 2a (1.8.0), 2b + 2c (1.9.0) | Remaining slices |
 | [typescript-codegen](typescript-codegen.md) | Slice 1 comprehension (1.11.0) | Codegen slices |
 | [multi-language-java](multi-language-java.md) | Slice 1 comprehension (1.7.0) | Superseded in part by `java-codegen` |
-| [unified-ui](unified-ui.md) | P0–P3 — the buildable UI | P4 TUI, P5 SPA (**optional**) |
+| [unified-ui](unified-ui.md) | P0–P3 — the buildable UI; P4 TUI shipped 1.18.0, removed 3.31.0 | P5 SPA (**optional**) |
 | [cross-run-semantic-memory](cross-run-semantic-memory.md) | Phase 1 read path, `MemoryRow` | Write/distil path |
 | [project-comprehension-memory-bank](project-comprehension-memory-bank.md) | Phases 1 + 4 (1.5.0, 1.6.0) | Phases 2–3 |
 | [persona-skill-measurement](persona-skill-measurement.md) | P0–P3 implemented | The P2 A/B `--live` run |

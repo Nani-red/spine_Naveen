@@ -18,8 +18,9 @@ are design records and count separately.
 | Registry / web UI change (`registry/`) | `OPERATIONS.md`, `USER_GUIDE.md` operator section, `docs/specs/unified-ui.md` | no build step introduced |
 | Deploy / env / config change | `OPERATIONS.md`, `SETUP.md`, `.env.example` if present | variable name and default |
 | Contribution process change | `CONTRIBUTING.md`, `.github/pull_request_template.md` | |
-| Release cut | `pyproject.toml` version, `CHANGELOG.md` header, `README.md` "What's new", both SVGs, `STATE-OF-SPINE.md` version row, `grep` for the previous version string across `*.md` | see SKILL.md §7 |
+| Release cut | `pyproject.toml` version and the lockfile's own entry, **every plugin manifest** (`_MANIFESTS` in `tests/plugin/test_manifests.py` — three, one at the repo root), `CHANGELOG.md` header, `README.md` "What's new", both SVGs, `STATE-OF-SPINE.md` version row, `CLI_REFERENCE.md` banner, `capability-matrix.md` header, the reusable-workflow tag in `gap4-adoption-distribution-roadmap.md`, `SPEC-INDEX.md` recount line; `grep` for the previous version string across `*.md` **and** `*.json` | see SKILL.md §7 |
 | New maintainer tooling (`.claude/skills`, `.claude/agents`, `scripts/`) | `CONTRIBUTING.md` (how to run it) | one line is enough |
+| **Removed feature or surface** (a CLI command, an MCP tool, an extra, a UI, a workflow) | every root document that named it — the audit lists them: `docs_audit.py --base <base> --head <head> --removed "<name>,<synonym>,<synonym>"`; the skill; any spec whose status restates it; `CHANGELOG.md` Removed | the name **and its synonyms** ("terminal UI" outlived "tui" by two releases); a mention inside a version-stamped paragraph is history and may stay |
 
 ## Counts that rot
 
@@ -32,3 +33,10 @@ digit **and** the word:
 - "N node kinds · M edge kinds" in the architecture SVG
 
 `scripts/state-numbers.py --check` gates some of these; the audit script covers the rest.
+
+## Links
+
+The audit follows every relative link in the user documents: the file must exist and an anchor
+must match a heading under GitHub's slug rules (an em dash yields a double hyphen —
+`step-1--install` — so do not "fix" those). Six dead links sat in `SETUP.md` for months before
+this check existed.

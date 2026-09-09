@@ -26,6 +26,17 @@ STALE/MISSING):
 5. MCP tools — every key of `plugin/outputs.py:OUTPUTS` is mentioned in `CLAUDE_GUIDE.md`,
    `CODEX_GUIDE.md`, and at least one `plugins/spine/skills/*/SKILL.md`.
 6. with `--base/--head`: which user documents the diff touched, for the report's table.
+7. links — every relative link in the user documents resolves: the file exists and, when
+   there is an anchor, it matches a heading under GitHub's slug rules (an em dash in a
+   heading yields a double hyphen: "Step 1 — Install" → `step-1--install`). MISSING.
+8. removed surfaces — with `--base/--head`, whatever the diff removed from the registries
+   (a CLI command, an MCP tool, an optional extra), plus anything passed as
+   `--removed "terminal UI,TUI,Textual"`, is grepped for in the user documents at head.
+   A mention is STALE; inside a version-stamped or dated paragraph it is INFO (history).
+   The manual list exists because a removed feature often has no registry entry — the
+   terminal UI had none, and two README sentences outlived it by two releases.
+
+`--root DIR` points every check at another tree (the tests use a fixture tree).
 
 A finding here is a pointer for the reviewer, not a verdict: a stale count in a paragraph
 describing a dated measurement may be correct history. The reviewer opens the line.
@@ -41,6 +52,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
 SRC = ROOT / "src" / "orchestrator"
+
+
+def set_root(path: Path | str) -> None:
+    """Point every check at ``path`` instead of the checkout this file lives in."""
+    global ROOT, SRC
+    ROOT = Path(path).resolve()
+    SRC = ROOT / "src" / "orchestrator"
+
 
 USER_DOCS = [
     "README.md",
@@ -90,8 +109,35 @@ WORDS = {
     "eleven": 11,
     "twelve": 12,
 }
-# Lines that describe a moment rather than the present: a date, or a release stamp.
-_HISTORY = re.compile(r"20\d\d-\d\d-\d\d|\*\*\d+\.\d+\.\d+\*\*")
+# A date, a bold release stamp (`**3.32.0**`, `**3.32.0 (current)**`), or prose that pins a
+# version ("removed in 3.31.0", "shipped 1.18.0", "since 3.29"). Present-tense prose has none.
+_HISTORY = re.compile(
+    r"20\d\d-\d\d-\d\d"
+    r"|\*\*\d+\.\d+\.\d+[^*\n]*\*\*"
+    r"|\b(?:removed|shipped|added|landed|since|until|before|after|in|at)(?: in)? v?\d+\.\d+(?:\.\d+)?\b",
+    re.I,
+)
+
+
+def history_lines(text: str) -> set[int]:
+    """1-based line numbers that are history: the line carries a date or release stamp, or
+    the paragraph it sits in opens with one ("What's new" stamps the paragraph, not every
+    line)."""
+    out: set[int] = set()
+    lines = text.splitlines()
+    para_start = 0
+    para_history = False
+    for i, line in enumerate(lines, 1):
+        if not line.strip():
+            para_start, para_history = 0, False
+            continue
+        if para_start == 0:
+            para_start, para_history = i, bool(_HISTORY.search(line))
+        if para_history or _HISTORY.search(line):
+            out.add(i)
+    return out
+
+
 _COUNT = re.compile(r"\b(?:all |the other |other )?(\d+|[a-z]+) (?:language )?front-ends\b", re.I)
 # Extras that bundle others or are tooling, never a language.
 _NOT_LANGUAGE_EXTRAS = frozenset({"dev", "languages", "all"})
@@ -122,7 +168,9 @@ def front_ends() -> list[str]:
 def check_counts(n: int) -> list[str]:
     out: list[str] = []
     for doc in user_docs():
-        for i, line in enumerate(_read(doc).splitlines(), 1):
+        text = _read(doc)
+        history = history_lines(text)
+        for i, line in enumerate(text.splitlines(), 1):
             for m in _COUNT.finditer(line):
                 tok = m.group(1).lower()
                 val = int(tok) if tok.isdigit() else WORDS.get(tok)
@@ -132,7 +180,7 @@ def check_counts(n: int) -> list[str]:
                 expected = n - 1 if other else n
                 if val == expected:
                     continue
-                tag = "INFO" if _HISTORY.search(line) else "STALE"
+                tag = "INFO" if i in history else "STALE"
                 note = f" (other → {expected})" if other else ""
                 out.append(
                     f"[{tag}] front-end count: {doc}:{i} says {tok!r}, registry has {n}{note}: "
@@ -245,6 +293,169 @@ def check_mcp() -> list[str]:
     return out
 
 
+# --------------------------------------------------------------------------- #
+# 7. links
+# --------------------------------------------------------------------------- #
+
+_LINK = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
+_HEADING = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
+
+
+def github_slug(heading: str) -> str:
+    """GitHub's anchor for a heading: markdown stripped, lowercased, everything but letters,
+    digits, spaces, hyphens and underscores dropped, spaces to hyphens. Consecutive hyphens
+    are kept — that is where the double hyphen for an em dash comes from."""
+    text = re.sub(r"`([^`]*)`", r"\1", heading)
+    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)  # [text](link) → text
+    text = text.replace("**", "").replace("*", "").replace("_", "_")
+    text = text.lower()
+    text = re.sub(r"[^\w\s-]", "", text, flags=re.UNICODE)
+    text = text.replace(" ", "-")
+    return text
+
+
+def heading_anchors(text: str) -> set[str]:
+    """Every anchor a document offers, duplicates suffixed the way GitHub does (-1, -2, …).
+    Headings inside code fences are not headings."""
+    seen: dict[str, int] = {}
+    out: set[str] = set()
+    fenced = False
+    for line in text.splitlines():
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+            continue
+        if fenced:
+            continue
+        m = _HEADING.match(line)
+        if not m:
+            continue
+        slug = github_slug(m.group(2))
+        n = seen.get(slug, 0)
+        seen[slug] = n + 1
+        out.add(slug if n == 0 else f"{slug}-{n}")
+    return out
+
+
+def _links_in(text: str) -> list[tuple[int, str]]:
+    """``(line, target)`` for every link outside a code fence; inline code is skipped too."""
+    out: list[tuple[int, str]] = []
+    fenced = False
+    for i, line in enumerate(text.splitlines(), 1):
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+            continue
+        if fenced:
+            continue
+        bare = re.sub(r"`[^`]*`", "", line)
+        for m in _LINK.finditer(bare):
+            out.append((i, m.group(1)))
+    return out
+
+
+def check_links() -> list[str]:
+    out: list[str] = []
+    for doc in user_docs():
+        text = _read(doc)
+        for lineno, target in _links_in(text):
+            if re.match(r"[a-z][a-z0-9+.-]*:", target) or target.startswith("//"):
+                continue  # http(s), mailto:, and friends
+            path, _, anchor = target.partition("#")
+            if not path and not anchor:
+                continue
+            base = (ROOT / doc).parent
+            file = (base / path).resolve() if path else (ROOT / doc)
+            if not file.exists():
+                out.append(f"[MISSING] link: {doc}:{lineno} → {target} — file not found")
+                continue
+            if anchor and file.suffix == ".md":
+                anchors = heading_anchors(file.read_text(encoding="utf-8", errors="replace"))
+                if anchor not in anchors:
+                    stem = anchor.split("-")[0]
+                    near = sorted(a for a in anchors if a.startswith(stem))[:3]
+                    hint = f" (nearest: {', '.join(near)})" if near else ""
+                    out.append(f"[MISSING] link: {doc}:{lineno} → {target} — no such anchor{hint}")
+    return out
+
+
+# --------------------------------------------------------------------------- #
+# 8. removed surfaces
+# --------------------------------------------------------------------------- #
+
+
+def cli_commands_in(text: str) -> set[str]:
+    return set(re.findall(r'@\w+\.command\("([a-z-]+)"', text))
+
+
+def mcp_tools_in(outputs_text: str) -> set[str]:
+    marker = "OUTPUTS: dict[str, type] = {"
+    block = outputs_text.split(marker, 1)[1].split("}", 1)[0] if marker in outputs_text else ""
+    return set(re.findall(r'^\s+"([a-z_]+)":', block, re.M))
+
+
+def extras_in(pyproject_text: str) -> set[str]:
+    if "[project.optional-dependencies]" not in pyproject_text:
+        return set()
+    opt = pyproject_text.split("[project.optional-dependencies]", 1)[1].split("\n[", 1)[0]
+    return set(re.findall(r"^([a-z-]+) = \[", opt, re.M)) - _NOT_LANGUAGE_EXTRAS
+
+
+def _at_ref(ref: str, rel: str) -> str:
+    try:
+        return subprocess.run(
+            ["git", "-C", str(ROOT), "show", f"{ref}:{rel}"], capture_output=True, text=True, check=True
+        ).stdout
+    except (subprocess.CalledProcessError, OSError):
+        return ""
+
+
+def _cli_files_at(ref: str) -> list[str]:
+    try:
+        names = subprocess.run(
+            ["git", "-C", str(ROOT), "ls-tree", "--name-only", ref, "src/orchestrator/cli/"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.split()
+    except (subprocess.CalledProcessError, OSError):
+        return []
+    return [n for n in names if n.endswith(".py")]
+
+
+def removed_surfaces(base: str, head: str) -> dict[str, set[str]]:
+    """What ``head`` no longer registers that ``base`` did: CLI commands, MCP tools, extras."""
+
+    def registries(ref: str) -> dict[str, set[str]]:
+        cli = set()
+        for f in _cli_files_at(ref):
+            cli |= cli_commands_in(_at_ref(ref, f))
+        return {
+            "CLI command": cli,
+            "MCP tool": mcp_tools_in(_at_ref(ref, "src/orchestrator/plugin/outputs.py")),
+            "extra": extras_in(_at_ref(ref, "pyproject.toml")),
+        }
+
+    before, after = registries(base), registries(head)
+    return {kind: before[kind] - after[kind] for kind in before if before[kind] - after[kind]}
+
+
+def check_removed(terms: dict[str, str]) -> list[str]:
+    """``terms`` maps a phrase to what it is (``"tui": "CLI command"``, ``"terminal ui":
+    "removed surface"``). Every mention in the user documents is STALE, or INFO inside a
+    history paragraph."""
+    out: list[str] = []
+    for doc in user_docs():
+        text = _read(doc)
+        history = history_lines(text)
+        for i, line in enumerate(text.splitlines(), 1):
+            for term, kind in terms.items():
+                if re.search(rf"(?<![\w-]){re.escape(term)}(?![\w-])", line, re.I):
+                    tag = "INFO" if i in history else "STALE"
+                    out.append(
+                        f"[{tag}] removed {kind} {term!r} still mentioned: {doc}:{i}: {line.strip()[:100]}"
+                    )
+    return out
+
+
 def touched_docs(base: str, head: str) -> list[str]:
     try:
         names = subprocess.run(
@@ -264,7 +475,15 @@ def main() -> int:
     ap.add_argument("--base")
     ap.add_argument("--head")
     ap.add_argument("--strict", action="store_true")
+    ap.add_argument("--root", help="audit another tree (default: this checkout)")
+    ap.add_argument(
+        "--removed",
+        default="",
+        help='comma-separated names/synonyms of removed features to grep for, e.g. "terminal UI,TUI,Textual"',
+    )
     args = ap.parse_args()
+    if args.root:
+        set_root(args.root)
 
     langs = front_ends()
     lines: list[str] = [f"[INFO] registered front-ends ({len(langs)}): {', '.join(langs)}"]
@@ -273,8 +492,17 @@ def main() -> int:
     lines += check_extras()
     lines += check_cli()
     lines += check_mcp()
+    lines += check_links()
+    terms: dict[str, str] = {t.strip(): "surface" for t in args.removed.split(",") if t.strip()}
     if args.base and args.head:
         lines += touched_docs(args.base, args.head)
+        for kind, names in removed_surfaces(args.base, args.head).items():
+            lines.append(
+                f"[INFO] {kind}s removed between {args.base} and {args.head}: {', '.join(sorted(names))}"
+            )
+            terms.update({n: kind for n in names})
+    if terms:
+        lines += check_removed(terms)
     for line in lines:
         print(line)
     bad = sum(1 for line in lines if line.startswith(("[STALE]", "[MISSING]")))

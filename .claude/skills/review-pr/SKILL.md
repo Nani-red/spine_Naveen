@@ -162,9 +162,19 @@ uv run --frozen python .claude/skills/review-pr/scripts/docs_audit.py --base <ba
 It reports: stale "N front-ends" counts against the registry, language enumerations that omit
 a registered language (informational — codegen lists legitimately exclude comprehension-only
 languages), CLI commands missing from `CLI_REFERENCE.md`, MCP tools missing from the two guides
-and the plugin skill, and every optional extra missing from any of its registration sites
+and the plugin skill, every optional extra missing from any of its registration sites
 (`USER_GUIDE.md`, the `languages` meta-extra, `ci.yml`, `doctor.EXTRA_PROBES`,
-`persistence._GRAMMAR_MODULES`, the mypy override).
+`persistence._GRAMMAR_MODULES`, the mypy override), **every relative link that does not
+resolve** (file or anchor, under GitHub's slug rules), and — with `--base/--head` — **every
+mention of a surface the diff removed** (a CLI command, an MCP tool, an extra). A removed
+feature often has no registry entry, so name it and its synonyms yourself:
+
+```bash
+uv run --frozen python .claude/skills/review-pr/scripts/docs_audit.py --base <base> --head <head> --removed "terminal UI,TUI,Textual"
+```
+
+A mention inside a version-stamped or dated paragraph is reported as INFO — it is history and
+may stay; a mention in present-tense prose is STALE.
 
 Then walk [docs-matrix.md](docs-matrix.md): for each trigger the diff matches, confirm the
 named document changed **and says the right thing** — a language added to one list and
@@ -186,10 +196,19 @@ its test fakes; fixture source lives under a dot-prefixed root; `--language` sta
 
 ## 7. Promotion (`--promote`) — the release cut
 
-- Version bumped in `pyproject.toml`; `CHANGELOG.md` has a dated header, not just
-  "Unreleased"; `README.md` "What's new" names the release; both SVGs re-rendered (they stamp
-  the version); `STATE-OF-SPINE.md` version row and the numbers `state-numbers.py` derives.
-- `grep -rn "<previous version>" *.md docs/specs/*.md` — stale version strings.
+- Version bumped in `pyproject.toml` **and the lockfile's own package entry only** (a full
+  `uv lock` on a developer machine rewrites unrelated markers and can downgrade the lock
+  revision — revert that, change the one line, as every prior cut did); `CHANGELOG.md` has a
+  dated header, not just "Unreleased"; `README.md` "What's new" names the release; both SVGs
+  re-rendered (they stamp the version); `STATE-OF-SPINE.md` version row and the numbers
+  `state-numbers.py` derives.
+- **Every plugin manifest** — the list is `_MANIFESTS` in `tests/plugin/test_manifests.py`
+  (three today, including the root `.claude-plugin/marketplace.json`, which a `find` for
+  `plugin.json` does not return). Run that test file; the 3.33.0 cut failed CI on the one
+  the grep below cannot see.
+- `grep -rn "<previous version>" *.md docs/specs/*.md` for stale version strings in prose,
+  and `grep -rn '"version": "<previous version>"' .claude-plugin plugins codex-marketplace`
+  for the JSON the Markdown grep misses.
 - Every open code-scanning alert on the changed files resolved or fixed (they re-comment on
   the release PR and block it).
 - `develop` is fast-forwardable from the reviewed merge commit; nothing landed since.
