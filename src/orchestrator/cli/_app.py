@@ -55,7 +55,7 @@ _COMMAND_ORDER: tuple[str, ...] = (
     # Knowledge graph
     "pkg",
     "media",
-    # Registry & integrations
+    # Registry & integrations (template / contract / task are registered but hidden from --help)
     "template",
     "contract",
     "task",

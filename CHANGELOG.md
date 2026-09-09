@@ -6,6 +6,17 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## Unreleased
 
+### Changed
+
+- **Thirteen commands leave the help screen.** The platform substrate — `task submit`
+  and the ten `template` / `contract` commands — predates the comprehension and
+  SDLC surfaces and is driven today by the integration tests, not by users; the
+  two G6 gold-set builders, `pkg labels` and `pkg fix-sites`, are maintainer
+  tooling. All are still registered, documented (CLI_REFERENCE's "Hidden" map)
+  and invocable; they no longer appear in `orchestrator --help` or
+  `orchestrator pkg --help`. Nothing is deleted and the command count is
+  unchanged.
+
 ### Fixed
 
 - **The first full run of the documentation audit, and what it found.** Ten
