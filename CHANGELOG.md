@@ -6,6 +6,17 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## Unreleased
 
+### Added
+
+- **Eight documented commands get their first CLI-level test.** `sdlc explain`,
+  `sdlc workflows`, `sdlc workflow`, `mcp call`, `mcp ingest-db`,
+  `sdlc address-review`, `sdlc baseline` and `sdlc remediate` each called a
+  tested engine, but no test invoked the *command* — a renamed flag or a broken
+  import would have shipped. One `CliRunner` test each, the engine patched where
+  it needs git, `gh`, a model, a server or a backend, and run for real where it
+  is deterministic and local (the profiles, the baseline gate, the schema
+  facts). The last item of the CLI command review.
+
 ### Changed
 
 - **The cheap rungs say what supersedes them.** `investigate`, `design` and
