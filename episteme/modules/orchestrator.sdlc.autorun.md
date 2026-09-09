@@ -9,7 +9,7 @@
 
 ## Changing this safely
 
-**Tested by** (2): `tests.sdlc.test_autorun`, `tests.sdlc.test_research_pass`
+**Tested by** (3): `tests.sdlc.test_autorun`, `tests.sdlc.test_research_pass`, `tests.test_cli_documented_commands`
 
 **Most depended-upon here** — a change to these reaches the most code (call graph, ≤4 hops):
 
@@ -188,7 +188,7 @@ _1 of the symbols other code depends on here have no test path the graph can see
 
 [`src/orchestrator/sdlc/autorun.py:227`](../../src/orchestrator/sdlc/autorun.py#L227)
 
-- **Called by** (2 production · 1 test): [`autorun`](../../src/orchestrator/sdlc/autorun.py#L237), [`sdlc_explain`](../../src/orchestrator/cli/sdlc.py#L244), [`test_the_default_artifact_dir_is_not_the_repo`](../../tests/sdlc/test_autorun.py#L188)
+- **Called by** (2 production · 2 test): [`autorun`](../../src/orchestrator/sdlc/autorun.py#L237), [`sdlc_explain`](../../src/orchestrator/cli/sdlc.py#L244), [`test_sdlc_explain_renders_a_case_and_names_a_missing_one`](../../tests/test_cli_documented_commands.py#L29), [`test_the_default_artifact_dir_is_not_the_repo`](../../tests/sdlc/test_autorun.py#L188)
 - **Calls** (3): `getenv`, `gettempdir`, `pathlib.Path`
 - **Documented in**: `docs/specs/build-document.md#5-document-identity-name-place-and-the-commit-it-was-derived-at`
 
@@ -204,4 +204,4 @@ _1 of the symbols other code depends on here have no test path the graph can see
 
 ## Imported by
 
-[`orchestrator.cli.sdlc`](orchestrator.cli.sdlc.md), [`scripts.phase2a_parity_gate`](../../scripts/phase2a_parity_gate.py#L1), [`tests.sdlc.test_autorun`](../../tests/sdlc/test_autorun.py#L1), [`tests.sdlc.test_research_pass`](../../tests/sdlc/test_research_pass.py#L1)
+[`orchestrator.cli.sdlc`](orchestrator.cli.sdlc.md), [`scripts.phase2a_parity_gate`](../../scripts/phase2a_parity_gate.py#L1), [`tests.sdlc.test_autorun`](../../tests/sdlc/test_autorun.py#L1), [`tests.sdlc.test_research_pass`](../../tests/sdlc/test_research_pass.py#L1), [`tests.test_cli_documented_commands`](../../tests/test_cli_documented_commands.py#L1)
