@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""The mechanical half of the user-facing documentation audit (`/review-pr` §5).
+"""The mechanical half of the user-facing documentation audit (`docs/reviewing/docs-matrix.md`).
 
 Cross-checks what the code *registers* against what the documents *say*, so a reviewer does
 not have to remember which of nine documents carries a language list. Stdlib only, regex over
 source — no imports of the package, so it runs on any ref, with or without extras installed.
 
-    python .claude/skills/review-pr/scripts/docs_audit.py [--base REF --head REF] [--strict]
+    python scripts/docs_audit.py [--base REF --head REF] [--strict] [--removed "name,synonym"]
 
 Checks (each prints `[STALE]`, `[MISSING]`, or `[INFO]` lines; `--strict` exits non-zero on
 STALE/MISSING):
@@ -50,7 +50,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[4]
+ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src" / "orchestrator"
 
 
