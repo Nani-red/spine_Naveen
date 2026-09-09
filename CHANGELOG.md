@@ -4,6 +4,81 @@ All notable changes to this project are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); the package is `synaptixs-spine`
 (import/CLI stay `orchestrator`).
 
+## 3.33.1 — the documents say only what is true, and the help screen shows only what you need
+
+### Changed
+
+- **The maintainer review skill leaves the repository; its reusable halves stay.**
+  The Claude Code `/review-pr` skill and the `pr-reviewer` subagent (#337) are
+  local tooling and are no longer tracked — `.gitignore` covers `.claude/` again.
+  What any maintainer or CI can use without an assistant moves to neutral paths:
+  the documentation audit to `scripts/docs_audit.py`, beside the other gates, and
+  the docs matrix and the language-front-end checklist to `docs/reviewing/`.
+  CONTRIBUTING describes the review checklist in prose and points at those.
+  Nothing a user installs is affected — the wheel never carried `.claude/`.
+
+### Added
+
+- **Eight documented commands get their first CLI-level test.** `sdlc explain`,
+  `sdlc workflows`, `sdlc workflow`, `mcp call`, `mcp ingest-db`,
+  `sdlc address-review`, `sdlc baseline` and `sdlc remediate` each called a
+  tested engine, but no test invoked the *command* — a renamed flag or a broken
+  import would have shipped. One `CliRunner` test each, the engine patched where
+  it needs git, `gh`, a model, a server or a backend, and run for real where it
+  is deterministic and local (the profiles, the baseline gate, the schema
+  facts). The last item of the CLI command review.
+
+### Changed
+
+- **The cheap rungs say what supersedes them.** `investigate`, `design` and
+  `localize` — the read-only first steps — now say in `--help` and in
+  CLI_REFERENCE that `sdlc plan` and `rca` are the composites that run them and
+  add the rest, and when to run the rung alone. The CLI review found no dead
+  command, only a ladder nobody had labelled.
+- **One reader, one summary.** The `episteme/` pages a design draws on were read
+  by two identical functions, one in the CLI and one in the plugin; they are
+  `sdlc.design.design_bank` now. The `sdlc baseline --json` object and the
+  plugin's `sdlc_baseline` result were assembled twice from the same scores;
+  they are `evals.agent_corpus.baseline_summary` now. Neither surface changed
+  its output.
+
+- **Thirteen commands leave the help screen.** The platform substrate — `task submit`
+  and the ten `template` / `contract` commands — predates the comprehension and
+  SDLC surfaces and is driven today by the integration tests, not by users; the
+  two G6 gold-set builders, `pkg labels` and `pkg fix-sites`, are maintainer
+  tooling. All are still registered, documented (CLI_REFERENCE's "Hidden" map)
+  and invocable; they no longer appear in `orchestrator --help` or
+  `orchestrator pkg --help`. Nothing is deleted and the command count is
+  unchanged.
+
+### Fixed
+
+- **The first full run of the documentation audit, and what it found.** Ten
+  "8 front-ends" counts written before PHP became the ninth (FEATURES,
+  USER_GUIDE, KNOWLEDGE_GRAPH, CLAUDE_GUIDE, CLI_REFERENCE, EXAMPLE) now say
+  nine and quote the corpus as it is — 38 fixture cases, 34 single-language and
+  4 multi-repo, where "19" had stood; BENCHMARK's two counts are pinned to the
+  3.29.0 measurement they describe rather than renumbered. CODEX_GUIDE's tool
+  table gains the twelve rows CLAUDE_GUIDE gained in 3.31.0 (`understand_repo`,
+  `profile_repo`, `design_change`, `sdlc_baseline`, the four `registry_*`
+  operator tools, and the four that close the loop after the PR). `pkg labels`
+  and `pkg fix-sites`, the G6 gold-set tooling, are documented in
+  CLI_REFERENCE as what they are: maintainer commands.
+
+### Added
+
+- **The documentation audit follows links and hunts removed surfaces.** The review
+  skill's `docs_audit.py` now fails on any relative link in a user document whose
+  file or anchor does not resolve (under GitHub's slug rules — an em dash yields a
+  double hyphen), and, given `--base/--head`, lists what the diff removed from the
+  CLI, MCP and extras registries and reports every remaining mention; `--removed
+  "terminal UI,TUI"` adds the names and synonyms of a feature that had no registry
+  entry. A mention inside a version-stamped paragraph is history, not a finding.
+  Six dead links in `SETUP.md` and two README sentences about a removed terminal
+  UI are what it would have caught. The docs matrix gains a "removed feature"
+  row; the script gains `--root` and its first tests. The release-cut guidance in
+  the skill now names the lockfile's own entry and every plugin manifest.
+
 ## 3.33.0 — a PHP codebase gets the whole graph
 
 ### Added
@@ -33,6 +108,21 @@ All notable changes to this project are documented here. Format loosely follows
   PHP-specific code at all. `state` reports "Call graph: available" on a PHP codebase; only
   codegen remains a later phase. `pip install 'synaptixs-spine[php]'`. See
   [php-support-roadmap.md](docs/specs/php-support-roadmap.md).
+
+### Changed
+
+- **`SETUP.md` is the contributor's zero-to-running page again, and says only
+  what is true.** It described the platform before the comprehension and SDLC
+  work existed — sprint-numbered sections, an eleven-package layout where the
+  tree has twenty, a `docs/` "gitignored" that is tracked, six links to files
+  that no longer exist, and a "common workflows" section that was the pre-SDLC
+  agent-template and task-submit curls. Now: prerequisites, install from source,
+  the gate (linked to CONTRIBUTING, the single source), a no-key first run on
+  the checkout itself (`state`, `understand`), `orchestrator up` for the full
+  stack, tracing, three day-one environment variables with the rest linked, and
+  troubleshooting — 371 lines to about 210, every path and anchor checked.
+- **README no longer lists a terminal UI** among the surfaces; it was removed in
+  3.31.0 and two sentences had outlived it.
 
 ### Fixed
 

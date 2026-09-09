@@ -1,7 +1,7 @@
 # Spec index — every design record, and where it stands
 
 **Generated 2026-08-15 against 3.18.1; refreshed 2026-08-21 for the completed GraphIR
-programme; recounted 2026-09-08 at 3.33.0.** `docs/specs/` holds **87** markdown files —
+programme; recounted 2026-09-09 at 3.33.1.** `docs/specs/` holds **87** markdown files —
 **80 specs** plus three navigation documents ([README](README.md), this index,
 [STATE-OF-SPINE](STATE-OF-SPINE.md)) — with 6 archived and 10 build documents. The count read
 *63* until 2026-08-21, and **five specs were not listed at all**, including this file's own
@@ -41,7 +41,7 @@ Graphify-gap series only. This file is the complete inventory.
 ---
 
 > **Start with [STATE-OF-SPINE.md](STATE-OF-SPINE.md)** — one page, verified 2026-09-04 against
-> 3.33.0, covering where the product stands, what is measured, the active programme, and what is
+> 3.33.1, covering where the product stands, what is measured, the active programme, and what is
 > outstanding. Come here for the per-spec inventory.
 
 ---
@@ -81,7 +81,7 @@ Graphify-gap series only. This file is the complete inventory.
 | [java-codegen](java-codegen.md) | 2a (1.8.0), 2b + 2c (1.9.0) | Remaining slices |
 | [typescript-codegen](typescript-codegen.md) | Slice 1 comprehension (1.11.0) | Codegen slices |
 | [multi-language-java](multi-language-java.md) | Slice 1 comprehension (1.7.0) | Superseded in part by `java-codegen` |
-| [unified-ui](unified-ui.md) | P0–P3 — the buildable UI | P4 TUI, P5 SPA (**optional**) |
+| [unified-ui](unified-ui.md) | P0–P3 — the buildable UI; P4 TUI shipped 1.18.0, removed 3.31.0 | P5 SPA (**optional**) |
 | [cross-run-semantic-memory](cross-run-semantic-memory.md) | Phase 1 read path, `MemoryRow` | Write/distil path |
 | [project-comprehension-memory-bank](project-comprehension-memory-bank.md) | Phases 1 + 4 (1.5.0, 1.6.0) | Phases 2–3 |
 | [persona-skill-measurement](persona-skill-measurement.md) | P0–P3 implemented | The P2 A/B `--live` run |

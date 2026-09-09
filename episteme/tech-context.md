@@ -9,7 +9,7 @@
 | Migrations | yes |
 | Test runner | pytest |
 | Task type (default) | feature |
-| Version | `3.33.0` |
+| Version | `3.33.1` |
 | Requires Python | `>=3.12` |
 
 ## Infrastructure & runtime
@@ -38,17 +38,17 @@ _How this system starts._
 - `main()` @ scripts/bench_aggregate.py:94
 - `main()` @ scripts/codegen_ab.py:242
 - `main()` @ scripts/codegen_benchmark.py:1853
-- `main()` @ scripts/live_sdlc_worker.py:44
+- `main()` @ scripts/docs_audit.py:473
 
 ## Most-used external imports
 _Everything imported from outside this codebase, by how often — standard library and test dependencies included, so this is wider than the install list._
 
-- `__future__.annotations` — imported 680 times
-- `pathlib.Path` — imported 289 times
-- `typing.Any` — imported 256 times
-- `pytest` — imported 196 times
+- `__future__.annotations` — imported 683 times
+- `pathlib.Path` — imported 292 times
+- `typing.Any` — imported 257 times
+- `pytest` — imported 198 times
 - `dataclasses.dataclass` — imported 150 times
-- `json` — imported 145 times
+- `json` — imported 146 times
 - `collections.abc` — imported 132 times
 - `os` — imported 105 times
 - `httpx` — imported 81 times

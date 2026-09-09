@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -20,10 +21,23 @@ _AUTH_PY = (
 
 
 def test_top_level_help_lists_command_groups(runner: CliRunner) -> None:
-    result = runner.invoke(app, ["--help"])
+    result = runner.invoke(app, ["--help"], env={"COLUMNS": "200"})
     assert result.exit_code == 0
-    assert "template" in result.stdout
-    assert "contract" in result.stdout
+    assert "sdlc" in result.stdout and "pkg" in result.stdout and "mcp" in result.stdout
+
+
+def test_the_substrate_groups_are_hidden_but_still_invocable(runner: CliRunner) -> None:
+    """Agent templates, tool contracts and the generic task API predate the comprehension and
+    SDLC surfaces; the integration tests drive them, users do not. Off the help screen, on the
+    command line."""
+    top = runner.invoke(app, ["--help"], env={"COLUMNS": "200"}).stdout
+    for hidden in ("template", "contract", "task"):
+        assert not re.search(rf"^\s*│?\s*{hidden}\s", top, re.M), f"{hidden} is still on the help screen"
+        assert runner.invoke(app, [hidden, "--help"]).exit_code == 0
+    pkg = runner.invoke(app, ["pkg", "--help"], env={"COLUMNS": "200"}).stdout
+    for hidden in ("fix-sites", "labels"):
+        assert hidden not in pkg, f"pkg {hidden} is still on the help screen"
+        assert runner.invoke(app, ["pkg", hidden, "--help"]).exit_code == 0
 
 
 def test_top_level_help_is_grouped_into_panels_in_workflow_order(runner: CliRunner) -> None:

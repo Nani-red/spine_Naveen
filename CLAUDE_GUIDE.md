@@ -777,7 +777,7 @@ approval — Spine refuses a live write without it. `live=true` needs a reachabl
 
 ## 10. Language support & toolchains
 
-Comprehension covers **eight front-ends**. Spine only needs a language's toolchain when it
+Comprehension covers **nine front-ends**. Spine only needs a language's toolchain when it
 **builds/tests** generated code in that language:
 
 | Language | Build/test needs on PATH |
@@ -801,7 +801,7 @@ merges header declarations with their definitions; for Go it computes **interfac
 satisfaction** (`IMPLEMENTS`) by matching method sets.
 
 **How accurate is the graph these tools read?** Measured against a committed corpus covering
-all eight front-ends: **precision 1.00 on every node and edge kind, in every language** —
+all nine front-ends: **precision 1.00 on every node and edge kind, in every language** —
 nothing is invented. Recall is 1.00 on everything except `CALLS`, which ranges from 1.00
 (C, SQL) to 0.50 (TypeScript); the gap is calls whose receiver is a variable rather than a
 name. Run `orchestrator pkg accuracy` to see the current numbers yourself.

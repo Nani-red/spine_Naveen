@@ -1,371 +1,211 @@
-# SETUP — Spine
+# SETUP — Spine, from a source checkout
 
-Zero-to-running guide. For what Spine is and its capabilities, see `README.md`;
-for the day-to-day workflow, see `USER_GUIDE.md`.
+The contributor's zero-to-running page: clone, sync, pass the gate, see it work. If you
+want to *use* Spine, install it from PyPI and follow [USER_GUIDE.md](USER_GUIDE.md); if you
+run it for others, [OPERATIONS.md](OPERATIONS.md) has the deployment modes and every
+environment variable. This page links to those rather than repeating them.
 
-> **Spine** is the product; it installs as the **`synaptixs-spine`** package and
-> its command is **`orchestrator`** — used verbatim in the commands below.
+> **Spine** is the product; it installs as the **`synaptixs-spine`** package and its command
+> is **`orchestrator`** — used verbatim below. On a source checkout, prefix CLI calls with
+> `uv run`.
 
 ---
 
 ## 1. Prerequisites
 
-| Tool | Min version | Why |
+| Tool | Min version | Needed for |
 |---|---|---|
-| **Python** | 3.12 | Runtime |
-| **uv** | 0.4+ | Package + venv manager (`pip install uv` or `brew install uv`) |
-| **Docker** + `docker compose` | recent | Postgres, MinIO, and Temporal services for local dev |
-| **(optional)** Anthropic / OpenAI API key | — | Real-LLM smoke test + integration tests; not needed for unit tests |
-
-Verify:
+| **Python** | 3.12 | everything |
+| **uv** | 0.4+ | the venv and the gate (`pip install uv` or `brew install uv`) |
+| **Docker** + `docker compose` | recent | only the full stack in §5 — comprehension, the gate and the intake dry run need no Docker |
+| an LLM key (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`) | — | only the intake pipeline and the real-model tests; `understand` / `state` / `pkg` never call a model |
 
 ```bash
-python3 --version       # → 3.12.x
-uv --version            # → 0.4+
-docker --version        # → 24+ recommended
-docker compose version
+python3 --version && uv --version && docker compose version
 ```
 
 ---
 
-## 2. First-time install
+## 2. Install from source
 
 ```bash
-# 1. Install Python dependencies (creates .venv, installs project + dev extras)
+git clone https://github.com/synaptixs/spine
+cd spine
 uv sync --extra dev
-
-# 2. Bring up local infrastructure (Postgres, MinIO, Temporal)
-docker compose -f docker-compose.dev.yml up -d
-
-# Wait ~30 seconds on first run while Temporal's Postgres initialises.
-# Check readiness:
-docker compose -f docker-compose.dev.yml ps
-
-# 3. Apply database migrations
-uv run alembic upgrade head
+uv run orchestrator --help
 ```
 
-> `--extra dev` already pulls in the parsers CI exercises (including `pypdf` for PDF doc
-> ingestion), so `understand`/`state` handle PDFs out of the box here. End users add feature
-> extras à la carte — e.g. `pip install 'synaptixs-spine[docs]'` for PDF ingestion, `[sql]`
-> for SQL comprehension (see [USER_GUIDE.md](USER_GUIDE.md#step-1--install)).
->
-> **The six tree-sitter language front-ends are extras too** — `[java]`, `[typescript]`,
-> `[csharp]`, `[c]`, `[cpp]`, `[go]`. Without them those languages are *unmeasured*, not
-> scored zero: `pkg accuracy` skips a front-end it cannot import, so a local run with fewer
-> extras than CI reports fewer languages. Install all of them before comparing your numbers
-> against the committed scoreboard.
-
-What just came up:
-
-| Service | Port | Purpose |
-|---|---|---|
-| `orchestrator-postgres` | 5433 | Main application DB |
-| `orchestrator-minio` | 9000 / 9001 | S3-compatible artifact store (console on :9001) |
-| `orchestrator-temporal` | 7233 | Workflow engine (Sprint 13+) |
-| `orchestrator-temporal-ui` | 8233 | Web UI for workflow inspection |
-| `orchestrator-temporal-postgres` | — | Dedicated DB for Temporal |
-| `orchestrator-jaeger` | 16686 / 4317 / 4318 | Live OTel tracing — UI on :16686, OTLP receivers on :4317 (gRPC) / :4318 (HTTP) |
-
-MinIO console login: `minio_admin` / `minio_admin_password`.
-
-### Live tracing (optional)
-
-Tracing is **off by default** — nothing is emitted unless you point the app at a
-collector. Jaeger (above) bundles its own OTLP receiver, so it doubles as the collector.
-Install the extra and export the endpoint, then run the API/worker as usual:
-
-```bash
-uv sync --extra otel              # OTLP/HTTP exporter
-export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
-uv run python -m orchestrator.temporal.worker   # (and/or the API)
-```
-
-Open **http://localhost:16686**, pick the `synaptixs-spine` service, and you'll see one
-trace per run: `execute_graph_pass → agent.step → llm.complete / tool.<name>`, with the app
-`trace_id` on every span so it joins the audit log. See `docs/specs/live-observability-otel.md`.
+`--extra dev` installs the project plus the parsers CI exercises — every tree-sitter language
+front-end and PDF ingestion — so `understand` / `state` / `pkg accuracy` here measure the same
+languages the committed scoreboard does. A run with fewer front-ends than CI reports fewer
+languages, not zeros. End users add feature extras à la carte; that list lives in
+[USER_GUIDE.md → Step 1](USER_GUIDE.md#step-1--install).
 
 ---
 
-## 3. Running tests
+## 3. The gate
 
-The default `uv run pytest` runs unit tests only (no docker required):
-
-```bash
-uv run pytest               # ~296 unit tests, <5 seconds
-uv run ruff check .         # lint
-uv run ruff format --check . # format
-uv run mypy                 # type check (--strict)
-```
-
-Integration tests need Postgres up (step 2):
+Run it before every push. The commands are the single source in
+[CONTRIBUTING.md → Opening a pull request](CONTRIBUTING.md#opening-a-pull-request) — note
+`mypy src tests`, **not** just `src`, and the four `--check` scripts CI also runs. In short:
 
 ```bash
-uv run pytest -m integration             # ~33 tests
+uv run pytest                    # unit tests only; no Docker, no key
+uv run mypy src tests
+uv run ruff format --check .
 ```
 
-Two integration tests are intentionally skipped until CI provisions
-Temporal — manual run commands documented in each file's `skipif` reason:
+Two opt-in markers need more than the checkout: `-m integration` needs Postgres up (§5), and
+`-m real_llm` needs a provider key. The default run excludes both.
 
-- `tests/temporal/test_worker_restart.py` (Sprint 13.6)
-- `tests/integration/test_approvals_e2e.py` (Sprint 14.10)
+---
 
-Real-LLM tests need a provider key:
+## 4. See it work — no account, no key
+
+The deterministic comprehension surface runs on this repository itself:
+
+```bash
+uv run orchestrator state .            # a current-state report, developer lens
+uv run orchestrator understand .       # writes episteme/ — the committed knowledge base
+uv run orchestrator understand . --check   # …and verifies it still matches the code
+```
+
+`episteme/` is regenerated by CI after every merge and is never committed from a branch (see
+[CLAUDE.md](CLAUDE.md)); generate it locally to read it. [USER_GUIDE.md → Step 1.5](USER_GUIDE.md#step-15--see-what-it-knows-about-your-repo-no-configuration-yet)
+walks through what you are looking at.
+
+The intake pipeline is the first thing that needs a model. The `file://` source reads
+requirements off disk — no Confluence, Notion or Jira account:
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
-uv run pytest -m real_llm
+uv run orchestrator ingest --source file://./examples/intake/sample-spec.md   # dry run; writes nothing
 ```
+
+`orchestrator doctor` says which of the optional credentials are set.
 
 ---
 
-## 4. Try the intake pipeline (no SaaS accounts)
+## 5. The full stack
 
-The fastest way to see the backlog pipeline work. The `file://` source reads
-requirements straight off the local filesystem — no Confluence, Notion, or
-Jira account required. Point it at the bundled sample (or any markdown
-file/directory of your own):
+Everything under the SDLC pipeline and the web dashboard — Temporal, Postgres, the worker,
+the API — comes up with one command from a checkout with Docker running:
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...   # the intent/spec stages still call an LLM
-
-# Dry-run: source → intents → gaps → specs → would-be Jira issues (writes nothing)
-uv run orchestrator ingest --source file://./examples/intake/sample-spec.md
+uv run orchestrator up            # infra + migrations + API + worker, then prints the URL and key
 ```
 
-Other source kinds are drop-in (`confluence://<page_id>`, `notion://<page_id>`)
-once their credentials are set in `.env` — run `orchestrator doctor` to check.
-`file://` accepts a single file or a directory (walked breadth-first); set
-`FILE_SOURCE_ROOT` to confine reads to a sandbox base dir.
+It opens `http://localhost:8000/app`; Ctrl-C stops the app processes. What it started:
 
----
+| Service | Port | Purpose |
+|---|---|---|
+| `orchestrator-postgres` | 5433 | application DB |
+| `orchestrator-minio` | 9000 / 9001 | S3-compatible artifact store (console on :9001, `minio_admin` / `minio_admin_password`) |
+| `orchestrator-temporal` | 7233 | workflow engine |
+| `orchestrator-temporal-ui` | 8233 | workflow inspection |
+| `orchestrator-jaeger` | 16686 / 4317 / 4318 | live tracing — UI on :16686, OTLP receivers on :4317 (gRPC) / :4318 (HTTP) |
 
-## 5. Running the dev API
-
-> **One command:** from a source checkout with Docker running, `orchestrator up`
-> brings up the infra (Postgres + Temporal), applies migrations, and launches the
-> web/API server **and** the SDLC worker together — then prints the URL
-> (`http://localhost:8000/app`) and login key. Ctrl-C stops the app processes. The
-> steps below are the manual equivalent (useful for `--reload` dev loops or running
-> a single process).
+The manual equivalents, for a `--reload` loop or a single process:
 
 ```bash
-# In one terminal: the registry + task API
-export ORCHESTRATOR_API_KEY=dev-key
-export ANTHROPIC_API_KEY=sk-ant-...   # or OPENAI_API_KEY
+docker compose -f docker-compose.dev.yml up -d && uv run alembic upgrade head
 uv run uvicorn orchestrator.registry.api.app:create_app --factory --reload --port 8000
-```
-
-Health check:
-
-```bash
-curl -s -H "X-API-Key: dev-key" http://localhost:8000/v1/agent-templates | jq
-```
-
-End-to-end smoke test (publishes a template, submits a task, exercises
-the planner + runtime):
-
-```bash
-ANTHROPIC_API_KEY=sk-ant-... ./scripts/smoke-test.sh
-```
-
----
-
-## 6. Running the Temporal worker (Sprint 13+)
-
-The synchronous `/v1/tasks` path works without Temporal. To use
-`execution_mode=temporal` (or to fire approval gates), run the worker:
-
-```bash
-# Requires docker compose services from step 2 to be running.
 uv run python -m orchestrator.temporal.worker
 ```
 
-The worker logs `temporal.worker.start` and subscribes to the
-`orchestrator-tasks` task queue. SIGINT/SIGTERM drains cleanly.
-
-Submit a workflow-mode task:
-
-```bash
-curl -X POST http://localhost:8000/v1/tasks \
-  -H "X-API-Key: dev-key" -H "Content-Type: application/json" \
-  -d '{
-    "objective": "Summarise the Big Bang",
-    "execution_mode": "temporal",
-    "glossary": {"topic": "cosmology"}
-  }'
-```
-
-Open the Temporal Web UI at <http://localhost:8233> to inspect runs.
+What to do with a running stack — delegate a run, approve a gate, watch it — is
+[USER_GUIDE.md → Step 7](USER_GUIDE.md#step-7--the-full-pipeline--web-dashboard); every command
+is in [CLI_REFERENCE.md](CLI_REFERENCE.md).
 
 ---
 
-## 7. Environment variables
+## 6. Live tracing (optional)
 
-| Variable | Default | Where it matters |
+Off by default — nothing is emitted until you point the app at a collector. Jaeger (above)
+bundles its own OTLP receiver, so it doubles as one:
+
+```bash
+uv sync --extra otel
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+uv run orchestrator up
+```
+
+Open **http://localhost:16686**, pick the `synaptixs-spine` service: one trace per run,
+`execute_graph_pass → agent.step → llm.complete / tool.<name>`, with the app `trace_id` on every
+span so it joins the audit log. Design record: `docs/specs/live-observability-otel.md`.
+
+---
+
+## 7. Environment
+
+`orchestrator init` scaffolds a `.env` from the same groups `doctor` checks. The three a
+developer sets on day one:
+
+| Variable | Default | What it is |
 |---|---|---|
-| `ORCHESTRATOR_API_KEY` | `dev-key` | Auth for `/v1/*` endpoints (set via `X-API-Key` header) |
-| `ORCHESTRATOR_DATABASE_URL` | `postgresql+psycopg://orchestrator:orchestrator@localhost:5433/orchestrator` | Main DB connection |
-| `ORCHESTRATOR_EXECUTION_MODE` | `sync` | Deployment-wide default for `/v1/tasks` (`sync` or `temporal`) |
-| `ORCHESTRATOR_ARTIFACT_STORE` | (unset → MinIO) | Set to `memory` to use in-memory artifact store (tests) |
-| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | — | LLM provider creds (LiteLLM auto-routes) |
-| `FILE_SOURCE_ROOT` | (unset → CWD) | Optional sandbox base dir for the `file://` intake source; reads are confined to it when set |
-| `TEMPORAL_HOST` | `localhost:7233` | Temporal frontend; cloud namespaces use `<ns>.tmprl.cloud:7233` |
-| `TEMPORAL_NAMESPACE` | `default` | Temporal namespace |
-| `TEMPORAL_TASK_QUEUE` | `orchestrator-tasks` | Worker's task queue subscription |
-| `TEMPORAL_API_KEY` | — | Set → cloud mode with TLS; unset → local plaintext |
-| `LANGSMITH_PROJECT` | — | Set → `/trace/{task_id}` HTML gains a LangSmith deep-link |
-| `E2B_API_KEY` | — | Required by `run_python_analysis` tool's E2B backend |
-| `OBJECT_STORE_ENDPOINT` / `OBJECT_STORE_ACCESS_KEY` / `OBJECT_STORE_SECRET_KEY` / `OBJECT_STORE_BUCKET_ARTIFACTS` / `OBJECT_STORE_BUCKET_DOCUMENTS` | docker-compose defaults | MinIO / S3 wiring |
+| `ORCHESTRATOR_API_KEY` | `dev-key` | auth for `/v1/*` (the `X-API-Key` header) |
+| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | — | the model provider; LiteLLM routes on whichever is set |
+| `ORCHESTRATOR_DATABASE_URL` | the compose Postgres on 5433 | the application DB |
+
+Everything else — sources, trackers, Temporal, object store, MCP auth — is in
+[`.env.example`](.env.example) with a comment per variable, and explained in
+[OPERATIONS.md → Environment-variable reference](OPERATIONS.md#environment-variable-reference).
 
 ---
 
-## 8. Common workflows
-
-### Publish an agent template
-
-```bash
-# Templates live in examples/templates/*.yaml
-curl -X POST http://localhost:8000/v1/agent-templates \
-  -H "X-API-Key: dev-key" -H "Content-Type: application/json" \
-  --data-binary @<(yq -o=json examples/templates/research_agent.yaml)
-
-# Promote draft → published
-curl -X POST http://localhost:8000/v1/agent-templates/agent.research/0.1.0/publish \
-  -H "X-API-Key: dev-key"
-```
-
-### Submit a task
-
-```bash
-curl -X POST http://localhost:8000/v1/tasks \
-  -H "X-API-Key: dev-key" -H "Content-Type: application/json" \
-  -d '{
-    "objective": "Do antibiotics work against viral infections?",
-    "template": {"id": "agent.research"}
-  }'
-```
-
-### View the trace
-
-- JSON: `GET /v1/tasks/{task_id}/trace` (auth required)
-- HTML: `GET /trace/{task_id}` (no auth, shareable)
-
-### Approve a pending workflow gate (Sprint 14+)
-
-```bash
-# List pending
-curl -s -H "X-API-Key: dev-key" http://localhost:8000/v1/approvals | jq
-
-# Approve
-curl -X POST -H "X-API-Key: dev-key" -H "Content-Type: application/json" \
-  http://localhost:8000/v1/approvals/<id>/approve \
-  -d '{"rationale": "looks good"}'
-
-# Reject
-curl -X POST -H "X-API-Key: dev-key" \
-  http://localhost:8000/v1/approvals/<id>/reject
-
-# Approve with input patch (modify the next pass's glossary)
-curl -X POST -H "X-API-Key: dev-key" -H "Content-Type: application/json" \
-  http://localhost:8000/v1/approvals/<id>/modify_input \
-  -d '{"rationale": "narrower scope", "modified_input": {"focus": "FDA only"}}'
-```
-
----
-
-## 9. Migrations
+## 8. Migrations
 
 Every schema change ships as an Alembic revision under `migrations/versions/`:
 
-| Revision | What it adds |
-|---|---|
-| 0001 | Initial registry tables (agent_templates, tool_contracts, audit_log) |
-| 0002 | Glossary entries |
-| 0003 | Calibration history (Sprint 11.6 confidence-calibration ranking) |
-| 0004 | Approval requests (Sprint 14) |
-
-Apply: `uv run alembic upgrade head` · Roll back one: `uv run alembic downgrade -1`
-
-Generate a new revision after editing models:
-
 ```bash
-uv run alembic revision --autogenerate -m "your change"
-# Edit the generated file in migrations/versions/ — autogenerate is a
-# starting point, not a finished migration. Review carefully.
+uv run alembic upgrade head                            # apply
+uv run alembic downgrade -1                            # roll back one
+uv run alembic revision --autogenerate -m "your change"   # after editing models — then edit the file; autogenerate is a draft
 ```
 
 ---
 
-## 10. Project layout
+## 9. Where things live
 
-```
-src/orchestrator/
-├── core/              # LLM client (LiteLLM + Mock), state schema
-├── ir/                # GraphIR Pydantic models + validator
-├── planner/           # PlannerV0 + PlannerV1 (multi-pattern + replan)
-├── registry/          # Agent / tool / glossary registry, REST API, DB models
-│   ├── api/           # FastAPI routes (tasks, approvals, trace, agent_templates)
-│   └── db/            # SQLAlchemy ORM + session
-├── runtime/           # LangGraph builders + verifier chain + chain node
-│   └── verifiers/     # Schema, Confidence, Evidence, Policy, Glossary
-├── temporal/          # Workflow + worker + activities (Sprint 13+)
-├── approval/          # Approval Pydantic models + repository (Sprint 14)
-├── gateway/           # MCP tool gateway + invocation handlers
-├── storage/           # Object-store client (MinIO/S3)
-└── cli/               # `orchestrator` CLI, one module per help panel
-
-migrations/versions/   # Alembic revisions 0001–0004
-examples/              # Agent template YAMLs + tool contracts
-scripts/               # smoke-test.sh
-tests/                 # unit + integration + temporal + approval
-docs/                  # Planning docs + specs (gitignored by default;
-                       # included in this archive bundle)
-```
+[ARCHITECTURE.md](ARCHITECTURE.md) has the package table and the diagram; [CLAUDE.md](CLAUDE.md)
+has the layout by responsibility plus the invariants that are easy to break; the design
+records — the *why* — are indexed at [docs/specs/README.md](docs/specs/README.md).
 
 ---
 
-## 11. Troubleshooting
+## 10. Troubleshooting
 
-**`temporal-test-server` orphaned after killed pytest** — kill stragglers
-with `pkill -f temporal-test-server`. Time-skipping test server doesn't
-clean up after `SIGKILL`.
+**`temporal-test-server` orphaned after a killed pytest** — `pkill -f temporal-test-server`.
+The time-skipping test server does not clean up after `SIGKILL`.
 
-**`EndpointConnectionError` running the manager-workflow integration test** —
-MinIO isn't reachable. Run `docker compose -f docker-compose.dev.yml up -d minio`
-or set `ORCHESTRATOR_ARTIFACT_STORE=memory` for tests that don't need
-real artifact persistence.
+**`EndpointConnectionError` in an integration test** — MinIO is not reachable. Start it
+(`docker compose -f docker-compose.dev.yml up -d minio`) or set
+`ORCHESTRATOR_ARTIFACT_STORE=memory` for tests that need no real artifact store.
 
-**`AgentNodeError: required input 'X' not resolvable`** — the template
-has multiple required inputs but the request only sent `objective`.
-Templates with exactly one required `str` input auto-receive the
-objective; multi-input templates need each slot bound in the request
-glossary (e.g. `{"glossary": {"research_question": "...", "max_sources": 5}}`).
+**Migrations fail with "relation already exists"** — a prior run left tables behind. Reset
+the dev DB: `docker compose -f docker-compose.dev.yml down -v` (deletes the volume), then
+`up -d` and `uv run alembic upgrade head`.
 
-**Migrations fail with "relation already exists"** — a prior run left
-tables behind. Reset the dev DB:
+**`mypy` errors after adding a dependency** — `uv sync --extra dev` to pick up the stubs, then
+re-run. A failure in a file you did not touch usually means a missing extra; see
+[CONTRIBUTING.md → When a check fails on something you didn't change](CONTRIBUTING.md#when-a-check-fails-on-something-you-didnt-change).
 
-```bash
-docker compose -f docker-compose.dev.yml down -v   # NUKES the volume
-docker compose -f docker-compose.dev.yml up -d
-uv run alembic upgrade head
-```
-
-**`mypy` errors after adding a new dependency** — `uv sync` to pick up
-new type stubs, then re-run `uv run mypy`.
+**`orchestrator` resolves to an older install** — `uv run orchestrator --version` and
+`orchestrator doctor` both name the interpreter answering; a stale console script on PATH is
+the usual cause.
 
 ---
 
-## 12. Where to learn more
+## 11. Where to learn more
 
 | Topic | File |
 |---|---|
-| Project rationale + concepts | `README.md` |
-| Sprint-by-sprint progress + design choices + deviations | `PROGRESS.md` |
-| Full development roadmap (Sprints 1–22+) | `docs/full-development-tasks.md` |
-| Master index of planning docs | `docs/MASTER-INDEX-v1.0.md` |
-| GoTo-market / ops bundles | `docs/bundle-05-*.md`, `docs/bundle-06-*.md`, `docs/bundle-07-*.md` |
-| Pydantic model specifications | `docs/specs/models.md` |
-| Contributing guidelines | `CONTRIBUTING.md` |
-| Security policy | `SECURITY.md` |
-| License | `LICENSE` (MIT) |
+| What Spine is, and what is new | [README.md](README.md) |
+| Using it, step by step | [USER_GUIDE.md](USER_GUIDE.md) |
+| Every command and flag | [CLI_REFERENCE.md](CLI_REFERENCE.md) |
+| How the pieces fit | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| Running it for others | [OPERATIONS.md](OPERATIONS.md) |
+| Contributing, review, the gate | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Using it from Claude Code or Codex | [CLAUDE_GUIDE.md](CLAUDE_GUIDE.md), [CODEX_GUIDE.md](CODEX_GUIDE.md) |
+| Design records | [docs/specs/README.md](docs/specs/README.md) |
+| Security policy · license | [SECURITY.md](SECURITY.md) · `LICENSE` (MIT) |

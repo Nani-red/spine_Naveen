@@ -436,8 +436,8 @@ orchestrator pkg verify .        # does the graph contradict itself? (dangling e
 orchestrator pkg accuracy        # precision & recall per kind, per language, vs a labelled corpus
 ```
 
-Against the committed corpus of 19 fixture repositories across 8 front-ends, **precision is
-1.00 on every node kind and every edge kind in all 8 languages**, and recall is 1.00 on every
+Against the committed corpus of 38 fixture cases (34 single-language, 4 multi-repo) across all
+9 front-ends, **precision is 1.00 on every node kind and every edge kind in all 9 languages**, and recall is 1.00 on every
 kind except `CALLS`:
 
 | language | `CALLS` recall |

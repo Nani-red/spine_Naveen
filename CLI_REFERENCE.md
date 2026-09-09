@@ -9,7 +9,10 @@
 ## Command map
 
 **Getting started & operations** — Set up your environment and run the platform.  
-`init` · `doctor` · `models` · `up` · `task submit`
+`init` · `doctor` · `models` · `up`
+
+**Hidden — maintainer & platform plumbing** — Registered and documented, but off `--help`: the platform substrate that predates the comprehension and SDLC surfaces (driven by the integration tests, not by users), and the G6 gold-set tooling.  
+`task submit` · `template register|list|show|publish|deprecate` · `contract register|list|show|publish|deprecate` · `pkg labels` · `pkg fix-sites`
 
 **Understand a codebase — the Knowledge Graph** — Extract and read the Product Knowledge Graph (PKG). Deterministic, no LLM. All accept a local path OR a git URL.  
 `understand` · `state` · `profile` · `catalog list` · `catalog plan` · `pkg extract` · `pkg export` · `pkg docs` · `pkg capabilities` · `pkg verify` · `pkg accuracy` · `pkg joins` · `media extract`
@@ -41,7 +44,7 @@ Set up your environment and run the platform.
 Prints the installed version **and the path it is running from**:
 
 ```
-Spine 3.33.0  (synaptixs-spine)
+Spine 3.33.1  (synaptixs-spine)
   running from /path/to/site-packages/orchestrator
 ```
 
@@ -150,6 +153,9 @@ orchestrator up [OPTIONS]
 | `--compose-file` | Override the docker compose file to use. |
 
 ### `orchestrator task submit`
+
+> Hidden from `--help` — the platform substrate's generic task API, kept for the integration
+> tests that drive it. Still invocable.
 
 Submit a task to the orchestrator and print the final state.
 
@@ -515,8 +521,8 @@ orchestrator pkg accuracy [PATH] [OPTIONS]
 | `--tests` | Test target(s) for `--oracle runtime`; defaults to the repo's own. |
 | `--dialect` | SQL dialect (postgres\|mysql\|tsql\|oracle\|…); default: auto-detect. |
 
-**Current corpus results** (19 fixture cases, 8 front-ends). Precision is **1.00 on every node
-kind and every edge kind in all 8 languages**; recall is 1.00 on every kind except `CALLS`:
+**Current corpus results** (38 fixture cases — 34 single-language, 4 multi-repo — across all 9
+front-ends). Precision is **1.00 on every node kind and every edge kind in all 9 languages**; recall is 1.00 on every kind except `CALLS`:
 
 | language | `CALLS` recall |
 |---|---|
@@ -548,13 +554,31 @@ is not computable from a trace, and the report says so on every run.
 **Two coverage limits worth knowing before you quote a number:**
 
 - **`--oracle runtime` is Python-only.** It uses `sys.monitoring` (PEP 669), which has no
-  equivalent in the other seven front-ends. "Runtime-verified" means "runtime-verified for
+  equivalent in the other eight front-ends. "Runtime-verified" means "runtime-verified for
   Python".
 - **`--oracle invention` only examines Python.** It resolves caller-scope bindings with
   Python's `ast`, so calls in other languages are counted as *unexaminable* rather than
   scored. On a C repository it reports `0 (0.00% of all calls)` with every candidate
   unexaminable — that is "not measured", not "clean". The corpus catches invention in the
   other front-ends; this repo-scale oracle does not.
+
+### `orchestrator pkg labels` · `orchestrator pkg fix-sites`
+
+**The G6 gold set — maintainer tooling, hidden from `--help`.** `pkg accuracy`'s localization oracle scores
+`investigate` against tickets whose fixing commit is known. These two commands are how that
+gold set is built and kept honest; a user of Spine never needs them.
+
+```
+orchestrator pkg labels [--check] [--paths]
+orchestrator pkg fix-sites <repo> <commit>
+```
+
+| Command | What it does |
+|---|---|
+| `pkg labels` | The gold set as it stands: what is labelled, what was excluded and why. `--check` validates it and exits non-zero on a problem; `--paths` also verifies every labelled path exists in the pinned tree. |
+| `pkg fix-sites` | What a fixing commit changed — paths and change counts straight from git — the raw material for one label. **It does not choose for you**: deciding which of a commit's changes *is* the fix is the judgement the hand-labelled set exists to capture, and a candidate picked the way `investigate` reads a ticket would not be independent of the thing being scored. |
+
+---
 
 ### `orchestrator media extract`
 
@@ -615,6 +639,10 @@ The KG-grounded engineering commands: design a change, research a ticket, and tr
 
 Grounded feature design: spec × knowledge graph → a design with blast radius.
 
+> One rung of a ladder: `sdlc plan` produces the same design as one of its twelve sections,
+> alongside the investigation, blast radius, files and cost. Run this alone for the design
+> without writing anything under `.spine/`.
+
 Produces the M2 design for one feature anchored to the repo's real structure,
 and annotates it with its **blast radius** (which modules it touches, who
 depends on them, the call hotspots) and any **unverified references** (named
@@ -643,6 +671,9 @@ orchestrator design [PATH] [OPTIONS]
 ### `orchestrator investigate`
 
 Investigation brief: a ticket × the codebase, before you design.
+
+> The read-only rung: `sdlc plan` carries this brief as its first sections and writes the
+> build document. Run this alone when nothing should be written yet.
 
 Researches where a ticket lands in the code (knowledge-graph retrieval, with
 `file:line` + caller counts), the relevant committed `episteme/` knowledge,
@@ -676,6 +707,9 @@ orchestrator investigate [PATH] [OPTIONS]
 ### `orchestrator localize`
 
 Fault localization: a stack trace → the repo symbols it names.
+
+> `rca` runs this same localization and adds ranked hypotheses, a regression surface and a fix
+> approach. Run this alone when the fault site is all you need, in a second.
 
 Parses a Python traceback / pytest failure, resolves each frame to a
 knowledge-graph symbol (`file:line`), and points at the likely fault site
@@ -1377,6 +1411,9 @@ orchestrator mcp ingest-db [OPTIONS]
 ---
 
 ## Registry — templates & contracts
+
+> Hidden from `--help` — agent templates and tool contracts are the platform substrate that
+> predates the comprehension and SDLC surfaces. Registered, documented, still invocable.
 
 Manage reusable capability templates and API contracts in the registry service.
 

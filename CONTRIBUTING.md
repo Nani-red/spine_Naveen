@@ -38,12 +38,21 @@ published release notes.
 For larger features, the core team often develops them ahead of time and publishes
 them on a release cadence — so opening an issue first avoids duplicated effort.
 
-**Reviewing a pull request as a maintainer.** From Claude Code in this checkout, run
-`/review-pr <number>` (add `--promote` for a release-cut check). It is the checklist a merge
-decision needs — the gate with CI's extras, fan-out code review, a real-repository smoke test
-for front-end changes, and a mechanical audit that every user-facing document the change
-obliges was updated (`.claude/skills/review-pr/`). The same procedure is available as the
-`pr-reviewer` subagent.
+**Auditing the documentation a change obliges.** `uv run --frozen python
+scripts/docs_audit.py --base develop --head HEAD` cross-checks the
+user documents against what the code registers (front-end counts, extras, CLI commands, MCP
+tools), follows every relative link, and — add `--removed "<name>,<synonym>"` — finds mentions
+of a feature you took out. Stdlib only; runs on any ref. The reviewer runs it on every PR
+([docs/reviewing/docs-matrix.md](docs/reviewing/docs-matrix.md) says which document each kind of change obliges).
+
+**Reviewing a pull request as a maintainer.** The checklist a merge or promotion decision
+needs — the gate with CI's extras, fan-out code review, a real-repository smoke test for
+front-end changes, and the documentation audit above walked against
+[docs/reviewing/docs-matrix.md](docs/reviewing/docs-matrix.md) (plus
+[docs/reviewing/language-frontend-checklist.md](docs/reviewing/language-frontend-checklist.md)
+when a front-end changed). Maintainers who use Claude Code carry it as a local `/review-pr`
+skill and a `pr-reviewer` subagent under `.claude/`, which this repository does not track;
+the repository keeps the two reference documents and the script, which need no assistant.
 
 ## Opening a pull request
 
