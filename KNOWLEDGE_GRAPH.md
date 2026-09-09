@@ -26,7 +26,7 @@ The PKG is built **from your code** (deterministic, no LLM). Spine reads it befo
 writes anything, so generated code matches your repo's real structure and conventions.
 
 Its accuracy is measured rather than asserted: **precision 1.00 on every node and edge kind
-across all 8 front-ends** — nothing in the graph is invented — with the remaining gap being
+across all 9 front-ends** — nothing in the graph is invented — with the remaining gap being
 missing `CALLS` edges, not wrong ones (§10).
 
 ---

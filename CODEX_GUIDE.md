@@ -181,11 +181,25 @@ At a glance:
 | [`read_memory_bank`](#read_memory_bank) | Read a repo's committed `episteme/` (code‑true project knowledge). | no |
 | [`pkg_grounding`](#pkg_grounding) | The existing‑code context a repo's Product Knowledge Graph surfaces for a spec — real APIs/types Spine would reuse, with `file:line`. | no |
 | [`ingest_preview`](#ingest_preview) | Preview the backlog (derived intents + gaps) for a requirements source — dry‑run. | no |
+| `understand_repo` | **Build the `episteme/` knowledge base** a repo has none of yet (then `read_memory_bank` it), or `check=true` to verify the committed one still matches the code — missing / stale / orphaned pages named. Deterministic, no model. Refuses a build on a git URL unless `out` is an absolute directory. | `episteme/` |
+| `profile_repo` | Languages, framework, database + migrations, test runner, and the task type for an `intent` — the profile the catalog picks skills from. | no |
+| `design_change` | A grounded design for one spec (the same `spec` object as `sdlc_plan`): approach, **blast radius**, **unverified references**. Deterministic; `use_llm=true` writes the prose. Never writes. | no |
+| `sdlc_baseline` | Score the run agent against a corpus of tickets with known answers, plus the durable run records — false and missed refusals counted separately. Free. | no |
 | **Plan it, then decide — before anything is built** | | |
 | [`sdlc_plan`](#sdlc_plan) | **The build document.** Twelve grounded sections for one ticket: requirement, intent, root cause, what the graph knows, blast radius, design, files, acceptance criteria, the codegen prompt, cost and confidence — each labelled with where it came from. **No model, no credentials, nothing spent.** | `.spine/` |
 | [`sdlc_approve`](#sdlc_approve) | Record that a **human** read that document and decided. Binds to a digest of it, so a plan that changes afterwards reads as *stale* rather than still approved. | `.spine/` |
 | [`sdlc_feature`](#sdlc_feature) | **Ship it.** One intent end‑to‑end: spec → grounded codegen → tests → branch → *(optionally)* PR. | gated |
 | [`sdlc_start_run` + gate tools](#the-autonomous-run-sdlc_start_run--friends) | Drive the long, autonomous, gated run as a job (needs the Mode‑B backend). | gated |
+| **Operate — what is running, what is waiting on me** | | |
+| `registry_runs` | Recent runs at the registry: id, state, last action, timestamps. | no |
+| `registry_approvals` | The gates waiting on a human, latest first, with risk and the run they belong to. | no |
+| `registry_trace` | A run's audit trail and tool invocations, newest `tail` entries, with what was left out. | no |
+| `registry_decide` | Approve / reject / modify a pending approval so its run continues (or stops). | gated |
+| **Close the loop — after the PR** | | |
+| `sdlc_address_review` | Address the human review comments on an open PR and **push a fix to its branch** (clone, `gh pr checkout`, codegen with the comments as feedback, tests + preflight, push). No local mode — **`confirm=true` on every call**. Needs `git`, `gh`, a model, the run backend. | gated |
+| `sdlc_complete` | Close the tracker issue for a **merged** PR: verify the merge via `gh`, derive the key from `feat/<id>/<KEY>` (or pass `issue`), transition, comment, mark the backlog intent done. Real Jira, never dry-run — **`confirm=true`**. | gated |
+| `sdlc_remediate` | Turn an infodrift drift report (+ the confirmed mapping store, both files on this machine) into remediation runs at or above `min_severity`. Safe by default (branch + diff); `live=true` opens PRs and needs `confirm=true`, like `sdlc_feature`. | gated |
+| `audit_repo` | A codebase-auditor persona reads the repo on a model and reports findings anchored to real `file:line` (claims that don't resolve are listed as `unresolved`). Writes nothing; spends tokens; needs `ORCHESTRATOR_INTAKE_MODEL`. | no |
 
 > **The comprehension tools are read‑only, need no credentials, and are deterministic** (only
 > `root_cause`'s opt‑in `use_llm` uses a model) — the differentiator: they don't just map the code,
