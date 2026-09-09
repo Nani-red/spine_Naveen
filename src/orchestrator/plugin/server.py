@@ -1222,13 +1222,13 @@ async def design_change(repo_path: str, spec: dict[str, Any], use_llm: bool = Fa
     async def run(repo: Any) -> dict[str, Any]:
         from orchestrator.pkg import FactStore, load_or_extract
         from orchestrator.pkg.overview import build_overview
-        from orchestrator.sdlc.design import produce_design, render_design_md
+        from orchestrator.sdlc.design import design_bank, produce_design, render_design_md
 
         batch = load_or_extract(repo)
         design = await produce_design(
             resolved,
             overview=build_overview(batch),
-            memory_bank=_design_bank(repo),
+            memory_bank=design_bank(repo),
             store=FactStore(batch),
             llm=client,
             root=repo,
@@ -1251,23 +1251,6 @@ async def design_change(repo_path: str, spec: dict[str, Any], use_llm: bool = Fa
         return {"error": str(exc)}
 
 
-def _design_bank(repo: Path) -> dict[str, str]:
-    """The committed ``episteme/`` pages a design draws conventions from, when present —
-    the same three the CLI's ``design`` reads."""
-    import contextlib
-
-    from orchestrator.knowledge.understand import existing_bank_dir
-
-    out: dict[str, str] = {}
-    with contextlib.suppress(Exception):
-        bank = existing_bank_dir(repo)
-        for name in ("domain-model.md", "tech-context.md", "conventions.md"):
-            page = bank / name
-            if page.exists():
-                out[name] = page.read_text(encoding="utf-8")
-    return out
-
-
 def sdlc_baseline(repo_path: str) -> dict[str, Any]:
     """Score the run agent against a corpus of tickets whose right answer is known, and
     summarize the durable run records. **Deterministic and free**: the validity gate reads
@@ -1276,30 +1259,13 @@ def sdlc_baseline(repo_path: str) -> dict[str, Any]:
     let each hide behind the other. ``repo_path`` is a local path or a git URL."""
 
     def run(repo: Any) -> dict[str, Any]:
-        from orchestrator.evals.agent_corpus import render_report, score_gate, score_runs
+        from orchestrator.evals.agent_corpus import baseline_summary, render_report, score_gate, score_runs
         from orchestrator.pkg import FactStore, load_or_extract
         from orchestrator.sdlc.runstate import RunStore
 
         gate = score_gate(FactStore(load_or_extract(repo)))
         runs = score_runs(RunStore().all())
-        return {
-            "gate": {
-                "accuracy": gate.accuracy,
-                "cases": len(gate.results),
-                "false_refusals": gate.false_refusals,
-                "missed_refusals": gate.missed_refusals,
-            },
-            "runs": {
-                "runs": runs.runs,
-                "completed": runs.completed,
-                "parked": runs.parked,
-                "failed": runs.failed,
-                "completion_rate": runs.completion_rate,
-                "intervention_rate": runs.intervention_rate,
-                "mean_cost_usd": runs.mean_cost_usd,
-            },
-            "markdown": render_report(gate, runs),
-        }
+        return {**baseline_summary(gate, runs), "markdown": render_report(gate, runs)}
 
     return _in_repo(repo_path, run, hint=False)
 

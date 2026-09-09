@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import json
 from pathlib import Path
 from typing import Annotated, Any
@@ -48,12 +47,17 @@ def design(
     depends on them, the call hotspots) and any **unverified references** (named
     paths absent from the graph). Deterministic by default; `--llm` writes the
     prose. `path` may be a local path or a git URL cloned on demand.
+
+    This is one rung of a ladder: `sdlc plan` produces the same design as one of its
+    twelve sections, alongside the investigation, the blast radius, the files and the
+    cost — run this alone when you want the design without writing anything under
+    `.spine/`.
     """
     import asyncio
 
     from orchestrator.pkg import FactStore, RepoCodeExtractor, load_or_extract
     from orchestrator.pkg.overview import build_overview
-    from orchestrator.sdlc.design import produce_design, render_design_md
+    from orchestrator.sdlc.design import design_bank, produce_design, render_design_md
 
     spec = _load_design_spec(spec_file, title, summary, list(criterion or []))
     if not spec.get("title"):
@@ -77,7 +81,7 @@ def design(
         batch = extractor.extract(repo) if refresh else load_or_extract(repo, extractor=extractor)
         store = FactStore(batch)
         overview = build_overview(batch)
-        memory_bank = _read_design_bank(repo)
+        memory_bank = design_bank(repo)
         design_dict = asyncio.run(
             produce_design(spec, overview=overview, memory_bank=memory_bank, store=store, llm=client)
         )
@@ -108,20 +112,6 @@ def _load_design_spec(
         head = lines[0].lstrip("# ").strip() if lines else ""
         return {"title": head, "summary": "\n".join(lines[1:]), "acceptance_criteria": criteria}
     return {"title": title, "summary": summary, "acceptance_criteria": criteria}
-
-
-def _read_design_bank(repo: Path) -> dict[str, str]:
-    """Optional conventions/domain context from a committed `episteme/`, if present."""
-    from orchestrator.knowledge.understand import existing_bank_dir
-
-    out: dict[str, str] = {}
-    with contextlib.suppress(Exception):
-        bank = existing_bank_dir(repo)
-        for name in ("domain-model.md", "tech-context.md", "conventions.md"):
-            p = bank / name
-            if p.exists():
-                out[name] = p.read_text(encoding="utf-8")
-    return out
 
 
 @app.command("investigate", rich_help_panel=PANEL_CHANGE)
@@ -166,7 +156,9 @@ def investigate(
     `file:line` + caller counts), the relevant committed `episteme/` knowledge,
     and — when a registry DB is configured — prior-run notes. Deterministic, no
     LLM. Pass the ticket via `--source` (e.g. `jira://PROJ-123`) or inline with
-    `--title`/`--text`. Feed the result into `orchestrator design`.
+    `--title`/`--text`. Feed the result into `orchestrator design` — or skip both and run
+    `sdlc plan`, which carries this brief as its first sections and writes the build
+    document; this command is the read-only rung for when nothing should be written yet.
     """
     from orchestrator.pkg import FactStore, RepoCodeExtractor, load_or_extract
     from orchestrator.sdlc.investigate import build_investigation, render_investigation_md
@@ -281,7 +273,9 @@ def localize(
     Parses a Python traceback / pytest failure, resolves each frame to a
     knowledge-graph symbol (`file:line`), and points at the likely fault site
     plus who calls it. Reads the trace from `--trace <file>`, `--text`, or stdin.
-    Deterministic, no LLM — the first step of a root-cause investigation.
+    Deterministic, no LLM — the first step of a root-cause investigation. `rca` runs this
+    same localization and adds ranked hypotheses, a regression surface and a fix approach;
+    use this alone when the fault site is all you need, in a second.
     """
     import sys
 

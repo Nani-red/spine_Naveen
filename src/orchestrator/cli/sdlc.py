@@ -228,35 +228,14 @@ def sdlc_baseline(
     """
     import json as _json
 
-    from orchestrator.evals.agent_corpus import render_report, score_gate, score_runs
+    from orchestrator.evals.agent_corpus import baseline_summary, render_report, score_gate, score_runs
     from orchestrator.pkg import FactStore, load_or_extract
     from orchestrator.sdlc.runstate import RunStore
 
     gate = score_gate(FactStore(load_or_extract(path)))
     runs = score_runs(RunStore().all())
     if as_json:
-        typer.echo(
-            _json.dumps(
-                {
-                    "gate": {
-                        "accuracy": gate.accuracy,
-                        "cases": len(gate.results),
-                        "false_refusals": gate.false_refusals,
-                        "missed_refusals": gate.missed_refusals,
-                    },
-                    "runs": {
-                        "runs": runs.runs,
-                        "completed": runs.completed,
-                        "parked": runs.parked,
-                        "failed": runs.failed,
-                        "completion_rate": runs.completion_rate,
-                        "intervention_rate": runs.intervention_rate,
-                        "mean_cost_usd": runs.mean_cost_usd,
-                    },
-                },
-                indent=2,
-            )
-        )
+        typer.echo(_json.dumps(baseline_summary(gate, runs), indent=2))
         return
     typer.echo(render_report(gate, runs))
 

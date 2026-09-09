@@ -378,4 +378,23 @@ async def design_feature(
     }
 
 
-__all__ = ["design_feature", "produce_design", "render_design_md"]
+def design_bank(repo: Path | str) -> dict[str, str]:
+    """The committed ``episteme/`` pages a design draws conventions and domain context from,
+    when present — ``domain-model``, ``tech-context``, ``conventions``. Empty when there is
+    no bank; never raises. One reader, shared by ``orchestrator design`` and the plugin's
+    ``design_change``, so the two cannot drift on which pages count."""
+    import contextlib
+
+    from orchestrator.knowledge.understand import existing_bank_dir
+
+    out: dict[str, str] = {}
+    with contextlib.suppress(Exception):
+        bank = existing_bank_dir(repo)
+        for name in ("domain-model.md", "tech-context.md", "conventions.md"):
+            page = bank / name
+            if page.exists():
+                out[name] = page.read_text(encoding="utf-8")
+    return out
+
+
+__all__ = ["design_bank", "design_feature", "produce_design", "render_design_md"]
