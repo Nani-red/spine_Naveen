@@ -1,0 +1,339 @@
+# Reusable SDLC pipeline — the governed build path, as two jobs split where the model starts.
+#
+# A calling repository adds a few lines and gets Spine's SDLC stages as a pipeline:
+#
+#     jobs:
+#       spine:
+#         uses: synaptixs/spine/.github/workflows/spine-sdlc.yml@<tag>   # pin a release
+#         with:
+#           spec: .spine/specs/TICKET-1.json
+#         secrets:
+#           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+#
+# **`plan` costs nothing and needs nothing.** It runs intake → investigate → validity → design
+# from a hand-written spec — no model, no credentials, same commit in, same document out — and
+# publishes the build document as the job summary and an artifact. It runs on every trigger.
+#
+# **`build` is where a human decides.** It is bound to a GitHub Environment (`spine-build` by
+# default): configure required reviewers on it and the reviewer's click *is* the plan gate.
+# The job records that decision with `sdlc approve` — the approver's login, the run URL — and
+# only then runs `sdlc autorun`, which refuses to build a plan nobody approved. Default `--safe`
+# clones, generates, tests and commits locally and pushes nothing; `live: true` opens the PR.
+#
+# **Three locations, named separately**, because a single-package repository lets you conflate
+# them and the other shapes do not:
+#   * `path`        — the graph root Spine reads (a monorepo package, or `.`)
+#   * `target-dir`  — where generated code lands and tests run (defaults to `path`)
+#   * the git repo  — what is branched and gets the PR (always the caller)
+# Delivery into a subdirectory is not supported yet (`sdlc-target-layout-scaffold.md`, v1 is a
+# single package root), so `build` refuses when `target-dir` is not the repository root rather
+# than scaffolding at the wrong level. `plan` still works for that package.
+#
+# **Multirepo (option A):** the caller commits `.spine/repos.yaml` and lists the sibling
+# checkouts it needs in `checkouts`. Each is cloned beside `repo/` before `plan`, every declared
+# root is verified to be a populated, clean git checkout, and `investigate --repos` writes the
+# cross-repo brief next to the build document. Delivery stays one repository, one PR — a
+# ticket spanning repos is planned here and shipped as one run per repo.
+#
+# **Submodules** are checked out recursively. Spine treats a nested checkout as a boundary,
+# not a subdirectory, so a superproject's graph stops at each submodule and a `repos.yaml`
+# declaring both is scoped exactly once. Delivery *into* a submodule is a PR to that
+# repository plus a pin bump here, which is the multi-repo case again — `build` refuses it.
+#
+# This header is the design record.
+name: Spine SDLC
+
+on:
+  workflow_call:
+    inputs:
+      spec:
+        description: "Path, inside the calling repository, of the hand-written spec (JSON: title, summary, acceptance_criteria)."
+        type: string
+        required: true
+      path:
+        description: "Graph root Spine reads, relative to the repository root. A monorepo package, or `.`."
+        type: string
+        default: "."
+      target-dir:
+        description: "Where generated code lands and tests run, relative to the repository root. Defaults to `path`."
+        type: string
+        default: ""
+      repos:
+        description: "A `.spine/repos.yaml` inside the repository, for a multi-repo graph. Empty for one repository."
+        type: string
+        default: ""
+      checkouts:
+        description: >-
+          JSON list of sibling checkouts the multi-repo graph needs, each {repository, ref, path}
+          with `path` relative to the workspace (beside `repo/`). Empty for one repository.
+        type: string
+        default: "[]"
+      build:
+        description: "Run the gated build job after plan. Set false for plan-only pipelines."
+        type: boolean
+        default: true
+      live:
+        description: "Push the branch and open the pull request. Default false: clone, generate, test, commit locally, push nothing."
+        type: boolean
+        default: false
+      environment:
+        description: "GitHub Environment the build job deploys to. Put required reviewers on it — that review is the plan gate."
+        type: string
+        default: "spine-build"
+      max-cost:
+        description: "Cap on model spend for the build, in USD. Exhausting it parks the run."
+        type: string
+        default: "5"
+      version:
+        description: "Spine version to install. Pin it; an unpinned tool changes under you."
+        type: string
+        default: ""
+      install-from:
+        description: "A pip requirement that overrides `version` — used by Spine's own repository to run the workflow on the checkout under test."
+        type: string
+        default: ""
+      python-version:
+        description: "Python used to run Spine, not the version of the code being read."
+        type: string
+        default: "3.12"
+    secrets:
+      ANTHROPIC_API_KEY:
+        description: "Model key for the build job's intake, implement and review stages. Plan needs none."
+        required: false
+      CHECKOUT_TOKEN:
+        description: "Token able to read the sibling repositories in `checkouts`. The job token cannot read other private repositories."
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: plan (deterministic, no model)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      intent: ${{ steps.doc.outputs.intent }}
+    env:
+      SPEC: ${{ inputs.spec }}
+      GRAPH_ROOT: ${{ inputs.path }}
+      TARGET_DIR: ${{ inputs.target-dir || inputs.path }}
+      REPOS_FILE: ${{ inputs.repos }}
+      CHECKOUTS: ${{ inputs.checkouts }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: repo
+          # Full history: the commit cache is keyed on HEAD and only trusted on a clean tree.
+          fetch-depth: 0
+          # A superproject's submodules are part of what is being read. Cheap when there are none.
+          submodules: recursive
+
+      - name: Check out the sibling repositories the multi-repo graph declares
+        if: ${{ inputs.checkouts != '[]' }}
+        env:
+          # The job token reads only this repository; siblings need one the caller supplies.
+          GH_TOKEN: ${{ secrets.CHECKOUT_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          echo "$CHECKOUTS" | python3 -c '
+          import json, subprocess, sys
+          for c in json.load(sys.stdin):
+              repo, ref, path = c["repository"], c.get("ref", ""), c["path"]
+              if not path or path.startswith(("/", "..")):
+                  sys.exit(f"checkouts: path {path!r} must be relative and inside the workspace")
+              cmd = ["gh", "repo", "clone", repo, path, "--", "--recurse-submodules"]
+              if ref:
+                  cmd += ["--branch", ref]
+              print(" ".join(cmd), flush=True)
+              subprocess.run(cmd, check=True)
+          '
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install Spine
+        env:
+          VERSION: ${{ inputs.version }}
+          INSTALL_FROM: ${{ inputs.install-from }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INSTALL_FROM" ]; then
+            pip install --quiet "$INSTALL_FROM"
+          elif [ -n "$VERSION" ]; then
+            pip install --quiet "synaptixs-spine[languages]==$VERSION"
+          else
+            pip install --quiet "synaptixs-spine[languages]"
+          fi
+          orchestrator --version
+
+      # Every root the multi-repo graph declares must be a populated, clean git checkout
+      # *before* anything reads it. An un-initialised submodule is an empty directory — it
+      # loads without error and contributes no facts, which is a graph that is quietly wrong.
+      # A dirty tree makes the whole merged graph untrusted, and a pipeline should not plan on
+      # an untrusted graph without saying so.
+      - name: Verify every declared repository is checked out and clean
+        if: ${{ inputs.repos != '' }}
+        working-directory: repo
+        run: |
+          set -euo pipefail
+          python3 - "$REPOS_FILE" <<'PY'
+          import subprocess, sys
+          from orchestrator.pkg.repos import load_repo_config
+          from orchestrator.pkg.persistence import repo_state
+          bad = []
+          for key, root in load_repo_config(sys.argv[1]):
+              sha, dirty = repo_state(root)
+              populated = any(root.iterdir())
+              state = "ok" if sha and not dirty and populated else "NOT OK"
+              print(f"{key:>16}  {root}  head={sha or '-'}  dirty={dirty}  populated={populated}  {state}")
+              if state != "ok":
+                  bad.append(key)
+          if bad:
+              sys.exit(f"::error::declared repositories not usable: {bad} — check `checkouts` and submodule init")
+          PY
+
+      - name: Where this change lands, across repositories
+        if: ${{ inputs.repos != '' }}
+        working-directory: repo
+        run: |
+          set -euo pipefail
+          # `investigate` takes a title and body; lift them from the spec. Through variables,
+          # never inline — the spec is caller-authored text.
+          title=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["title"])' "$SPEC")
+          text=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("summary", ""))' "$SPEC")
+          orchestrator investigate . --title "$title" --text "$text" --repos "$REPOS_FILE" --out ../brief-across-repos.md
+          {
+            echo "## Across repositories"
+            echo
+            cat ../brief-across-repos.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build document (sdlc plan)
+        id: doc
+        working-directory: repo
+        run: |
+          set -euo pipefail
+          intent=$(python3 -c 'import json,pathlib,sys; p=pathlib.Path(sys.argv[1]); print(json.loads(p.read_text()).get("intent_id") or p.stem)' "$SPEC")
+          echo "intent=$intent" >> "$GITHUB_OUTPUT"
+          orchestrator sdlc plan --spec "$SPEC" --path "$GRAPH_ROOT" --out ../plans --quiet
+          cp "../plans/$intent-build.md" ../build-document.md
+          if [ "$TARGET_DIR" != "." ]; then
+            echo "::notice::target-dir is '$TARGET_DIR' — plan is scoped to it, but delivery into a subdirectory is not supported yet; the build job will refuse."
+          fi
+          {
+            echo "## Build document — \`$intent\`"
+            echo
+            cat ../build-document.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spine-plan
+          path: |
+            build-document.md
+            brief-across-repos.md
+          if-no-files-found: error
+
+  build:
+    name: build (gated)
+    needs: plan
+    if: ${{ inputs.build }}
+    runs-on: ubuntu-latest
+    # The environment's required reviewers are the plan gate. Nothing below runs until one of
+    # them approves this run, and the approval is recorded against the plan's digest.
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      SPEC: ${{ inputs.spec }}
+      GRAPH_ROOT: ${{ inputs.path }}
+      TARGET_DIR: ${{ inputs.target-dir || inputs.path }}
+      INTENT: ${{ needs.plan.outputs.intent }}
+      ENVIRONMENT: ${{ inputs.environment }}
+      MAX_COST: ${{ inputs.max-cost }}
+      LIVE: ${{ inputs.live }}
+      REPO_URL: https://github.com/${{ github.repository }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Refuse delivery shapes Spine does not support yet
+        run: |
+          set -euo pipefail
+          if [ "$TARGET_DIR" != "." ]; then
+            echo "::error::Delivery into a subdirectory ('$TARGET_DIR') is not supported: codegen, the test environment and layout detection key off the repository root (docs/specs/sdlc-target-layout-scaffold.md, v1 is a single package root). Plan for that package succeeded; run the build with target-dir '.' or wait for target-dir delivery."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v7
+        with:
+          path: repo
+          fetch-depth: 0
+          submodules: recursive
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install Spine
+        env:
+          VERSION: ${{ inputs.version }}
+          INSTALL_FROM: ${{ inputs.install-from }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INSTALL_FROM" ]; then
+            pip install --quiet "$INSTALL_FROM"
+          elif [ -n "$VERSION" ]; then
+            pip install --quiet "synaptixs-spine[languages]==$VERSION"
+          else
+            pip install --quiet "synaptixs-spine[languages]"
+          fi
+          orchestrator --version
+
+      # The plan is regenerated here rather than downloaded: it is deterministic for the
+      # commit, so the digest the approval binds to is the digest the reviewer read, and a
+      # plan that would differ is exactly the case the digest exists to catch.
+      - name: Record who approved, against the plan they approved
+        working-directory: repo
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          orchestrator sdlc plan --spec "$SPEC" --path "$GRAPH_ROOT" --quiet
+          approver=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/approvals" \
+            --jq '[.[] | select(.state == "approved")] | last | .user.login // empty' 2>/dev/null || true)
+          who="${approver:-$ACTOR}"
+          orchestrator sdlc approve "$INTENT" --path "$GRAPH_ROOT" --by "$who" \
+            --note "GitHub Environment '$ENVIRONMENT' approval on $RUN_URL"
+
+      - name: Build (sdlc autorun)
+        working-directory: repo
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Read by the clone and the push; `gh` opens the PR with it.
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+          SDLC_WORKSPACE_ROOT: ${{ runner.temp }}/sdlc-workspaces
+        run: |
+          set -euo pipefail
+          if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+            echo "::error::ANTHROPIC_API_KEY is not set — the build job's intake, implement and review stages call a model. Pass it under secrets:."
+            exit 1
+          fi
+          mode=--safe
+          if [ "$LIVE" = "true" ]; then mode=--live; fi
+          orchestrator sdlc autorun \
+            --source "file://$SPEC" --spec "$SPEC" \
+            --path "$GRAPH_ROOT" --repo "$REPO_URL" \
+            "$mode" --max-cost "$MAX_COST" --no-review \
+            --out ../run-artifacts
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: spine-run
+          path: run-artifacts
+          if-no-files-found: warn

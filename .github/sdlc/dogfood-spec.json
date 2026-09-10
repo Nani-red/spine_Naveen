@@ -1,0 +1,10 @@
+{
+  "intent_id": "DOGFOOD-1",
+  "title": "Name the nested-checkout boundary in the pkg extract help text",
+  "summary": "The repository walker stops at any nested git checkout (a submodule, a vendored clone). `orchestrator pkg extract --help` should say so, beside the ignored-directory list, so an operator reading the help learns why a submodule's symbols are absent from the superproject's graph.",
+  "acceptance_criteria": [
+    "`orchestrator pkg extract --help` mentions that nested git checkouts are not walked",
+    "The wording names the `.git` entry as the boundary marker",
+    "No extraction behaviour changes: the same commit produces the same facts"
+  ]
+}

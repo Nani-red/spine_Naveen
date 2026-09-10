@@ -68,6 +68,7 @@ the repository keeps the two reference documents and the script, which need no a
    python scripts/matrix-count.py --check
    python scripts/state-numbers.py --check                  # claims re-derived from source
    uv run orchestrator pkg accuracy --check
+   python scripts/sdlc_shapes.py                            # the SDLC pipeline on four repo shapes
    ```
    **The four `--check` scripts are generated-artifact gates and CI runs every one of them.**
    They are listed together because running only the first is how a release PR failed on a

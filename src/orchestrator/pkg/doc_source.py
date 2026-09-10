@@ -31,7 +31,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 from orchestrator.pkg.docs import DocPage
-from orchestrator.pkg.extractor import DEFAULT_IGNORE_DIRS
+from orchestrator.pkg.extractor import DEFAULT_IGNORE_DIRS, is_nested_repo
 from orchestrator.pkg.media import MEDIA_SUFFIXES, read_media_artifact
 
 # Skip absurdly large docs (generated dumps, vendored changelogs) — keep the graph legible.
@@ -154,6 +154,7 @@ def read_doc_pages(root: Path | str, *, sections: bool = True) -> list[DocPage]:
     """Every documentation file under ``root`` as a ``DocPage`` (repo-relative title).
 
     Skips the usual ignored dirs (``.git``, ``node_modules``, build output, hidden dirs),
+    nested git checkouts (a submodule's docs are that repository's, not this one's),
     text files that can't be read as UTF-8 or exceed ``_MAX_DOC_BYTES``, and PDFs that are
     too large or yield no text. Deterministic order.
 
@@ -163,7 +164,12 @@ def read_doc_pages(root: Path | str, *, sections: bool = True) -> list[DocPage]:
     root_path = Path(root).resolve()
     pages: list[DocPage] = []
     for dirpath, dirnames, filenames in os.walk(root_path):
-        dirnames[:] = sorted(d for d in dirnames if d not in DEFAULT_IGNORE_DIRS and not d.startswith("."))
+        here = Path(dirpath)
+        dirnames[:] = sorted(
+            d
+            for d in dirnames
+            if d not in DEFAULT_IGNORE_DIRS and not d.startswith(".") and not is_nested_repo(here, d)
+        )
         for name in sorted(filenames):
             path = Path(dirpath) / name
             reader = _READERS.get(path.suffix.lower())

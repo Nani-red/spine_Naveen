@@ -87,6 +87,12 @@ Keep new design records in here rather than in an untracked scratch directory.
   **`.repo/`** and the leading dot is load-bearing — see `corpus/README.md`. `pkg verify`
   does *not* catch this: fixture modules are perfectly self-consistent, so nothing will
   remind you. Same trap for any future on-disk fixture tree, not just this corpus.
+- **A nested git checkout is a boundary, not a subdirectory.** Both walkers also stop at any
+  child directory holding a `.git` entry — file *or* directory, because a submodule's is a
+  file (`is_nested_repo` in `extractor.py`). Before that rule a superproject's graph walked
+  into its submodules, and declaring both in `.spine/repos.yaml` scoped every symbol twice.
+  `from_mapping` now refuses a declared root nested inside another unless the inner one is a
+  checkout of its own. The reasoning is in the header of `.github/workflows/spine-sdlc.yml`.
 - **`--language` is not validated in `cli/`** — an unsupported language silently
   scaffolds a *Python* project (every dispatch chain falls through to the Python branch).
   Detection (`catalog/profile.py`) and extraction (`pkg/`) are independent systems; a
