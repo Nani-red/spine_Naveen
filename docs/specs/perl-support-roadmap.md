@@ -54,7 +54,7 @@ a pasted command result.
 | `.pl` / `.pm` / `.t` are not in the profiler's suffix map | [`catalog/profile.py`](../../src/orchestrator/catalog/profile.py) | A Perl repo profiles as `languages=∅` |
 | `cpanfile` / `Makefile.PL` / `Build.PL` / `dist.ini` are not read as markers | `catalog/profile.py` | No framework (`mojolicious` / `catalyst` / `dancer2`) or test-runner (`prove`) detection |
 | No `perl_extractor.py`, no `perl` extra, no `tree_sitter_perl` probe, no `_GRAMMAR_MODULES` entry | `pkg/`, `pyproject.toml`, `doctor.py`, `persistence.py` | **Zero graph nodes**; a warm cache would not notice the extra |
-| `--language perl` is rejected (exit 2) | `feature_runner.py` | Correct until P5 (D9) |
+| `--language perl` is rejected (exit 2) | `feature_runner.py` | Correct; the codegen track adds the machinery before the flag (D9) |
 
 ---
 
@@ -68,7 +68,6 @@ CHEAP
   `Shop::Log->new` are exact ids with no symbol table. Bare `f()` resolves to the
   same-file sub or a name in an explicit `use Foo qw(f)` import list.
 · `.pl`/`.pm`/`.t` collide with no registered suffix.
-· The codegen toolchain is one command each way: cpanm, prove. No build system.
 NOT CHEAP
 · "Only perl can parse Perl." tree-sitter is error-tolerant, so a hard file still
   yields the declarations that parse — but sub recall on legacy code WILL be below
@@ -80,8 +79,7 @@ NOT CHEAP
 
 **Reused verbatim:** lazy parser factory + `TYPE_CHECKING`-guarded `TSNode`; gated append in
 `default_extractors()`; the two-pass CALLS pattern; `finalize` repoint (C#/PHP); the corpus
-method; the per-front-end freshness test; the C-style path-suffix import join for `require "file.pl"`;
-the Go-shaped codegen pair (`ToolEnvironment` + build-then-test runner, green and red proven).
+method; the per-front-end freshness test; the C-style path-suffix import join for `require "file.pl"`.
 
 ---
 
@@ -220,8 +218,8 @@ Two poles, both public, shallow-cloned to a scratch dir, extracted on a `.git`-l
 after; names live in `docs/` only, never in `src/` or `tests/`:
 
 - **Mojolicious** (`mojolicious/mojo`) — modern OO Perl: `use Mojo::Base 'Parent'`, `has`, roles,
-  a router, ~200 `.pm` + `.t` files. Exercises D2/D4/D5, P3 routes, `.t` as source, and P5
-  brownfield codegen (`prove` is its own test runner).
+  a router, ~200 `.pm` + `.t` files. Exercises D2/D4/D5, P3 routes, and `.t` as source; the
+  codegen track uses it again for brownfield.
 - **ExifTool** (`exiftool/exiftool`) — classic CPAN Perl: `@ISA = qw(Exporter)`, hash-based
   objects, huge table-driven `.pm` files, no Moose. Exercises the `@ISA` spelling, D6, D10, and
   **parse recall on hard Perl**: record the `sub` count from `grep` beside the `Function` count
