@@ -1,16 +1,16 @@
-# Design + Plan: adding Perl to the PKG — comprehension, then codegen, one track
+# Design + Plan: adding Perl to the PKG — comprehension (codegen is its own track)
 
 **Status:** Proposed — plan for review, no code written. **Date:** 2026-09-10 · spine v3.33.2.
 **Branch:** `feat/perl-support` off `develop` at `d84e666`. **Delivery: one MR** to `develop` when
 every phase in §4 is done and tested (the Kotlin track's rule, [kotlin-support-roadmap.md](kotlin-support-roadmap.md) D19).
-Adds a Perl front-end to the PKG extractor as one self-contained track of five phases, the same
+Adds a Perl front-end to the PKG extractor as one self-contained track of four phases, the same
 cadence as C#/C/C++ ([language-support-roadmap.md](language-support-roadmap.md)), SQL
 ([sql-support-roadmap.md](sql-support-roadmap.md)), Go ([go-support-roadmap.md](go-support-roadmap.md))
-and PHP ([php-support-roadmap.md](php-support-roadmap.md)). **Codegen is in scope** (P5): the
-toolchain is `cpanm --installdeps .` → `prove -l t/`, hermetic and universal. Comprehension is the
-whole desirability win and ships first inside the track: when P1 lands, `understand` / `state` /
-`design` / `investigate` / `localize` / `rca` / `regression` and codegen *grounding* work on a Perl
-codebase; P5 makes `sdlc feature --language perl` generate, build and test.
+and PHP ([php-support-roadmap.md](php-support-roadmap.md)). **Codegen is in scope and is its own
+track**, [perl-codegen-roadmap.md](perl-codegen-roadmap.md), opened when this one merges — the Java
+and TypeScript split. Comprehension is the whole desirability win: when P1 lands, `understand` /
+`state` / `design` / `investigate` / `localize` / `rca` / `regression` and codegen *grounding* work
+on a Perl codebase.
 
 > Perl is not in the expansion roadmap's four-language set
 > ([language-expansion-roadmap.md](language-expansion-roadmap.md)); it is a demand-pulled addition
@@ -42,7 +42,7 @@ a pasted command result.
 | **D6** | `Field` in classic (hash-based) objects | (a) declared accessors only: Moo/Moose/Mojo::Base `has`, `Class::Accessor` `mk_accessors`, 5.38 `field`; (b) also infer from `$self->{key}` | **(a).** `$self->{items}` is a hash access, not a declaration; inferring fields from it fabricates a schema the author never wrote. |
 | **D7** | Suffixes | (a) `.pl`, `.pm`, `.t`; (b) `.pm` only; (c) plus shebang sniffing | **(a).** `.t` files are Perl and are the tests. `.pl` collides with Prolog by name; a Prolog file parses to ERROR nodes and yields nothing, the right degradation. (c) needs a dispatcher change; document the gap. `.pod` and `.xs` are not Perl source. |
 | **D8** | Invention oracle (`pkg/scope.py`) | (a) `NOT_APPLICABLE["perl"]` with a reason, (b) a `_Perl` walker | **(a).** Variables carry a sigil; `f()` and `$f->()` / `&$f` are different CST nodes. A `my $f` cannot shadow a bare call — the Java/PHP argument. |
-| **D9** | Codegen in this track | (a) P5, after comprehension is proven, (b) defer | **(a).** `cpanm --installdeps .` → `prove -l t/` is a clean two-step. `"perl"` enters `SUPPORTED_LANGUAGES` **only in P5**, together with layout (`lib/` + `t/`, a `cpanfile`), scaffold, `PerlToolEnvironment`, `ProveTestRunner`, prompts and a `perl-conventions` skill — never before, so `sdlc feature --language perl` exits 2 until the runner exists rather than scaffolding Python. Proven the Go way: real `prove` green **and** red. |
+| **D9** | Codegen | (a) its own track, opened when this one merges; (b) inside this track | **(a)** — [perl-codegen-roadmap.md](perl-codegen-roadmap.md): `cpanm --installdeps .` → `prove -l t/`, proven green **and** red, one MR of its own. `"perl"` stays out of `SUPPORTED_LANGUAGES` until that track's first commit adds the whole machinery, so `sdlc feature --language perl` exits 2 here rather than scaffolding Python. |
 | **D10** | Default `@EXPORT` and `@ISA` method resolution for bare calls | (a) a whole-repo `finalize` pass in P2, (b) never | **(a), P2, verified-only.** A bare `fmt()` after `use Shop::Util;` (no list) resolves only when the repository's own `Shop::Util` declares `fmt` in a literal `@EXPORT`; an inherited `total()` resolves only through a literal `@ISA` chain to a first-party package. Anything else is skipped — the `exporter_default` corpus case keeps it honest. |
 
 ---
@@ -133,16 +133,6 @@ the Go-shaped codegen pair (`ToolEnvironment` + build-then-test runner, green an
 | Rose::DB::Object / Class::DBI | `__PACKAGE__->meta->setup(...)` | Same shape, second reader |
 | DBI raw SQL strings | — | a cross-language pass, its own spec |
 
-### 3.5 Codegen (P5)
-
-| Piece | What | Precision / safety rule |
-|---|---|---|
-| Layout | greenfield: `lib/<Dist>/`, `t/`, `cpanfile`, `Makefile.PL` (EUMM) or `dist.ini` absent by default; brownfield: place into the existing `lib/` tree by package name, `t/` beside it | the placement package is read from the neighbouring `.pm` files' `package` lines, never derived from the directory name alone (the Go 4.5 lesson) |
-| `PerlToolEnvironment` | `cpanm --installdeps . --notest` when a `cpanfile` exists (best effort, offline-tolerant); `perl` and `prove` on PATH | `perl_toolchain_available()` = `perl` **and** `prove`; `cpanm` optional and said so |
-| `ProveTestRunner` | `perl -c` on each changed file, then `prove -l t/` (or `prove -l <file>` for the test the change targets, with a whole-suite run before green) | early-return on the first non-zero, `_clip`-ed output as the refine signal |
-| Prompts + skill | `perl-conventions` (strict/warnings, `Test::More`, Moo when the repo uses it, else classic `bless`) | the convention is read from the repo's own `.pm` files, not assumed |
-| `SUPPORTED_LANGUAGES`, `_resolve_language` | `"perl"` added in P5 only; `auto` resolves to Perl when `.pm`/`.pl` are present and Python is not | |
-
 ---
 
 ## 4. Phases — the living table
@@ -153,11 +143,10 @@ the Go-shaped codegen pair (`ToolEnvironment` + build-then-test runner, green an
 | **P2 Corpus + CALLS** | `corpus/perl/{plain,instance_calls,exporter_default,isa_spellings,legacy_main,multi_package}` labelled from source first; §3.2 rows 1–6; D10's `finalize` pass; `--scoreboard`; freshness test | ~4–5 d | precision 1.00 on every kind; CALLS recall stated with predicted `known_gaps`; invention `NOT_APPLICABLE` with reason; `state` "Call graph: available" | ⬜ | | | |
 | **P3 Routes + typed receivers** | `perl_routes.py` (Mojolicious full + Lite, Dancer2); §3.2 row 7; `corpus/perl/mojo_routes` | ~3–5 d | `Endpoint`s on the Mojolicious repo with `EXPOSES` to real controller subs; a Perl service joins as a provider in `pkg joins` | ⬜ | | | |
 | **P4 Data layer** | DBIx::Class `Entity`/`REFERENCES`/`Field` (§3.4); `corpus/perl/dbic` | ~2–4 d | entities linked; `data_layer_link` reconciles against a `.sql` schema; zero invented `REFERENCES` | ⬜ | | | |
-| **P5 Codegen** | §3.5: `sdlc/perl.py` layout + scaffold, `PerlToolEnvironment`, `ProveTestRunner`, prompts + `perl-conventions`, `"perl"` into `SUPPORTED_LANGUAGES`, preflight `perl -c` | ~4–6 d | greenfield `sdlc feature --language perl` → real `prove` green **and** red proven in `tests/sdlc/test_perl_integration.py` (gated on `perl_toolchain_available()`); brownfield into the Mojolicious validation repo green, independently re-run | ⬜ | | | |
-| **P6 Review + MR** | `/review-pr` on the branch; fix; one MR to `develop` with this table and every validation number as its body | ~1 d | verdict "mergeable"; every §7.1 row updated; CI green; no `episteme/` in the diff | ⬜ | | | |
+| **P5 Review + MR** | `/review-pr` on the branch; fix; one MR to `develop` with this table and every validation number as its body | ~1 d | verdict "mergeable"; every §7.1 row updated; CI green; no `episteme/` in the diff | ⬜ | | | |
 
-All phases land on `feat/perl-support`; delivery is **one MR**. **Rough total: ~18–27 days**, one
-engineer familiar with the PKG. No net-new *algorithm*; P1 is a day longer than PHP's because of
+All phases land on `feat/perl-support`; delivery is **one MR**. **Rough total: ~14–21 days**, one
+engineer familiar with the PKG; codegen's ~7–11 days are in its own roadmap. No net-new *algorithm*; P1 is a day longer than PHP's because of
 package-scope tracking and the five inheritance spellings.
 
 ---
@@ -178,17 +167,12 @@ Vocabulary row for `corpus/README.md`: `perl` · module `perl:lib/Shop/Cart.pm` 
 | `mojo_routes` (P3) | `->to('orders#index')`, the hash form, an `under` group, a closure, `->any` | closure → endpoint without `EXPOSES`; `any` → nothing |
 | `dbic` (P4) | two Result classes, `belongs_to`/`has_many`, one relation outside the tree | `REFERENCES` between the two; the outside target stays external |
 
-Codegen (P5) is proven the Go way, green and red against real `prove`, in
-`tests/sdlc/test_perl_integration.py`, not in the corpus.
-
 ---
 
 ## 6. Files to change
 
-**New:** `src/orchestrator/pkg/perl_extractor.py`, `perl_routes.py`; `src/orchestrator/sdlc/perl.py`,
-`PerlToolEnvironment` and `ProveTestRunner` in the existing `testenv.py`/`testrunner.py`;
-`tests/pkg/test_perl_extractor.py`, `test_perl_routes.py`; `tests/sdlc/test_perl_codegen.py`,
-`test_perl_integration.py`; `corpus/perl/*`; this file.
+**New:** `src/orchestrator/pkg/perl_extractor.py`, `perl_routes.py`; `tests/pkg/test_perl_extractor.py`,
+`test_perl_routes.py`; `corpus/perl/*`; this file.
 
 **Modified (P1):** `pkg/extractor.py`, `pkg/capabilities.py`, `pkg/persistence.py`, `doctor.py`,
 `catalog/profile.py`, `pkg/scope.py`, `pkg/import_link.py`, `knowledge/insights.py`, `pkg/docs.py`,
@@ -196,11 +180,7 @@ Codegen (P5) is proven the Go way, green and red against real `prove`, in
 tests (`test_default_extractors`, `test_capabilities`, `test_verifier`, `test_scope`, `test_profile`,
 `test_doctor`, `test_insights`); docs per §7.1.
 
-**Modified (P5):** `sdlc/feature_runner.py` (`SUPPORTED_LANGUAGES`, `_resolve_language`, toolchain
-guard), `layout.py`, `scaffold.py`, `codegen.py` prompts, `preflight.py`, `catalog/catalog.py` +
-`skills.py` (`perl-conventions`).
-
-**Untouched until P5:** everything under `sdlc/` (D9).
+**Untouched:** everything under `sdlc/` — the codegen track's files (D9).
 
 ### 7.1 User-facing documentation — what changes, in which phase
 
@@ -210,12 +190,12 @@ Updated in the phase that makes each row true, in the same commit as the code;
 | Document | What must change | Phase |
 |---|---|---|
 | `README.md` | every language list (intro, "Works across", "Add a language" count and next-language list); "What's new" at the release cut | P1 · release |
-| `FEATURES.md` | a Perl capability row; the "all N front-ends" accuracy row count; a codegen row in P5 | P1, P5 |
-| `USER_GUIDE.md` | the extras list (`[perl]`), the "Multi-language" blockquote (`.pl`/`.pm`/`.t`), the corpus-results line; toolchain passage (`perl`, `prove`, `cpanm` optional) in P5 | P1, P5 |
+| `FEATURES.md` | a Perl capability row; the "all N front-ends" accuracy row count | P1 |
+| `USER_GUIDE.md` | the extras list (`[perl]`), the "Multi-language" blockquote (`.pl`/`.pm`/`.t`, codegen "in its own track"), the corpus-results line | P1 |
 | `KNOWLEDGE_GRAPH.md` | node/edge matrices, language table row, "Parser coverage", a fact-mapping note on D2 (package = namespace **and** class, module = file) | P1, P4 |
-| `CLAUDE_GUIDE.md`, `CODEX_GUIDE.md` | the language sentence and "N front-ends"; a Perl toolchain row in P5 | P1, P5 |
+| `CLAUDE_GUIDE.md`, `CODEX_GUIDE.md` | the language sentence and "N front-ends"; the toolchain table gets no Perl row yet and says why | P1 |
 | `CLI_REFERENCE.md`, `EXAMPLE.md`, `BENCHMARK.md` | corpus-results counts | P2 |
-| `SETUP.md` | the `[perl]` extra; the toolchain in P5 | P1, P5 |
+| `SETUP.md` | the `[perl]` extra | P1 |
 | `corpus/README.md` | the id-vocabulary row (path-keyed module, dotted type) | P2 |
 | `plugins/spine/skills/*/SKILL.md` | the language line | P1 |
 | `docs/specs/STATE-OF-SPINE.md` | front-end count, precision row count, `CALLS` recall row with Perl's number, source-module and test counts | P1, P2 |
@@ -256,7 +236,7 @@ reports no language.
 - **Extensionless scripts** (shebang-only `bin/` files) — a dispatcher change; measure demand.
 - **Catalyst attribute routing** without an HTTP method — verb-less, the no-`ANY` rule.
 - **Embedded-SQL strings** in DBI calls — a cross-language pass, its own spec.
-- **`perlcritic` as preflight** — optional; `perl -c` is the P5 preflight because it is always present.
+- **Codegen and preflight** — the codegen track (D9).
 
 ## 10. Risks and gotchas
 
@@ -267,8 +247,6 @@ reports no language.
   agree with the extractor.
 - **Pragmas look like imports.** The lowercase-initial skip is the rule; a first-party lowercase
   package name is the accepted false negative.
-- **`cpanm` may be absent or offline.** The environment step is best effort and says so; `prove`
-  is the gate.
 - **Untracked `docs/specs/*.md` changes the spec count** and, as this document once did, can be
   lost — it is tracked on its branch from its first commit.
 - **Never commit `episteme/`.**
@@ -281,6 +259,6 @@ reports no language.
 2. P2 corpus + CALLS → corpus 1.00 precision, exporter_default green, @EXPORT/@ISA pass
 3. P3 routes + typed receivers → Perl provider in the multi-repo joiner
 4. P4 DBIx::Class entities
-5. P5 codegen → sdlc feature --language perl, prove green + red; brownfield on Mojolicious
-6. /review-pr, then one MR to develop
+5. /review-pr, then one MR to develop
+6. open feat/perl-codegen — perl-codegen-roadmap.md
 ```
