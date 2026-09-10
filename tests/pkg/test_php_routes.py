@@ -200,3 +200,10 @@ def test_symfony_named_path_prefix_and_unreadable_prefix(tmp_path: Path) -> None
     endpoints, exposes = _graph(tmp_path, src, name="Controllers.php")
     assert endpoints == {"php:endpoint:GET /api/orders"}
     assert ("php:endpoint:GET /api/orders", "php:App.Controller.NamedController.index") in exposes
+
+
+def test_deep_expression_does_not_overflow_route_scan(tmp_path: Path) -> None:
+    source = "<?php $text = " + " . ".join(["'legacy'"] * 1500) + ";\n"
+    source += "Route::get('/health', function () { return 'ok'; });"
+    endpoints, _ = _graph(tmp_path, source)
+    assert any("/health" in endpoint for endpoint in endpoints)

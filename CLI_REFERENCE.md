@@ -1106,7 +1106,12 @@ orchestrator sdlc feature [OPTIONS]
 | `--package-name` | Override the scaffold package name (default: derived from repo). |
 | `--spec` | Implement a hand-written spec (JSON) instead of deriving one from the source — see `sdlc autorun` above for the format. |
 | `--refresh` | Re-extract intents from the source (default: reuse the cached, deterministic backlog). |
-| `--language` | Target language: auto (detect), python, java, typescript, csharp, c, cpp, go, or sql. (default: `auto`) |
+| `--language` | Target language: auto (detect), python, java, typescript, csharp, c, cpp, go, php, or sql. (default: `auto`) |
+
+PHP uses Composer when a root `composer.json` exists, otherwise a checksum-pinned
+PHPUnit PHAR outside the checkout. `phpunit.xml[.dist]` supplies the test directory,
+suffix and bootstrap. Changed PHP files are linted before their tests run. See
+[PHP code generation](USER_GUIDE.md#php-code-generation) for toolchain requirements.
 
 ### `orchestrator sdlc run`
 

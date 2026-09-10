@@ -262,6 +262,125 @@ class CToolEnvironment:
         return f"c toolchain ({self.build_tool} + system compiler)"
 
 
+class PhpToolEnvironment:
+    """Composer when declared; otherwise a checksum-pinned, workspace-local PHPUnit."""
+
+    declared: set[str] = set()
+
+    def __init__(self) -> None:
+        self.php = shutil.which("php") or "php"
+        self.version = "unknown"
+        self.phpunit: str | None = None
+        self.setup_note = ""
+
+    @property
+    def python(self) -> str:
+        raise RuntimeError("PhpToolEnvironment has no Python interpreter")
+
+    async def ensure(self, worktree: Path | str) -> None:
+        from orchestrator.sdlc.php import read_composer
+        from orchestrator.sdlc.testrunner import _exec_capture
+
+        root = Path(worktree).resolve()
+        rc, output = await _exec_capture((self.php, "--version"), cwd=str(root), timeout=30)
+        match = re.search(r"PHP (\d+)\.(\d+)", output)
+        if rc or match is None:
+            raise RuntimeError(f"Cannot determine PHP version: {output}")
+        version = (int(match[1]), int(match[2]))
+        self.version = f"{version[0]}.{version[1]}"
+        pin_file = root / ".php-version"
+        if pin_file.is_file():
+            pin = pin_file.read_text().strip()
+            requested = re.fullmatch(r"(\d+)\.(\d+)(?:\.\d+)?", pin)
+            if requested and version != (int(requested[1]), int(requested[2])):
+                raise RuntimeError(
+                    f"Repository requests PHP {pin}; found {self.version}. Select the requested PHP on PATH."
+                )
+        manifest = read_composer(root)
+        if manifest is not None:
+            composer = shutil.which("composer")
+            if composer is None:
+                raise RuntimeError("PHP repository has composer.json: install Composer on PATH, then retry.")
+            # An interrupted/extraction-failed install can leave a bin proxy without an
+            # autoloader. Retry once before codegen; the model cannot repair tool setup.
+            for _attempt in range(2):
+                rc, output = await _exec_capture(
+                    (composer, "install", "--no-interaction", "--prefer-dist"),
+                    cwd=str(root),
+                    timeout=600,
+                )
+                if rc == 0:
+                    break
+            self.setup_note = (
+                f"Composer install exited {rc}: {output[-1000:]}" if rc else "Composer dependencies installed"
+            )
+            self.phpunit = str(root / "vendor/bin/phpunit")
+            if not Path(self.phpunit).is_file() or not (root / "vendor/autoload.php").is_file():
+                raise RuntimeError(
+                    "Composer did not provide vendor/bin/phpunit and vendor/autoload.php. "
+                    f"Declare phpunit/phpunit in require-dev. {self.setup_note}"
+                )
+            return
+        if version < (7, 3):
+            raise RuntimeError(
+                f"PHP {self.version} is too old for the modern PHPUnit runner (requires PHP >=7.3)."
+            )
+        release, checksum = _PHPUNIT_PHARS[11 if version >= (8, 2) else 9]
+        destination = root.parent / f".sdlc-phpunit-{release}.phar"
+        await asyncio.to_thread(_ensure_phpunit_phar, destination, release, checksum)
+        self.phpunit = str(destination)
+        self.setup_note = f"PHPUnit {release} (verified PHAR outside worktree)"
+
+    async def install(self, packages: list[str]) -> bool:
+        return False
+
+    def describe(self) -> str:
+        return f"PHP {self.version}; {self.setup_note}"
+
+
+# SHA-256 published at https://phar.phpunit.de/; use immutable release URLs.
+_PHPUNIT_PHARS = {
+    11: ("11.5.56", "915fa161f496dc04a45cd6032855879bca0bab644048cd0516982dffe678e9f1"),
+    9: ("9.6.36", "d9552a130747f02f9d7fc2427b143189c638e273c502c8faa88ab6b04c5f2662"),
+}
+
+
+def _ensure_phpunit_phar(destination: Path, release: str, checksum: str) -> None:
+    import hashlib
+    import tempfile
+
+    import httpx
+
+    if (
+        destination.is_file()
+        and not destination.is_symlink()
+        and hashlib.sha256(destination.read_bytes()).hexdigest() == checksum
+    ):
+        return
+    try:
+        response = httpx.get(
+            f"https://phar.phpunit.de/phpunit-{release}.phar", timeout=60, follow_redirects=True
+        )
+        response.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise RuntimeError(f"Cannot download PHPUnit {release}: {exc}") from exc
+    data = response.content
+    if hashlib.sha256(data).hexdigest() != checksum:
+        raise RuntimeError(f"PHPUnit {release} checksum mismatch; refusing to execute download")
+    # Unique temporary file and atomic replace avoid partial downloads and concurrent writers.
+    with tempfile.NamedTemporaryFile(dir=destination.parent, delete=False) as staged:
+        temporary = Path(staged.name)
+        staged.write(data)
+    try:
+        temporary.replace(destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def php_toolchain_available() -> bool:
+    return shutil.which("php") is not None
+
+
 class GoToolEnvironment:
     """Go build toolchain. Dependencies are resolved from ``go.mod`` (not pip), so
     ``install`` (auto-heal) is a no-op; ``ensure`` runs ``go mod download`` best-effort
@@ -404,6 +523,8 @@ def make_test_environment(language: str = "python", *, build_tool: str = "") -> 
         return DotnetToolEnvironment()
     if language in ("c", "cpp"):
         return CToolEnvironment(build_tool or "cmake")
+    if language == "php":
+        return PhpToolEnvironment()
     if language == "go":
         return GoToolEnvironment()
     if language == "sql":
@@ -423,6 +544,7 @@ def make_test_runner(language: str, env: TestEnvironment) -> TestRunner:
         MavenTestRunner,
         MesonTestRunner,
         NodeTestRunner,
+        PhpUnitTestRunner,
         SubprocessTestRunner,
     )
 
@@ -435,6 +557,8 @@ def make_test_runner(language: str, env: TestEnvironment) -> TestRunner:
     if language in ("c", "cpp"):
         # The build tool (cmake/meson) is carried on the C/C++ tool environment.
         return MesonTestRunner() if getattr(env, "build_tool", "cmake") == "meson" else CTestRunner()
+    if language == "php":
+        return PhpUnitTestRunner(php=getattr(env, "php", "php"), phpunit=getattr(env, "phpunit", None))
     if language == "go":
         return GoTestRunner()
     if language == "sql":
@@ -591,6 +715,8 @@ def _project_dependencies(root: Path) -> list[str]:
 
 
 __all__ = [
+    "PhpToolEnvironment",
+    "php_toolchain_available",
     "CToolEnvironment",
     "DotnetToolEnvironment",
     "GoToolEnvironment",

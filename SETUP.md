@@ -209,3 +209,7 @@ the usual cause.
 | Using it from Claude Code or Codex | [CLAUDE_GUIDE.md](CLAUDE_GUIDE.md), [CODEX_GUIDE.md](CODEX_GUIDE.md) |
 | Design records | [docs/specs/README.md](docs/specs/README.md) |
 | Security policy · license | [SECURITY.md](SECURITY.md) · `LICENSE` (MIT) |
+
+PHP codegen requires PHP on PATH (including XML and mbstring extensions), plus Composer
+for repositories with `composer.json`. See [PHP code generation](USER_GUIDE.md#php-code-generation)
+for version selection, PHPUnit installation, and legacy repository behavior.

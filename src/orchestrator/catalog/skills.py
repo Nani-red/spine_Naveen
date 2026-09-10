@@ -138,6 +138,12 @@ NATIVE_SKILLS: tuple[Skill, ...] = (
         "Match the repo's C++ conventions — header/source split, RAII/ownership, namespaces.",
     ),
     Skill(
+        "php-conventions",
+        "Match existing PHP namespaces and file naming; use require_once with __DIR__ "
+        "when there is no autoloader. Write modern PHPUnit tests in the configured suite "
+        "directory with its suffix. Add strict_types only in greenfield code.",
+    ),
+    Skill(
         "go-conventions",
         "Match the repo's Go conventions — package layout, exported API, error returns "
         "(not panics), and co-located table-driven tests.",

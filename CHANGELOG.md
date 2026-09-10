@@ -4,6 +4,26 @@ All notable changes to this project are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); the package is `synaptixs-spine`
 (import/CLI stay `orchestrator`).
 
+## Unreleased
+
+### Added
+
+- PHP code generation for Composer packages and legacy repositories: PSR-4 scaffolding,
+  PHPUnit configuration-aware test placement, checksum-pinned PHAR fallback, changed-file
+  syntax checks, modern PHPUnit prompts and sampled conventions. The runner refuses empty
+  test runs and tests only files touched by the change. See the
+  [PHP codegen roadmap](docs/specs/php-codegen-roadmap.md).
+
+### Fixed
+
+- PHP route discovery no longer overflows Python's call stack on deeply nested expressions,
+  as measured on the public aiemr repository.
+- Plan approval revalidation uses the selected language, so a PHP plan is not compared
+  against a regenerated Python plan, and includes the same measured run history as
+  the CLI when checking an approved plan.
+- Semantic review includes PHP source, PHPUnit XML, Composer lockfiles and scaffold
+  dotfiles, so it can inspect generated PHP configuration.
+
 ## 3.33.1 — the documents say only what is true, and the help screen shows only what you need
 
 ### Changed

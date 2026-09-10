@@ -410,11 +410,11 @@ The autonomous multi-feature pipeline + web dashboard needs Temporal + Postgres 
 see the [Setup guide](https://github.com/synaptixs/spine/blob/main/SETUP.md).
 
 **Which languages and models?**
-Comprehension and codegen cover **Python, Java, TypeScript, C#, C, C++ and Go** — each
+Comprehension and codegen cover **Python, Java, TypeScript, C#, C, C++, Go and PHP** — each
 front-end going beyond structure into what that stack actually does (Java and C# REST
 endpoints, EF Core entities, C's `#include` graph, C++ templates and namespaces, Go
 interface satisfaction by method-set matching). **PHP** adds a call graph too (namespaces,
-classes, interfaces, traits, `CALLS`) — codegen is a follow-on. **SQL** adds data-layer comprehension plus
+classes, interfaces, traits, `CALLS`), plus Composer/PHAR PHPUnit codegen with changed-file lint. **SQL** adds data-layer comprehension plus
 greenfield migration codegen validated against an ephemeral database. **Docs** fold in
 automatically; **media** (diagrams, screenshots, recorded reviews) via the opt-in
 `media extract`. Any LiteLLM provider — Anthropic, OpenAI, Bedrock — or a local Ollama

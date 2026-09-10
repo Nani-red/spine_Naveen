@@ -88,6 +88,8 @@ def scaffold(root: Path | str, layout: TargetLayout, *, profile: ProjectProfile 
         files = _c_files(layout)
     elif layout.language == "cpp":
         files = _cpp_files(layout)
+    elif layout.language == "php":
+        files = _php_files(layout)
     elif layout.language == "go":
         files = _go_files(layout)
     elif layout.language == "sql":
@@ -569,3 +571,28 @@ build/
 
 
 __all__ = ["scaffold"]
+
+
+def _php_files(layout: TargetLayout) -> dict[str, str]:
+    from xml.sax.saxutils import escape, quoteattr
+
+    manifest = {
+        "name": "app/generated-library",
+        "type": "library",
+        "require": {"php": ">=8.2"},
+        "require-dev": {"phpunit/phpunit": "^11"},
+        "autoload": {"psr-4": {layout.package_name.rstrip("\\") + "\\": layout.source_dir + "/"}},
+    }
+    return {
+        "composer.json": json.dumps(manifest, indent=2) + "\n",
+        "phpunit.xml": '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<phpunit bootstrap="vendor/autoload.php">\n  <testsuites>\n'
+        '    <testsuite name="unit"><directory suffix='
+        + quoteattr(layout.test_suffix)
+        + ">"
+        + escape(layout.tests_dir)
+        + "</directory></testsuite>\n  </testsuites>\n</phpunit>\n",
+        f"{layout.source_dir}/.gitkeep": "",
+        f"{layout.tests_dir}/.gitkeep": "",
+        ".gitignore": "vendor/\n.phpunit.cache/\n.phpunit.result.cache\n",
+    }

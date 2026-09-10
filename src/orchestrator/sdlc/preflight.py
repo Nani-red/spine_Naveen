@@ -182,6 +182,30 @@ class StubPreflightRunner:
         return PreflightResult(passed=True, output="stub preflight")
 
 
+class PhpPreflightRunner:
+    """Changed-file syntax validation, independent of the repository's existing suite."""
+
+    def __init__(self, php: str = "php") -> None:
+        self._php = php
+
+    async def run(self, *, path: str, baseline: Baseline | None = None) -> PreflightResult:
+        from orchestrator.sdlc.php import changed_php_files
+        from orchestrator.sdlc.testrunner import _exec_capture
+
+        try:
+            root = Path(path).resolve()
+            files = await changed_php_files(root)
+            for name in files:
+                rc, out = await _exec_capture(
+                    (self._php, "-l", str(root / name)), cwd=str(root), timeout=_TOOL_TIMEOUT
+                )
+                if rc:
+                    return PreflightResult(False, f"PHP lint failed: {name}\n{out}"[-_MAX_OUTPUT_CHARS:])
+            return PreflightResult(True, f"PHP lint green: {len(files)} changed file(s)")
+        except (OSError, ValueError, RuntimeError) as exc:
+            return PreflightResult(False, str(exc))
+
+
 class SubprocessPreflightRunner:
     """ruff check + ruff format --check + mypy, via the worker's interpreter."""
 
@@ -280,4 +304,10 @@ class SubprocessPreflightRunner:
         return rc, stdout_bytes.decode("utf-8", "replace")
 
 
-__all__ = ["PreflightResult", "PreflightRunner", "StubPreflightRunner", "SubprocessPreflightRunner"]
+__all__ = [
+    "PhpPreflightRunner",
+    "PreflightResult",
+    "PreflightRunner",
+    "StubPreflightRunner",
+    "SubprocessPreflightRunner",
+]

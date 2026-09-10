@@ -16,6 +16,9 @@ on:
       - ".github/workflows/spine-sdlc.yml"
       - ".github/workflows/sdlc-dogfood.yml"
       - ".github/sdlc/**"
+      - "src/orchestrator/sdlc/**"
+      - "src/orchestrator/pkg/php*.py"
+      - "tests/sdlc/test_php_codegen.py"
   workflow_dispatch:
     inputs:
       spec:
@@ -26,6 +29,10 @@ on:
         description: "Open the pull request (default: build locally, push nothing)."
         type: boolean
         default: false
+      php-version:
+        description: "PHP interpreter for the aiemr build (match the target repository's version requirements)."
+        type: string
+        default: "8.3"
       max-cost:
         description: "Cap on model spend, USD."
         type: string
@@ -48,3 +55,100 @@ jobs:
       max-cost: ${{ inputs.max-cost || '5' }}
     secrets:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+  aiemr-plan:
+    name: aiemr PHP plan (no model)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          path: spine
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: synaptixs/aiemr
+          ref: 5ba45f6166d3d4383057d0f24c1641663a4380f1
+          path: aiemr
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      - name: Install checkout under test
+        working-directory: spine
+        run: uv sync --frozen --extra dev --extra languages
+      - name: Configure episteme location
+        run: echo "ORCHESTRATOR_MEMORY_BANK_DIR=$RUNNER_TEMP/aiemr-episteme" >> "$GITHUB_ENV"
+      - name: Build focused aiemr episteme
+        run: uv run --project spine orchestrator understand aiemr/library/classes
+      - name: Plan the PHP compatibility ticket
+        run: |
+          uv run --project spine orchestrator sdlc plan \
+            --spec spine/.github/sdlc/php-codegen-spec.json \
+            --path aiemr/library/classes --language php --out plans --quiet
+          cat plans/PHP-CODEGEN-1-build.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: shivammathur/setup-php@b604ade2a87db23f8871b7182e69ec5e75effb45 # v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, dom, xml, xmlwriter
+          tools: composer
+          coverage: none
+      - name: Real PHP runner tests (Composer and PHAR)
+        working-directory: spine
+        run: uv run pytest tests/sdlc/test_php_codegen.py -q
+
+  aiemr-build:
+    name: aiemr PHP build (dispatch only)
+    if: github.event_name == 'workflow_dispatch'
+    needs: aiemr-plan
+    environment: spine-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          path: spine
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: synaptixs/aiemr
+          ref: 5ba45f6166d3d4383057d0f24c1641663a4380f1
+          path: aiemr
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      - uses: shivammathur/setup-php@b604ade2a87db23f8871b7182e69ec5e75effb45 # v2
+        with:
+          php-version: ${{ inputs.php-version || '8.3' }}
+          extensions: mbstring, dom, xml, xmlwriter
+          tools: composer
+          coverage: none
+      - name: Install checkout under test
+        working-directory: spine
+        run: uv sync --frozen --extra languages
+      - name: Configure episteme location
+        run: echo "ORCHESTRATOR_MEMORY_BANK_DIR=$RUNNER_TEMP/aiemr-episteme" >> "$GITHUB_ENV"
+      - name: Build focused aiemr episteme
+        run: uv run --project spine orchestrator understand aiemr/library/classes
+      - name: Prepare and record the environment-approved plan
+        env:
+          APPROVER: ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          git -C aiemr branch validation-base
+          git -C aiemr config user.name "Spine PHP validation"
+          git -C aiemr config user.email "noreply@synaptixs.dev"
+          echo '.spine/' >> aiemr/.git/info/exclude
+          uv run --project spine orchestrator sdlc plan \
+            --spec spine/.github/sdlc/php-codegen-spec.json \
+            --path aiemr/library/classes --language php --quiet
+          uv run --project spine orchestrator sdlc approve PHP-CODEGEN-1 \
+            --path aiemr/library/classes --by "$APPROVER" \
+            --note "spine-build environment approval: $RUN_URL"
+      - name: Generate and test locally
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SDLC_WORKSPACE_ROOT: ${{ runner.temp }}/php-workspaces
+          GIT_AUTHOR_NAME: Spine PHP validation
+          GIT_AUTHOR_EMAIL: noreply@synaptixs.dev
+          GIT_COMMITTER_NAME: Spine PHP validation
+          GIT_COMMITTER_EMAIL: noreply@synaptixs.dev
+          MAX_COST: ${{ inputs.max-cost || '5' }}
+        run: |
+          uv run --project spine orchestrator sdlc autorun \
+            --source file://spine/.github/sdlc/php-codegen-spec.json \
+            --spec spine/.github/sdlc/php-codegen-spec.json \
+            --repo "$GITHUB_WORKSPACE/aiemr" --base validation-base \
+            --path aiemr/library/classes --language php --safe --max-cost "$MAX_COST" \
+            --out "$RUNNER_TEMP/php-run"

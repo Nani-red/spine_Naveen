@@ -167,3 +167,9 @@ async def test_the_design_model_answer_parses_out_of_a_fence() -> None:
     design = await _llm_design({"title": "t"}, {"overview": {"modules": []}}, _LLM())
     assert design["llm"] is True
     assert design["files_to_touch"] == ["x.py"]
+
+
+def test_legacy_php_filename_is_a_path_not_a_dotted_symbol(tmp_path: Path) -> None:
+    (tmp_path / "NumberToText.class.php").write_text("<?php class NumberToText {}")
+    result = validate_design({"files_to_touch": ["NumberToText.class.php"]}, store=_store(), root=tmp_path)
+    assert result.ok

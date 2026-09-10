@@ -1,0 +1,13 @@
+{
+  "intent_id": "PHP-CODEGEN-1",
+  "title": "Make NumberToText compatible with PHP 8 while preserving negative-number conversion",
+  "summary": "In library/classes/NumberToText.class.php, replace active curly-brace string offset access removed in PHP 8 with square-bracket access. Preserve the existing global class, public API, legacy coding style and require_once import convention. Add Tests/NumberToTextNegativeTest.php using modern PHPUnit Framework TestCase and an explicit require_once of the source file. Do not change unrelated files or the legacy suite. Negative conversion already exists; this ticket makes it executable on PHP 8.",
+  "acceptance_criteria": [
+    "library/classes/NumberToText.class.php passes php -l under PHP 8.3",
+    "A new NumberToText(-12) converts to negative twelve",
+    "A new NumberToText('-12.5') converts to negative twelve point five",
+    "NumberToText(12) and NumberToText(0) still return twelve and zero",
+    "The changed class remains parseable on PHP 7.4",
+    "Only library/classes/NumberToText.class.php and Tests/NumberToTextNegativeTest.php are changed"
+  ]
+}

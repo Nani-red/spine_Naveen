@@ -145,7 +145,9 @@ def _is_token(ref: str) -> bool:
 
 
 def _looks_like_path(ref: str) -> bool:
-    return "/" in ref or ref.endswith((".py", ".ts", ".tsx", ".java", ".cs", ".go", ".sql", ".c", ".h"))
+    return "/" in ref or ref.endswith(
+        (".py", ".ts", ".tsx", ".java", ".cs", ".go", ".php", ".sql", ".c", ".h")
+    )
 
 
 def _check_path(ref: str, *, dirs: set[str]) -> str:
