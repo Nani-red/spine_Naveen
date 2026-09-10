@@ -74,7 +74,7 @@ Optional extras, added when you need them:
   comprehension (schema/queries/procedures + migration folding) — no toolchain needed. `[php]`
   adds `.php` comprehension + a call graph (namespaces, classes/interfaces/traits, `CALLS`,
   typed-receiver resolution) + Laravel/Slim/Symfony routes + Eloquent/Doctrine entities —
-  codegen is not shipped yet.
+  codegen uses Composer or a pinned PHPUnit PHAR.
 - `[docs]` — **PDF** doc ingestion; `[office]` — **Word/Excel** (`.docx`/`.xlsx`) ingestion.
   Markdown, `.rst`, `.txt` and **HTML** need no extra. Without an extra those files are simply
   skipped, so a base install still ingests everything it can read.
@@ -359,8 +359,7 @@ is: `orchestrator understand .` → commit `episteme/`, then re-run whenever the
 > extra is installed (`pip install 'synaptixs-spine[java]'` / `[typescript]` / `[csharp]` / `[c]`
 > / `[cpp]` / `[go]` / `[php]` / `[sql]`). `understand`, codegen grounding, and `pkg extract` then
 > process `.java` / `.ts` / `.cs` / `.c` / `.h` / `.cpp` / `.hpp` / `.go` / `.php` / `.sql` too
-> (`.blade.php` is skipped as a template, not PHP source). PHP has a call graph too; only codegen
-> is not shipped yet. For **SQL**, the
+> (`.blade.php` is skipped as a template, not PHP source). PHP also builds and tests code with Composer or a pinned PHPUnit PHAR. For **SQL**, the
 > graph models the **data layer from source** — `CREATE TABLE`/columns → `Entity`/`Field`,
 > foreign keys → `REFERENCES`, views and `SELECT`/`INSERT`/`UPDATE`/`DELETE` → `READS`/
 > `WRITES`, and stored procedures → `Function` + `CALLS`. A `migrations/` folder is folded
@@ -722,6 +721,34 @@ It **fails closed**: with no terminal to ask on, it declines rather than assumin
 yes. Pass it from an interactive shell, not from cron or a background job.
 
 ---
+
+### PHP code generation
+
+Use `orchestrator sdlc feature --source file://./requirements.md --language php --safe`.
+Install PHP on PATH with `dom`, `mbstring`, `xml` and `xmlwriter`; a Composer repository
+also needs the `composer` command. The environment reports the actual PHP version.
+Select it before running Spine, using your version manager or CI's PHP setup step.
+A numeric `.php-version` is checked against the selected major/minor; Composer enforces
+its `require.php` constraint during dependency installation. The default CI validation
+uses PHP 8.3.
+
+An empty repository receives a PSR-4 Composer package (`src/`, `tests/`, PHPUnit `^11`,
+PHP `>=8.2`). Existing projects keep their layout: the first directory in the first
+`phpunit.xml` suite (or `phpunit.xml.dist`) supplies the test directory and suffix;
+its bootstrap remains active. Composer's PSR-4 mapping supplies the source directory.
+Loose PHP files select an existing layout and are never replaced with a scaffold.
+
+Without a root `composer.json`, Spine downloads a checksum-pinned PHPUnit PHAR beside
+the worktree: PHPUnit 11 on PHP 8.2+, PHPUnit 9 on PHP 7.3–8.1. Composer projects use
+`composer install --no-interaction --prefer-dist` and `vendor/bin/phpunit` instead.
+PHPUnit is supported; a separate Pest runner and framework-specific scaffolds are deferred.
+
+Before testing, `php -l` checks every changed PHP file. The runner then executes only
+the generated or touched test files, individually, and fails when no tests execute.
+This lets a legacy repository gain modern tests without loading its unrelated historical
+suite. Passing this check means the change's tests pass, not that the repository's entire
+suite is compatible. Brownfield code keeps its namespaces, imports and style;
+`declare(strict_types=1)` is introduced only for greenfield code.
 
 ## Step 4 — Go live: a real issue + pull request
 

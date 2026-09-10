@@ -95,6 +95,15 @@ jobs:
       - name: PKG invariants (orchestrator pkg verify)
         run: uv run orchestrator pkg verify .
 
+      # The reusable SDLC workflow promises to work on four repository shapes — single repo,
+      # monorepo package, multi-repo workspace, superproject with submodules. This builds all
+      # four from scratch (real git, a real `submodule add`) and runs the plan stage on each,
+      # asserting determinism and, for the submodule shape, that its symbols are scoped once:
+      # they were scoped twice until 2026-09-09 and nothing said so. No model, no network.
+      # The design is in the header of .github/workflows/spine-sdlc.yml.
+      - name: SDLC pipeline holds on all four repository shapes
+        run: uv run python scripts/sdlc_shapes.py
+
       # The architecture diagram carries live numbers — version, command count, node and edge
       # kinds — and it is generated from them rather than drawn. The PNG this replaced was
       # stamped 3.8.4 and claimed `7 node kinds · 9 edge kinds` two releases after

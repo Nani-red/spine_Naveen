@@ -44,6 +44,7 @@ _REVIEWABLE_SUFFIXES = frozenset(
         ".py",
         ".java",
         ".go",
+        ".php",
         ".c",
         ".h",
         ".cc",
@@ -68,8 +69,13 @@ _REVIEWABLE_SUFFIXES = frozenset(
         ".yaml",
         ".yml",
         ".json",
+        ".xml",
+        ".lock",
     }
 )
+
+
+_REVIEWABLE_FILENAMES = frozenset({".gitignore", ".php-version", ".gitkeep"})
 
 
 @dataclass(frozen=True)
@@ -331,13 +337,17 @@ def _read_source(root: Path, criteria: list[str]) -> str:
         for line in proc.stdout.splitlines():
             rel = line[3:].strip().strip('"')
             candidate = root / rel
-            if candidate.suffix.lower() in _REVIEWABLE_SUFFIXES and candidate.exists():
+            if (
+                candidate.suffix.lower() in _REVIEWABLE_SUFFIXES or candidate.name in _REVIEWABLE_FILENAMES
+            ) and candidate.exists():
                 files.append(candidate)
     if not files:
         files = [
             p
             for p in sorted(root.rglob("*"))
-            if p.is_file() and p.suffix.lower() in _REVIEWABLE_SUFFIXES and ".git" not in p.parts
+            if p.is_file()
+            and (p.suffix.lower() in _REVIEWABLE_SUFFIXES or p.name in _REVIEWABLE_FILENAMES)
+            and ".git" not in p.parts
         ]
 
     # Windowed, not all-or-nothing. Omitting a file outright was the judge's last blind

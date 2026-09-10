@@ -320,7 +320,7 @@
 [`src/orchestrator/knowledge/renderers.py:1541`](../../src/orchestrator/knowledge/renderers.py#L1541)
 
 - **Called by** (1): [`render_memory_bank`](../../src/orchestrator/knowledge/understand.py#L122)
-- **Calls** (5): [`_doc`](../../src/orchestrator/knowledge/renderers.py#L114), [`_error_idiom_block`](../../src/orchestrator/knowledge/renderers.py#L1503), [`_naming_block`](../../src/orchestrator/knowledge/renderers.py#L1439), [`_test_layout_block`](../../src/orchestrator/knowledge/renderers.py#L1487), [`extract_conventions`](../../src/orchestrator/sdlc/conventions.py#L78)
+- **Calls** (5): [`_doc`](../../src/orchestrator/knowledge/renderers.py#L114), [`_error_idiom_block`](../../src/orchestrator/knowledge/renderers.py#L1503), [`_naming_block`](../../src/orchestrator/knowledge/renderers.py#L1439), [`_test_layout_block`](../../src/orchestrator/knowledge/renderers.py#L1487), [`extract_conventions`](../../src/orchestrator/sdlc/conventions.py#L80)
 
 ### `render_domain_model`
 

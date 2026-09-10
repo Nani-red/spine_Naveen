@@ -791,6 +791,42 @@ _REFINE_SYSTEM_GO = (
     "change that turns the build + tests green. Same path rules — relative, no '..'."
 )
 
+_IMPLEMENT_SYSTEM_PHP = (
+    "You are a senior engineer implementing runnable PHP from the SPEC. "
+    "Output ONE JSON object, no prose or code fences:\n" + _FILE_FORMS + "\n"
+    "Paths are relative to the worktree, no leading slash or '..'. Write source files only "
+    "with .php extension, never .inc or Blade templates. Edit existing files using edits, "
+    "never replace them wholesale. Match existing namespaces and style; do not introduce "
+    "namespaces into global legacy code. Without an autoloader, import using require_once "
+    "__DIR__ . '/relative/path.php'. Use declare(strict_types=1) only for greenfield. "
+    "Every changed file must pass php -l on the target interpreter. "
+    "Implement production code only: a separate author_tests phase writes the tests. "
+    "The pipeline already created the greenfield Composer/PHPUnit scaffold. Do not emit "
+    "composer.json, phpunit.xml, composer.lock or .gitignore unless the feature requires "
+    "a specific change, and then use anchored edits on the existing file."
+)
+_TESTS_SYSTEM_PHP = (
+    "Write modern PHPUnit tests for the SPEC and CURRENT SOURCE FILES. "
+    "Output ONE JSON object, no prose or code fences:\n" + _FILE_FORMS + "\n"
+    "Write test files only, in the LAYOUT's tests_dir with its test_suffix. The test class "
+    "name must match the filename without .php. Use PHPUnit\\Framework\\TestCase, public "
+    "test* methods, and assertions for every acceptance criterion. Never use the obsolete "
+    "PHPUnit_Framework_TestCase or require PHPUnit/Framework.php. Without Composer autoload, "
+    "require_once __DIR__ . '/relative/path.php' for the class under test. Preserve configured "
+    "bootstrap. Do not emit or edit composer.json, composer.lock, phpunit.xml or .gitignore "
+    "in this test-writing phase. Use plain test methods for cross-version compatibility; "
+    "PHPUnit 11 data providers require attributes, not @dataProvider comments. "
+    "Do not modify the existing legacy suite or weaken assertions."
+)
+_REFINE_SYSTEM_PHP = (
+    "Fix a failing PHP lint or PHPUnit run using SPEC, CURRENT FILES and FAILURE OUTPUT. "
+    "Output ONE JSON object, no prose or code fences:\n" + _FILE_FORMS + "\n"
+    "Use edits for existing files; files created this session may use content. Keep paths "
+    "relative with no '..'. Make the smallest correct change, preserve the existing style "
+    "and namespaces, and keep generated PHPUnit tests in the configured directory and suffix. "
+    "Never disable tests, weaken assertions, or rewrite the target's unrelated legacy suite."
+)
+
 # Phase system prompts keyed by language (default: Python). Adding a language is a
 # new column here, not another boolean branch at each call site.
 _IMPLEMENT_SYSTEMS = {
@@ -801,6 +837,7 @@ _IMPLEMENT_SYSTEMS = {
     "c": _IMPLEMENT_SYSTEM_C,
     "cpp": _IMPLEMENT_SYSTEM_CPP,
     "go": _IMPLEMENT_SYSTEM_GO,
+    "php": _IMPLEMENT_SYSTEM_PHP,
     "sql": _IMPLEMENT_SYSTEM_SQL,
 }
 _TESTS_SYSTEMS = {
@@ -811,6 +848,7 @@ _TESTS_SYSTEMS = {
     "c": _TESTS_SYSTEM_C,
     "cpp": _TESTS_SYSTEM_CPP,
     "go": _TESTS_SYSTEM_GO,
+    "php": _TESTS_SYSTEM_PHP,
 }
 _REFINE_SYSTEMS = {
     "python": _REFINE_SYSTEM,
@@ -820,6 +858,7 @@ _REFINE_SYSTEMS = {
     "c": _REFINE_SYSTEM_C,
     "cpp": _REFINE_SYSTEM_CPP,
     "go": _REFINE_SYSTEM_GO,
+    "php": _REFINE_SYSTEM_PHP,
     "sql": _REFINE_SYSTEM_SQL,
 }
 
@@ -947,7 +986,12 @@ class LLMCodegenAdapter:
         if key not in self._conventions:
             from orchestrator.sdlc.conventions import extract_conventions
 
-            block = extract_conventions(root).prompt_block()
+            if self._layout is not None and self._layout.language == "php":
+                from orchestrator.sdlc.conventions import php_convention_block
+
+                block = php_convention_block(root, self._layout)
+            else:
+                block = extract_conventions(root).prompt_block()
             self._conventions[key] = f"\n\n{block}" if block else ""
         return self._conventions[key]
 
@@ -1053,6 +1097,17 @@ class LLMCodegenAdapter:
                 "`int main()` returning non-zero on failure, `#include`-ing the header from "
                 f"`{layout.source_dir}/`.\n"
                 f"{build_line} Don't invent unrelated paths.\n\n"
+            )
+        if layout.language == "php":
+            return (
+                "PROJECT LAYOUT (authoritative):\n"
+                f"- PHP {layout.mode} project, dependencies via {layout.build_tool}.\n"
+                f"- Source directory: `{layout.source_dir}`; "
+                f"namespace: `{layout.package_name or '(global; no namespace)'}`.\n"
+                f"- Tests: `{layout.tests_dir}/<Name>{layout.test_suffix}`; class name matches filename.\n"
+                f"- Bootstrap: `{layout.test_bootstrap or '(none; use require_once with __DIR__)'}`.\n"
+                "- Preserve existing namespaces, require_once imports and file naming. "
+                "Use strict_types only in greenfield. New files end in .php.\n\n"
             )
         if layout.language == "go":
             pkg = layout.package_name.rstrip("/").rsplit("/", 1)[-1]
@@ -1790,6 +1845,7 @@ _TESTABLE_SUFFIXES = frozenset(
         ".py",
         ".java",
         ".go",
+        ".php",
         ".c",
         ".h",
         ".cc",
@@ -1872,7 +1928,11 @@ def _is_test_file(path: Path) -> bool:
     small enough that duplicating it beats moving it; if it grows, move it to a shared spot.
     """
     name = path.name
-    return name.startswith("test_") or name.endswith("_test.py") or "tests" in path.parts
+    return (
+        name.startswith("test_")
+        or name.endswith(("_test.py", "Test.php"))
+        or "tests" in {p.lower() for p in path.parts}
+    )
 
 
 def _imported_type_names(root: Path, files: list[Path]) -> list[str]:

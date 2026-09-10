@@ -19,6 +19,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from orchestrator.sdlc.layout import TargetLayout
+
 # Bound the scan so a large repo can't blow up extraction time/cost.
 _MAX_SOURCE_SAMPLE = 40
 _MAX_TEST_SAMPLE = 30
@@ -184,3 +186,30 @@ def _top_package(root: Path) -> str:
 
 
 __all__ = ["RepoConventions", "extract_conventions"]
+
+
+def php_convention_block(root: Path, layout: TargetLayout) -> str:
+    """Bounded source and test examples, retaining legacy naming/import evidence."""
+    from orchestrator.core.prompt_safety import fence_untrusted
+    from orchestrator.sdlc.php import php_files
+
+    groups: list[str] = []
+    for directory, want_tests in ((layout.source_dir, False), (layout.tests_dir, True)):
+        count = 0
+        for file in php_files(root / directory):
+            is_test = file.name.endswith(layout.test_suffix) or (
+                layout.tests_dir != "." and file.is_relative_to(root / layout.tests_dir)
+            )
+            if is_test != want_tests:
+                continue
+            text = file.read_text(encoding="utf-8", errors="replace")[:1800]
+            groups.append(fence_untrusted(file.relative_to(root).as_posix(), text))
+            count += 1
+            if count == 3:
+                break
+    return (
+        "PHP CONVENTION EXAMPLES (legacy tests show layout only; generate modern PHPUnit tests):\n"
+        + "\n".join(groups)
+        if groups
+        else ""
+    )

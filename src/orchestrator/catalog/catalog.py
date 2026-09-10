@@ -54,6 +54,12 @@ _SEED: tuple[Capability, ...] = (
         CapabilitySelector(languages=frozenset({"cpp"}), task_types=frozenset({"feature"})),
     ),
     Capability(
+        "php-conventions",
+        CapabilityKind.SKILL,
+        "Match the repo's PHP conventions",
+        CapabilitySelector(languages=frozenset({"php"}), task_types=frozenset({"feature"})),
+    ),
+    Capability(
         "go-conventions",
         CapabilityKind.SKILL,
         "Match the repo's Go conventions",

@@ -134,7 +134,10 @@ class WorkspaceManager:
                 # against a private repo without an ambient credential helper.
                 # Falls back to the bare URL when no token is configured.
                 clone_url = await authenticate_repo_url(self._repo_url)
-                clone_args = ["clone"]
+                # A superproject's submodules come with it. Without this the worktree carries
+                # empty directories where a submodule should be, the test env cannot import
+                # it, and codegen asked to touch it writes into a folder git does not own.
+                clone_args = ["clone", "--recurse-submodules"]
                 if self._base_branch:
                     clone_args += ["--branch", self._base_branch]
                 clone_args += [clone_url or self._repo_url, str(self._base)]
@@ -179,8 +182,19 @@ class WorkspaceManager:
             await _run_git("fetch", "--quiet", "origin", cwd=self._base)
             branch = (await _run_git("rev-parse", "--abbrev-ref", "HEAD", cwd=self._base)).strip()
             await _run_git("reset", "--hard", f"origin/{branch}", cwd=self._base)
+            await self._populate_submodules(self._base)
         except WorkspaceError as exc:
             logger.warning("sdlc.workspace.base_refresh_failed", extra={"error": str(exc)[:200]})
+
+    async def _populate_submodules(self, tree: Path) -> None:
+        """Check out the submodules ``tree``'s pins point at, when it declares any.
+
+        ``git worktree add`` and ``git reset --hard`` move the superproject and leave every
+        submodule directory empty; only ``submodule update`` fills them. Guarded on
+        ``.gitmodules`` so a repository without submodules costs no extra git call.
+        """
+        if (tree / ".gitmodules").is_file():
+            await _run_git("submodule", "update", "--init", "--recursive", "--quiet", cwd=tree)
 
     async def _set_identity(self) -> None:
         """Pin a neutral commit identity on the base repo (worktrees inherit it)."""
@@ -198,6 +212,7 @@ class WorkspaceManager:
         path.parent.mkdir(parents=True, exist_ok=True)
         branch = f"feat/{sdlc_id}/{issue_key}"
         await _run_git("worktree", "add", "-b", branch, str(path), "HEAD", cwd=self._base)
+        await self._populate_submodules(path)
         return path
 
     async def cleanup(self, path: Path) -> None:

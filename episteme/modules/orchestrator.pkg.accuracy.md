@@ -88,7 +88,7 @@ _1 of the symbols other code depends on here have no test path the graph can see
 [`src/orchestrator/pkg/accuracy.py:232`](../../src/orchestrator/pkg/accuracy.py#L232)
 
 - **Called by** (1): [`score_case`](../../src/orchestrator/pkg/accuracy.py#L258)
-- **Calls** (4): [`RepoCodeExtractor`](../../src/orchestrator/pkg/extractor.py#L599), [`joins_from_list`](../../src/orchestrator/pkg/repos.py#L72), [`link_joins`](../../src/orchestrator/pkg/join_link.py#L150), [`merge_repos`](../../src/orchestrator/pkg/scoping.py#L150)
+- **Calls** (4): [`RepoCodeExtractor`](../../src/orchestrator/pkg/extractor.py#L615), [`joins_from_list`](../../src/orchestrator/pkg/repos.py#L72), [`link_joins`](../../src/orchestrator/pkg/join_link.py#L150), [`merge_repos`](../../src/orchestrator/pkg/scoping.py#L150)
 
 ### `_describe`
 
@@ -194,7 +194,7 @@ _1 of the symbols other code depends on here have no test path the graph can see
 [`src/orchestrator/pkg/accuracy.py:456`](../../src/orchestrator/pkg/accuracy.py#L456)
 
 - **Called by** (2): [`_comprehension_oracle`](../../src/orchestrator/cli/pkg.py#L445), [`build_scoreboard`](../../src/orchestrator/pkg/accuracy.py#L623)
-- **Calls** (4): [`CorpusError`](../../src/orchestrator/pkg/accuracy.py#L53), [`RepoCodeExtractor`](../../src/orchestrator/pkg/extractor.py#L599), `pathlib.Path`, [`score_provenance`](../../src/orchestrator/evals/comprehension.py#L69)
+- **Calls** (4): [`CorpusError`](../../src/orchestrator/pkg/accuracy.py#L53), [`RepoCodeExtractor`](../../src/orchestrator/pkg/extractor.py#L615), `pathlib.Path`, [`score_provenance`](../../src/orchestrator/evals/comprehension.py#L69)
 
 ### `score_corpus`
 
@@ -209,14 +209,14 @@ _1 of the symbols other code depends on here have no test path the graph can see
 [`src/orchestrator/pkg/accuracy.py:426`](../../src/orchestrator/pkg/accuracy.py#L426)
 
 - **Called by** (2 production · 3 test): [`_drift_oracle`](../../src/orchestrator/cli/pkg.py#L585), [`build_scoreboard`](../../src/orchestrator/pkg/accuracy.py#L623), [`test_drift_counts_claims_the_graph_cannot_support`](../../tests/pkg/test_accuracy.py#L392), [`test_no_documentation_is_not_a_clean_result`](../../tests/pkg/test_accuracy.py#L402), [`test_the_gate_number_is_the_number_state_reports`](../../tests/pkg/test_accuracy.py#L454)
-- **Calls** (7): [`CorpusError`](../../src/orchestrator/pkg/accuracy.py#L53), [`DocReconciler`](../../src/orchestrator/pkg/docs.py#L204), [`DriftReport`](../../src/orchestrator/pkg/accuracy.py#L396), [`RepoCodeExtractor`](../../src/orchestrator/pkg/extractor.py#L599), `pathlib.Path`, [`read_doc_pages`](../../src/orchestrator/pkg/doc_source.py#L153), [`symbolish_drift`](../../src/orchestrator/pkg/doc_link.py#L36)
+- **Calls** (7): [`CorpusError`](../../src/orchestrator/pkg/accuracy.py#L53), [`DocReconciler`](../../src/orchestrator/pkg/docs.py#L204), [`DriftReport`](../../src/orchestrator/pkg/accuracy.py#L396), [`RepoCodeExtractor`](../../src/orchestrator/pkg/extractor.py#L615), `pathlib.Path`, [`read_doc_pages`](../../src/orchestrator/pkg/doc_source.py#L153), [`symbolish_drift`](../../src/orchestrator/pkg/doc_link.py#L36)
 
 ### `score_parity`
 
 [`src/orchestrator/pkg/accuracy.py:382`](../../src/orchestrator/pkg/accuracy.py#L382)
 
 - **Called by** (2 production · 4 test): [`_parity_oracle`](../../src/orchestrator/cli/pkg.py#L395), [`build_scoreboard`](../../src/orchestrator/pkg/accuracy.py#L623), [`test_parity_needs_no_corpus_and_no_tests`](../../tests/pkg/test_accuracy.py#L315), [`test_parity_on_a_missing_repo_is_an_error`](../../tests/pkg/test_accuracy.py#L325), [`test_parity_reports_shortfall_when_the_graph_misses_a_route`](../../tests/pkg/test_accuracy.py#L290), [`test_parity_separates_surplus_from_shortfall`](../../tests/pkg/test_accuracy.py#L302)
-- **Calls** (5): [`CorpusError`](../../src/orchestrator/pkg/accuracy.py#L53), [`ParityReport`](../../src/orchestrator/pkg/accuracy.py#L348), [`RepoCodeExtractor`](../../src/orchestrator/pkg/extractor.py#L599), `pathlib.Path`, [`source_parity_counts`](../../src/orchestrator/pkg/verify.py#L355)
+- **Calls** (5): [`CorpusError`](../../src/orchestrator/pkg/accuracy.py#L53), [`ParityReport`](../../src/orchestrator/pkg/accuracy.py#L348), [`RepoCodeExtractor`](../../src/orchestrator/pkg/extractor.py#L615), `pathlib.Path`, [`source_parity_counts`](../../src/orchestrator/pkg/verify.py#L355)
 - **Documented in**: `docs/specs/build-documents/PKG-ACC-3-build.md#7-files`
 
 ### `scoreboard_improvements`

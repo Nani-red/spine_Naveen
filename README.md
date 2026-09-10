@@ -113,7 +113,21 @@ the product.** Where it can't know something, it says so and stops.
 
 ## What's new
 
-**3.33.1 (current)** — **the documents say only what is true, and the help screen shows only
+**3.33.2 (current)** — **the SDLC runs as a pipeline, and PHP builds.** A repository adds a few
+lines and gets Spine's SDLC stages as GitHub Actions: a `plan` job that writes the build
+document with **no credentials**, then a `build` job whose GitHub Environment reviewers are the
+plan gate — recorded, then honoured by `sdlc autorun`, safe until you say `live`. It plans on a
+single repository, a monorepo package, a multi-repo workspace and a superproject with submodules,
+each proved by a fixture CI builds from scratch, and refuses the two delivery shapes the runner
+does not support rather than building at the wrong level. Underneath, a nested git checkout is
+now a boundary: a superproject's graph stops at its submodules, which it used to walk into,
+counting every symbol twice. And PHP, the ninth language to be read, is the eighth to be
+**built**: Composer when there is a manifest, a checksum-pinned PHPUnit PHAR when there is not,
+tests placed where the repository's own `phpunit.xml` runs them, `php -l` before a model is
+asked to fix anything — validated with a model run on a public OpenEMR 4.2.2 fork whose own
+suite predates PHPUnit 6, where the *generated* tests pass on PHP 8.3 and 7.4.
+
+**3.33.1** — **the documents say only what is true, and the help screen shows only
 what you need.** A housekeeping release. `SETUP.md` is the contributor's zero-to-running page
 again — it had described the platform before the comprehension and SDLC work existed. The
 documentation audit now follows every link and hunts every mention of a removed feature, and its
@@ -410,11 +424,11 @@ The autonomous multi-feature pipeline + web dashboard needs Temporal + Postgres 
 see the [Setup guide](https://github.com/synaptixs/spine/blob/main/SETUP.md).
 
 **Which languages and models?**
-Comprehension and codegen cover **Python, Java, TypeScript, C#, C, C++ and Go** — each
+Comprehension and codegen cover **Python, Java, TypeScript, C#, C, C++, Go and PHP** — each
 front-end going beyond structure into what that stack actually does (Java and C# REST
 endpoints, EF Core entities, C's `#include` graph, C++ templates and namespaces, Go
 interface satisfaction by method-set matching). **PHP** adds a call graph too (namespaces,
-classes, interfaces, traits, `CALLS`) — codegen is a follow-on. **SQL** adds data-layer comprehension plus
+classes, interfaces, traits, `CALLS`), plus Composer/PHAR PHPUnit codegen with changed-file lint. **SQL** adds data-layer comprehension plus
 greenfield migration codegen validated against an ephemeral database. **Docs** fold in
 automatically; **media** (diagrams, screenshots, recorded reviews) via the opt-in
 `media extract`. Any LiteLLM provider — Anthropic, OpenAI, Bedrock — or a local Ollama

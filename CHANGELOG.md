@@ -4,6 +4,52 @@ All notable changes to this project are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); the package is `synaptixs-spine`
 (import/CLI stay `orchestrator`).
 
+## 3.33.2 — the SDLC runs as a pipeline, and PHP builds
+
+### Added
+
+- **The SDLC as a reusable CI pipeline.** `.github/workflows/spine-sdlc.yml` is a
+  `workflow_call` workflow another repository references in a few lines: a `plan` job
+  that runs intake → investigate → validity → design from a hand-written spec with **no
+  credentials**, publishing the build document, and a `build` job bound to a GitHub
+  Environment whose required reviewers *are* the plan gate — their decision is recorded
+  with `sdlc approve` before `sdlc autorun` runs, safe by default, `live: true` to open
+  the PR. Three inputs name what a single-package repository lets you conflate — the graph
+  root, the target directory, the git repo — so a monorepo package, a multi-repo workspace
+  (a committed `.spine/repos.yaml` plus a `checkouts` list of sibling clones) and a
+  superproject with submodules all plan; delivery into a subdirectory or a submodule is
+  refused before a model runs, naming the design record that explains why.
+  `scripts/sdlc_shapes.py` builds all four shapes with real git and runs the plan stage on
+  each in CI, asserting byte-identical output; `sdlc-dogfood.yml` runs the workflow on this
+  checkout. Contract tests pin the interface: no expression inside any script, the plan job
+  never sees the model key, no secret required, the gate never bypassed.
+- PHP code generation for Composer packages and legacy repositories: PSR-4 scaffolding,
+  PHPUnit configuration-aware test placement, checksum-pinned PHAR fallback, changed-file
+  syntax checks, modern PHPUnit prompts and sampled conventions. The runner refuses empty
+  test runs and tests only files touched by the change. See the
+  [PHP codegen roadmap](docs/specs/php-codegen-roadmap.md).
+
+### Fixed
+
+- **A nested git checkout is a boundary, not a subdirectory.** Measured on a superproject
+  with one submodule: both walkers descended into it, and declaring both in
+  `.spine/repos.yaml` scoped every symbol twice (`py:lib@lib.core.helper` and
+  `py:super@libs.lib.lib.core.helper`) with nothing flagging it. `is_nested_repo()` now
+  stops code and doc extraction at any child holding a `.git` entry — file *or*
+  directory, because a submodule's is a file; `from_mapping` refuses a declared root nested
+  inside another unless it is a checkout of its own; single-repo extraction is byte-identical.
+- **Worktrees carry their submodules.** `WorkspaceManager` clones with
+  `--recurse-submodules` and runs `submodule update` in every worktree and after every base
+  refresh — `git worktree add` and `reset --hard` both leave submodule directories empty, so
+  the test environment could not import them and codegen wrote into folders git did not own.
+- PHP route discovery no longer overflows Python's call stack on deeply nested expressions,
+  as measured on the public aiemr repository.
+- Plan approval revalidation uses the selected language, so a PHP plan is not compared
+  against a regenerated Python plan, and includes the same measured run history as
+  the CLI when checking an approved plan.
+- Semantic review includes PHP source, PHPUnit XML, Composer lockfiles and scaffold
+  dotfiles, so it can inspect generated PHP configuration.
+
 ## 3.33.1 — the documents say only what is true, and the help screen shows only what you need
 
 ### Changed

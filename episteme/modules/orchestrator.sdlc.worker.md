@@ -42,7 +42,7 @@ _4 of the symbols other code depends on here have no test path the graph can see
 [`src/orchestrator/sdlc/worker.py:87`](../../src/orchestrator/sdlc/worker.py#L87)
 
 - **Called by** (1): [`build_deps`](../../src/orchestrator/sdlc/worker.py#L183)
-- **Calls** (6): [`LLMCodegenAdapter`](../../src/orchestrator/sdlc/codegen.py#L827), [`StubCodegenAdapter`](../../src/orchestrator/sdlc/codegen.py#L195), [`compose_factory_with_ontomesh`](../../src/orchestrator/spine/grounder.py#L118), `from_file`, `getenv`, [`resolve_codegen_model`](../../src/orchestrator/sdlc/codegen.py#L45)
+- **Calls** (6): [`LLMCodegenAdapter`](../../src/orchestrator/sdlc/codegen.py#L866), [`StubCodegenAdapter`](../../src/orchestrator/sdlc/codegen.py#L195), [`compose_factory_with_ontomesh`](../../src/orchestrator/spine/grounder.py#L118), `from_file`, `getenv`, [`resolve_codegen_model`](../../src/orchestrator/sdlc/codegen.py#L45)
 - **Documented in**: `docs/specs/bet2c-in-loop-approval.md#as-built-notes`
 
 ### `_build_llm`
@@ -57,7 +57,7 @@ _4 of the symbols other code depends on here have no test path the graph can see
 [`src/orchestrator/sdlc/worker.py:148`](../../src/orchestrator/sdlc/worker.py#L148)
 
 - **Called by** (1): [`build_deps`](../../src/orchestrator/sdlc/worker.py#L183)
-- **Calls** (3): [`SemanticReviewAdapter`](../../src/orchestrator/sdlc/review.py#L178), [`StubReviewAdapter`](../../src/orchestrator/sdlc/review.py#L113), `getenv`
+- **Calls** (3): [`SemanticReviewAdapter`](../../src/orchestrator/sdlc/review.py#L184), [`StubReviewAdapter`](../../src/orchestrator/sdlc/review.py#L119), `getenv`
 
 ### `_default_database_url`
 
@@ -98,7 +98,7 @@ _4 of the symbols other code depends on here have no test path the graph can see
 [`src/orchestrator/sdlc/worker.py:183`](../../src/orchestrator/sdlc/worker.py#L183)
 
 - **Called by** (4): [`_run_address_review`](../../src/orchestrator/cli/sdlc.py#L180), [`main`](../../scripts/live_sdlc_worker.py#L44), [`run_sdlc_worker`](../../src/orchestrator/sdlc/worker.py#L259), [`sdlc_address_review`](../../src/orchestrator/plugin/server.py#L1285)
-- **Calls** (14): [`SDLCDeps`](../../src/orchestrator/sdlc/deps.py#L48), [`SubprocessPreflightRunner`](../../src/orchestrator/sdlc/preflight.py#L185), [`SubprocessTestRunner`](../../src/orchestrator/sdlc/testrunner.py#L95), [`WorkspaceManager`](../../src/orchestrator/sdlc/workspace.py#L59), [`_build_ci`](../../src/orchestrator/sdlc/worker.py#L163), [`_build_codegen`](../../src/orchestrator/sdlc/worker.py#L87), [`_build_review`](../../src/orchestrator/sdlc/worker.py#L148), [`_default_database_url`](../../src/orchestrator/sdlc/worker.py#L54), [`_default_workspace_root`](../../src/orchestrator/sdlc/worker.py#L61), [`build_run_budget`](../../src/orchestrator/sdlc/worker.py#L70), `getenv`, `orchestrator.runtime.artifact_store_from_env`, `sqlalchemy.ext.asyncio.async_sessionmaker`, `sqlalchemy.ext.asyncio.create_async_engine`
+- **Calls** (14): [`SDLCDeps`](../../src/orchestrator/sdlc/deps.py#L48), [`SubprocessPreflightRunner`](../../src/orchestrator/sdlc/preflight.py#L209), [`SubprocessTestRunner`](../../src/orchestrator/sdlc/testrunner.py#L95), [`WorkspaceManager`](../../src/orchestrator/sdlc/workspace.py#L59), [`_build_ci`](../../src/orchestrator/sdlc/worker.py#L163), [`_build_codegen`](../../src/orchestrator/sdlc/worker.py#L87), [`_build_review`](../../src/orchestrator/sdlc/worker.py#L148), [`_default_database_url`](../../src/orchestrator/sdlc/worker.py#L54), [`_default_workspace_root`](../../src/orchestrator/sdlc/worker.py#L61), [`build_run_budget`](../../src/orchestrator/sdlc/worker.py#L70), `getenv`, `orchestrator.runtime.artifact_store_from_env`, `sqlalchemy.ext.asyncio.async_sessionmaker`, `sqlalchemy.ext.asyncio.create_async_engine`
 
 ### `build_run_budget`
 

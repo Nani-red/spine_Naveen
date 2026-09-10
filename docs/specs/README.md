@@ -11,6 +11,8 @@ build focus (Product Knowledge Graph × ontomesh) — all in one place.
 
 ---
 
+PHP codegen implementation and validation: [php-codegen-roadmap.md](php-codegen-roadmap.md).
+
 ## 1. Where we are now
 
 **Two products, one substrate:** a domain-agnostic engine for *AI-native

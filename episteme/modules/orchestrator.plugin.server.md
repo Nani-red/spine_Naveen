@@ -116,7 +116,7 @@ _7 of the symbols other code depends on here have no test path the graph can see
 [`src/orchestrator/plugin/server.py:340`](../../src/orchestrator/plugin/server.py#L340)
 
 - **Called by** (2): [`_in_repos_store`](../../src/orchestrator/plugin/server.py#L366), [`pkg_joins`](../../src/orchestrator/plugin/server.py#L575)
-- **Calls** (3): [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L367), [`load_repo_config`](../../src/orchestrator/pkg/repos.py#L191), `orchestrator.pkg.FactStore`
+- **Calls** (3): [`load_or_extract_repos`](../../src/orchestrator/pkg/persistence.py#L367), [`load_repo_config`](../../src/orchestrator/pkg/repos.py#L207), `orchestrator.pkg.FactStore`
 
 ### `_open_repo`
 
@@ -131,7 +131,7 @@ _7 of the symbols other code depends on here have no test path the graph can see
 [`src/orchestrator/plugin/server.py:975`](../../src/orchestrator/plugin/server.py#L975)
 
 - **Called by** (1): [`docs_for`](../../src/orchestrator/plugin/server.py#L906)
-- **Calls** (2): [`load_repo_config`](../../src/orchestrator/pkg/repos.py#L191), [`repo_state`](../../src/orchestrator/pkg/persistence.py#L144)
+- **Calls** (2): [`load_repo_config`](../../src/orchestrator/pkg/repos.py#L207), [`repo_state`](../../src/orchestrator/pkg/persistence.py#L144)
 
 ### `_register_all`
 
@@ -187,7 +187,7 @@ _7 of the symbols other code depends on here have no test path the graph can see
 [`src/orchestrator/plugin/server.py:268`](../../src/orchestrator/plugin/server.py#L268)
 
 - **Called by** (1): [`_with_repos_note`](../../src/orchestrator/plugin/server.py#L306)
-- **Calls** (2): [`find_repo_config`](../../src/orchestrator/pkg/repos.py#L209), [`load_repo_config`](../../src/orchestrator/pkg/repos.py#L191)
+- **Calls** (2): [`find_repo_config`](../../src/orchestrator/pkg/repos.py#L225), [`load_repo_config`](../../src/orchestrator/pkg/repos.py#L207)
 
 ### `_runs_markdown`
 
@@ -445,7 +445,7 @@ _7 of the symbols other code depends on here have no test path the graph can see
 [`src/orchestrator/plugin/server.py:148`](../../src/orchestrator/plugin/server.py#L148)
 
 - **Called by** (0 production · 4 test): [`test_sdlc_feature_live_requires_confirm`](../../tests/plugin/test_server.py#L256), [`test_sdlc_feature_maps_run_error`](../../tests/plugin/test_server.py#L321), [`test_sdlc_feature_passes_greenfield_brownfield_params`](../../tests/plugin/test_server.py#L285), [`test_sdlc_feature_safe_maps_result`](../../tests/plugin/test_server.py#L262)
-- **Calls** (2): [`Reporter`](../../src/orchestrator/plugin/progress.py#L68), [`run_feature`](../../src/orchestrator/sdlc/feature_runner.py#L623)
+- **Calls** (2): [`Reporter`](../../src/orchestrator/plugin/progress.py#L68), [`run_feature`](../../src/orchestrator/sdlc/feature_runner.py#L629)
 
 ### `sdlc_plan`
 
