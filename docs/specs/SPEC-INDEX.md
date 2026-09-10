@@ -77,7 +77,7 @@ Graphify-gap series only. This file is the complete inventory.
 | [capability-recommendations-kg-grounded](capability-recommendations-kg-grounded.md) | C1–C6, C8–C10 (9 of 10) | **C7** — observability→defect |
 | [sql-support-roadmap](sql-support-roadmap.md) | Track A complete, released 2.7.0 | **Track B** — greenfield SQL codegen |
 | [go-support-roadmap](go-support-roadmap.md) | Phase 4.1 comprehension **done**; Go ships in 3.18.1 | Later phases; branch `feat/go-support` |
-| [php-codegen-roadmap](php-codegen-roadmap.md) | P0–P2 verified; P3–P5 in progress | Composer/PHAR PHPUnit, legacy layouts, aiemr validation |
+| [php-codegen-roadmap](php-codegen-roadmap.md) | P0–P5 complete; merge PR #350 | Composer/PHAR PHPUnit, legacy layouts, aiemr validation |
 | [php-support-roadmap](php-support-roadmap.md) | ✅ **All four phases done** — 9th front-end: comprehension, `CALLS` (incl. typed receivers), Laravel/Slim/Symfony routes, Eloquent/Doctrine entities | Codegen implemented in the follow-on below |
 | [java-codegen](java-codegen.md) | 2a (1.8.0), 2b + 2c (1.9.0) | Remaining slices |
 | [typescript-codegen](typescript-codegen.md) | Slice 1 comprehension (1.11.0) | Codegen slices |

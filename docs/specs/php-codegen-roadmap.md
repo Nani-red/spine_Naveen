@@ -1,8 +1,8 @@
 # Design + Plan: PHP codegen — the profile the PHP track deferred
 
-**Status:** implementation in progress on `codex/php-codegen` (2026-09-10).
-Recommendations D1–D7 accepted by the maintainer. P0–P3 are verified; P4/P5 validation
-are in progress; phases are marked complete only after their exit checks pass. Follow-on to
+**Status:** P0–P5 exit criteria completed on `codex/php-codegen` (2026-09-10).
+Recommendations D1–D7 accepted by the maintainer. [Merge PR #350](https://github.com/synaptixs/spine/pull/350)
+contains the implementation, tests and documentation; its checks track final merge readiness. Follow-on to
 [`php-support-roadmap.md`](php-support-roadmap.md) decision **D6**, which shipped PHP as the
 9th graph language and deliberately left `"php"` out of `SUPPORTED_LANGUAGES` so that
 `sdlc feature --language php` exits 2 instead of scaffolding Python. This record reverses
@@ -134,8 +134,8 @@ files from `source_dir` / `tests_dir`, so the model sees `.class.php` naming and
 | **P1 Runner set** | `PhpToolEnvironment`, `PhpUnitTestRunner`, `php_toolchain_available`, `make_tool_environment` / `make_test_runner` branches, the early refusal in `feature_runner.py`. Tests with a fake `php` on PATH and a real one when present (`pytest.importorskip`-style skip like the Go tests). | ~1 d | A hand-written `FooTest.php` in a temp repo with `phpunit.xml` runs green through the runner, with and without Composer | complete — fake-tool regressions and real Composer/PHAR green |
 | **P2 Layout + preflight** | `_resolve_php_layout`, the `phpunit.xml` reader, `test_suffix` on `TargetLayout`, `_php_files` scaffold, `php -l` preflight. `"php"` joins `SUPPORTED_LANGUAGES` and `_resolve_language`'s chain **here**, not before — the D6 trap. | ~1 d | `sdlc feature --language php` on an empty repo scaffolds a Composer package that `composer install && vendor/bin/phpunit` accepts; on aiemr, layout reports `Tests`/`Test.php`/phar | complete — four shapes, scaffold, lint and empty-suite checks green |
 | **P3 Brownfield, live** | Prompts + conventions. The ticket: *"NumberToText: support negative numbers"* (or whatever P0 shows is pure and testable) — `sdlc autorun --safe` against aiemr, then `--live` to a fork. | ~1–2 d | The generated `Tests/NumberToTextNegativeTest.php` (modern style) passes on the runner's PHP; the diff touches one class and one test; the run record shows implement → tests → refine → green | complete — model run, PHP 8.3/7.4 tests, fork PR #1 |
-| **P4 Greenfield, live** | The Go 4.4 equivalent: an LLM-generated small library into an empty repo. | ~0.5 d | Composer scaffold + generated code + tests green in one run | in progress — model runs exposed setup and review gaps; corrected |
-| **P5 Pipeline + docs** | `sdlc-dogfood.yml` gains an aiemr row (plan-only in CI, build on dispatch — see [the reusable workflow](../../.github/workflows/spine-sdlc.yml)); `php-support-roadmap.md` §9/§11 updated; README/FEATURES/USER_GUIDE language lists say PHP builds, not only reads; `STATE-OF-SPINE` numbers. | ~0.5 d | `python scripts/sdlc_shapes.py` unchanged; the aiemr plan job green in CI | in progress — implementation/docs and local gates pass; CI pending |
+| **P4 Greenfield, live** | The Go 4.4 equivalent: an LLM-generated small library into an empty repo. | ~0.5 d | Composer scaffold + generated code + tests green in one run | complete — run `ffe22823b724427f`, tests/proof/review green |
+| **P5 Pipeline + docs** | `sdlc-dogfood.yml` gains an aiemr row (plan-only in CI, build on dispatch — see [the reusable workflow](../../.github/workflows/spine-sdlc.yml)); `php-support-roadmap.md` §9/§11 updated; README/FEATURES/USER_GUIDE language lists say PHP builds, not only reads; `STATE-OF-SPINE` numbers. | ~0.5 d | `python scripts/sdlc_shapes.py` unchanged; the aiemr plan job green in CI | complete — docs and local gates pass; aiemr episteme/plan job green in CI |
 
 P1 and P2 can land as one PR; P3 is the one that costs tokens and is the proof.
 
@@ -145,6 +145,8 @@ P1 and P2 can land as one PR; P3 is the one that costs tokens and is the proof.
 
 | File | Phase |
 |---|---|
+| `src/orchestrator/sdlc/php.py` — shared config and changed-file discovery | P1–P2 |
+| `.github/sdlc/php-codegen-spec.json` — pinned aiemr compatibility ticket | P3–P5 |
 | `tests/sdlc/test_php_codegen.py` — layout reader, runner with/without Composer, scaffold, refusal | P1–P2 |
 | `docs/specs/php-codegen-roadmap.md` (this file) | now |
 
@@ -153,7 +155,7 @@ P1 and P2 can land as one PR; P3 is the one that costs tokens and is the proof.
 | File | Change | Phase |
 |---|---|---|
 | `src/orchestrator/sdlc/testenv.py` | `PhpToolEnvironment`, `php_toolchain_available`, factory branches, `__all__` | P1 |
-| `src/orchestrator/sdlc/testrunner.py` | `PhpUnitTestRunner` after `GoTestRunner` | P1 |
+| `src/orchestrator/sdlc/testrunner.py` | `PhpUnitTestRunner` | P1 |
 | `src/orchestrator/sdlc/feature_runner.py` | `"php"` in `SUPPORTED_LANGUAGES` and `_resolve_language`; the toolchain refusal | **P2** (not P1) |
 | `src/orchestrator/sdlc/layout.py` | `"php": "php"` in the suffix map; `_resolve_php_layout`; `detect_php_layout`; `test_suffix` | P2 |
 | `src/orchestrator/sdlc/scaffold.py` | `_php_files` | P2 |
@@ -165,8 +167,8 @@ P1 and P2 can land as one PR; P3 is the one that costs tokens and is the proof.
 | `docs/specs/SPEC-INDEX.md`, `STATE-OF-SPINE.md` | this row; spec count `87` → `88` (gated); test counts | now |
 | `README.md`, `FEATURES.md`, `USER_GUIDE.md`, `CHANGELOG.md` | PHP moves from "reads" to "reads and builds" | P5 |
 
-**Runner:** GitHub's `ubuntu-latest` image ships PHP 8.3 and Composer; nothing to add for
-the default. D5's pin uses `shivammathur/setup-php` in the caller, not in Spine.
+**Runner:** the caller explicitly selects PHP 8.3 and Composer with pinned
+`shivammathur/setup-php`. D5's version override stays in the caller, not in Spine.
 
 ## 6. Risks and gotchas
 
@@ -197,128 +199,95 @@ the default. D5's pin uses `shivammathur/setup-php` in the caller, not in Spine.
 4. P4, P5, release note.
 
 
-## 8. Execution log — 2026-09-10
+## 8. Completed execution — 2026-09-10
 
-- Branch: `codex/php-codegen`, based on `develop` at `6f8f565`.
-- Implemented pending verification: PHP environment/factories, configuration-aware layout,
-  Composer scaffold, changed-file lint and PHPUnit runner, prompts and convention samples.
-- Added regression coverage for configuration paths, legacy directory case, custom suffixes,
-  changed-file discovery, checksum validation, toolchain selection and empty-test refusal.
-- P0 correction: `NumberToText` already supports negative numbers. Its active curly-brace
-  string offsets fail PHP 8 parsing. The brownfield ticket will make that class PHP 8
-  compatible and add modern PHPUnit regression coverage for existing negative-number behavior.
-- Real PHP 7.4 and 8.3 validation uses official PHP container images, since this host has
-  neither PHP nor Composer installed. No system-wide toolchain installation is required.
+Branch `codex/php-codegen` was created from `develop` at `6f8f565`.
+Git author/committer: `Synaptixs <noreply@synaptixs.dev>`.
+The maintainer requested all phases in one implementation PR rather than the
+original multi-PR sequence. Real PHP validation used official PHP 7.4/8.3 containers.
 
 ### P0 measurements
 
-Pinned aiemr commit: `5ba45f6166d3d4383057d0f24c1641663a4380f1` (`rel-422`).
-After repairing the PHP route scanner's recursion overflow, extraction produced
-**45,973 nodes and 255,678 edges**. The **65 nested Composer manifests** contain
+Pinned aiemr: `5ba45f6166d3d4383057d0f24c1641663a4380f1` (`rel-422`).
+After repairing a PHP route-scanner recursion overflow, extraction produced
+**45,973 nodes and 255,678 edges**. The **65 nested Composer manifests** have
 **27,837 nodes** beneath their directories (a measured dependency-subtree proxy,
-not a claim that every node in those trees is third-party). Keep `library` and
-`contrib` out of global ignores; scope this ticket's plan to `library/classes`.
+not a claim that every node there is third-party). Keep `library` and `contrib`
+out of global ignores; scope this ticket's plan to `library/classes`.
 
 | Interpreter | Classes passing lint | Classes failing lint |
 |---|---:|---|
 | PHP 8.3 | 28 / 31 | `NumberToText.class.php`, `PQRIXml.class.php`, `Tree.class.php` |
 | PHP 7.4 | 30 / 31 | `Tree.class.php` |
 
-The original `Tests/NumberToTextTest.php` fails on both modern PHPUnit versions
-because `require_once('PHPUnit/Framework.php')` cannot resolve. D7 is confirmed:
-run the generated tests, not the historical suite. PHP 8.3 remains the validation
-default, with explicit PHP 7.4 compatibility checked for the changed class.
+The historical test fails on both modern PHPUnit versions because
+`require_once('PHPUnit/Framework.php')` cannot resolve. D7 is confirmed: test the
+change, not the historical suite. `NumberToText` already supports negatives;
+the chosen ticket repairs PHP 8-removed curly-brace string offsets and adds
+modern regression coverage. PHP 8.3 remains the default, with explicit 7.4 replay.
+The iterative route traversal preserves group behavior and passes a 1,500-term regression.
 
-The route-scanner fix uses iterative expression traversal, preserving route order
-and group-prefix handling. Its new 1,500-term expression regression and all route
-tests pass (**11 passed**).
+### P1/P2 runner and layout
 
-P1/P2 real integration: Composer scaffold and no-Composer PHAR both pass a real
-assertion on PHP 8.3 and both reject an intentionally wrong implementation.
+Fake-tool regressions and real PHP 8.3 integration cover Composer and verified PHAR
+execution, configuration paths/symlinks, legacy directory case, custom suffixes,
+renames and untracked paths, checksum integrity, missing dependencies and version pins.
+Both real runner paths pass correct code and fail intentionally incorrect code;
+empty, skipped and incomplete test runs fail. Dependency directories remain excluded
+when a proof probe removes `.gitignore`.
 
-### P3 validation
+### P3 brownfield and episteme
 
-Run `bbfc15bbeab34a2c` completed against the pinned aiemr checkout: implement → tests
-→ refine → green → review. Exactly **two files** changed: the existing
-`library/classes/NumberToText.class.php` and new `Tests/NumberToTextNegativeTest.php`.
-There were **two test iterations**, and the change-removal proof was red without
-the implementation. Independent PHP 7.4 / PHPUnit 9.6.36 replay passed **12 tests,
-30 assertions**. PHP 8.3 / PHPUnit 11 passed through the production runner.
+Initial run `bbfc15bbeab34a2c` passed after two test iterations, with red change-removal
+proof and review approval. PHP 7.4 / PHPUnit 9.6.36 replay passed 12 tests/30 assertions.
 
-A separate publication step pushes this tested commit to a fork and opens its PR;
-the validation run leaves tracker writes disabled. This achieves the live delivery
-proof without filing an unrelated Jira ticket. [Validation PR #1](https://github.com/ssmith-synaptixs/aiemr/pull/1) is open.
+After the maintainer's episteme clarification, `understand` generated the full aiemr
+bank (**133 files, 46,348 grounded nodes**) and a focused classes bank (**83 files,
+2,657 grounded nodes**). Replay `3bd08673bd5b47c9` used the focused bank through
+`ORCHESTRATOR_MEMORY_BANK_DIR` plus direct PKG context: **9,944 characters** of grounding.
+It passed after **three test iterations**, with red proof and semantic approval.
+Independent PHP 7.4 / PHPUnit 9.6.36 replay passed **21 tests, 36 assertions**.
 
-The scoped plan reports more candidate files than the final change, and paths relative
-to its graph root differ from checkout-relative delivery paths. The run records this
-plan-fit warning; the acceptance criteria and final two-file diff were checked directly.
+[Validation PR #1](https://github.com/ssmith-synaptixs/aiemr/pull/1) contains the replay's
+two-file diff in `b109375`: `library/classes/NumberToText.class.php` and
+`Tests/NumberToTextNegativeTest.php`. One advisory long-line finding remains in the test.
+Publication was separate from safe-mode generation, keeping unrelated Jira writes disabled.
+The scoped plan names more candidate files than the delivered diff; the run records
+that warning, and the final paths and acceptance criteria were checked directly.
 
-Additional integration fixes discovered by the real run: PHP filenames are recognized
-by the design validator, PHP source enters review/test recognition, and plan approval
-revalidation uses the chosen language.
+### P4 greenfield
 
+Run **`ffe22823b724427f`** generated `App\Temperature` into an empty repository.
+The Composer scaffold, source and generated PHPUnit tests passed the full delivery
+pipeline after **three test iterations**, including red change-removal proof,
+semantic approval and clean code review. Independent PHPUnit replay passed
+**18 tests, 161 assertions**. Nine files were committed locally.
 
-P4 execution note: the first greenfield attempt hit an incomplete Composer install
-on the container's shared filesystem and exhausted its refinement attempts. The
-runner now retries setup once and refuses missing `vendor/autoload.php` before any
-model runs. A fresh run has passed its initial tests and is completing proof/review.
+Earlier attempts exposed incomplete Composer extraction, missing reviewer context,
+and phase prompts that caused scaffold recreation. Setup now retries once and refuses
+a missing autoloader before generation; review includes XML, lockfiles and dotfiles;
+PHP prompts distinguish production, test and repair phases. The validation spec makes
+PSR-4/bootstrap requirements inspectable by the code-only judge while real execution
+is enforced by the runner. It permits PHP's platform requirement while excluding
+third-party runtime packages. No failed attempt is counted as a successful full run.
 
-Full-suite validation runs in a separate checkout without the developer `.env`:
-the initial sandboxed run had filesystem/network restrictions and a pre-existing
-unconfigured-Jira test read the local environment file. The isolated run removes
-that confounder without changing application behavior or the user's environment.
+### P5 documentation and pipeline
 
+The aiemr CI job builds focused episteme, produces the plan without a model, and runs
+real Composer/PHAR integration tests. It passed in [PR #350](https://github.com/synaptixs/spine/pull/350).
+Model-backed CI execution is dispatch-only behind `spine-build` with a cost cap.
+README, FEATURES, USER_GUIDE, CLI_REFERENCE, SETUP, both agent guides, CHANGELOG,
+the PHP support roadmap, spec index and state counts are updated.
 
-P5 local checks so far: all four `sdlc_shapes.py` shapes pass, `pkg verify` reports
-zero errors (one existing phantom-module warning), the accuracy gate has zero gated
-regressions, both generated SVG checks and the capability matrix check pass.
-`mypy src tests` and `ruff check` pass. The isolated full suite passes; CI remains pending.
+Local validation: **3,533 passed, 3 skipped, 51 deselected** in an isolated checkout
+without the developer `.env`, including real PHP tests. The subsequent approval-history
+fix and prompt changes passed **216 build-document/codegen tests**. Ruff, mypy (`src tests`),
+pre-commit including secret scan, both generated SVG checks, capability matrix, state
+counts (11 gated claims), PKG accuracy (zero gated regressions), PKG verify (zero errors;
+one existing phantom warning), all four unchanged SDLC shapes and Spine `understand`
+passed. Documentation audit: **zero stale/missing items**. Optional E2B, OCR and Postgres
+tests were skipped; `integration`/`real_llm` markers remain outside the default suite.
 
-
-Full isolated suite: **3,533 passed, 3 skipped, 51 deselected**. Real PHP/Composer
-integration ran. Skips: E2B key absent, pytesseract absent, optional Postgres integration
-not enabled; `integration` and `real_llm` markers remain outside the default suite.
-Separate model-backed P3/P4 validation is recorded above/below. `understand` also built
-successfully on the isolated Spine checkout; no generated `episteme/` files are staged.
-
-Maintainer clarification: aiemr's PKG directly grounded the successful brownfield run
-(**7,375 characters** of graph context). A readable aiemr `episteme/` is now being
-created as well; the next validation replay will use that generated knowledge through
-`ORCHESTRATOR_MEMORY_BANK_DIR` plus the direct PKG context.
-
-
-P4 review correction: the second generated library passed tests and change-removal
-proof, but semantic review could not see `phpunit.xml` or `composer.lock` because
-its file-type allowlist omitted them. Both now reach the judge, with regression coverage.
-Dependency directories are also excluded even when `.gitignore` is removed by a proof
-probe. Generated tests marked skipped/incomplete fail rather than reporting success.
-
-
-### Episteme and final validation
-
-The full aiemr episteme is built: **133 files**, **46,348 grounded nodes**. A focused
-`library/classes` episteme has **83 files**, **2,657 grounded nodes** and is configured
-through `ORCHESTRATOR_MEMORY_BANK_DIR` for the brownfield replay. CI now generates
-this focused episteme before planning or building as well. Knowledge files are local
-validation artifacts, not committed source.
-
-The generated greenfield tests repeatedly passed with a red change-removal proof.
-A final validation uses a structural Composer/PSR-4/bootstrap criterion that the
-code-only judge can inspect; the production runner independently enforces real test
-success. Earlier attempts found missing review context for XML, lockfiles and
-dotfiles; all now reach the judge.
-
-Replaying tickets also exposed an existing approval mismatch: the CLI renders
-measured run history into the plan, while revalidation omitted it. Revalidation
-now uses the same history, with a regression test.
-
-
-P3 episteme replay `3bd08673bd5b47c9` completed with **9,944 characters** of combined
-episteme and graph grounding, **three test iterations**, passing change-removal proof
-and semantic review. Independent PHP 7.4 / PHPUnit 9.6.36 replay passed **21 tests,
-36 assertions**. The fork PR now carries this replay's final two-file diff in commit
-`b109375`; one advisory long-line review finding remains in its generated test.
-
-P5: [Spine merge PR #350](https://github.com/synaptixs/spine/pull/350) is open against
-`develop`. Its aiemr episteme/plan job and real PHP runner tests passed in CI.
-The main quality job is still running.
+Two additional delivery fixes were required by the real runs: `.class.php` design
+references, and plan revalidation using the selected language and the same measured
+run history as CLI planning. Generated episteme is kept outside the committed diff.
