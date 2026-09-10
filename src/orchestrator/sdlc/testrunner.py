@@ -324,6 +324,61 @@ class MesonTestRunner:
         return TestRunResult(passed=rc == 0, returncode=rc, output=_clip("\n".join(captured)))
 
 
+class PhpUnitTestRunner:
+    """Lint every changed PHP file, then run only this change's PHPUnit test files."""
+
+    def __init__(self, php: str = "php", *, phpunit: str | None = None, timeout: float = 600) -> None:
+        self._php = php
+        self._phpunit = phpunit
+        self._timeout = timeout
+
+    async def run(self, *, path: str) -> TestRunResult:
+        from orchestrator.sdlc.php import changed_php_files, read_phpunit_config
+        from orchestrator.sdlc.preflight import PhpPreflightRunner
+
+        try:
+            root = Path(path).resolve()
+            config = read_phpunit_config(root)
+            changed = await changed_php_files(root)
+            lint = await PhpPreflightRunner(self._php).run(path=path)
+            if not lint.passed:
+                return TestRunResult(False, 1, lint.output)
+            tests = [name for name in changed if name.endswith(config.suffix)]
+            if not tests:
+                return TestRunResult(
+                    False, 5, f"No changed PHP tests matching {config.suffix}; refusing an empty test run."
+                )
+            executable = root / "vendor/bin/phpunit"
+            if not executable.is_file():
+                if self._phpunit is None:
+                    return TestRunResult(
+                        False, 2, "PHPUnit is unavailable; run PhpToolEnvironment.ensure() first."
+                    )
+                executable = Path(self._phpunit)
+            argv: tuple[str, ...] = (
+                self._php,
+                str(executable),
+                "--do-not-cache-result",
+                "--fail-on-risky",
+                "--fail-on-skipped",
+                "--fail-on-incomplete",
+            )
+            argv += ("--configuration", config.path) if config.path else ("--no-configuration",)
+            captured = [lint.output]
+            for test in tests:
+                # One explicit file per invocation also works on PHPUnit 9, which only
+                # accepts one positional argument. Never load the target's entire suite.
+                rc, output = await _exec_capture(
+                    (*argv, str(root / test)), cwd=str(root), timeout=self._timeout
+                )
+                captured.append(f"# {test}\n{output}")
+                if rc or "No tests executed" in output or "No tests found" in output:
+                    return TestRunResult(False, rc or 5, _clip("\n".join(captured)))
+            return TestRunResult(True, 0, _clip("\n".join(captured)))
+        except (OSError, ValueError, RuntimeError) as exc:
+            return TestRunResult(False, 2, str(exc))
+
+
 class GoTestRunner:
     """Builds and tests the Go module(s) a change actually touched, via ``go build ./...``
     then ``go test ./... -v`` **run from each changed module's directory**.
@@ -535,6 +590,7 @@ class StubTestRunner:
 
 
 __all__ = [
+    "PhpUnitTestRunner",
     "DEFAULT_TEST_TIMEOUT",
     "CTestRunner",
     "DotnetTestRunner",

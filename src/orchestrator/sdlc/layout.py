@@ -40,6 +40,7 @@ _SOURCE_EXT = {
     "cpp": "cpp",
     "sql": "sql",
     "go": "go",
+    "php": "php",
 }
 
 # Go package names can't be a reserved keyword (or `init`); guard the derived slug.
@@ -96,6 +97,8 @@ class TargetLayout:
     # scaffold's default; the runner sets it from the installed SDK so the generated
     # project both builds AND runs (a TFM with no matching runtime fails at test host).
     target_framework: str = ""
+    test_suffix: str = "Test.php"
+    test_bootstrap: str = ""
 
     def module_rel_path(self, module: str) -> str:
         """Worktree-relative path for a new source module/class (no leading dir)."""
@@ -595,6 +598,58 @@ def _resolve_go_layout(root: Path, *, mode: str, package_name: str | None, repo:
     return TargetLayout(derived, ".", ".", False, "new", language="go", build_tool="go")
 
 
+def detect_php_layout(root: Path) -> tuple[str, str, str] | None:
+    """Composer, PHPUnit config, or loose PHP source marks an existing project."""
+    from orchestrator.sdlc.php import php_files, read_composer, read_phpunit_config, safe_relative
+
+    manifest = read_composer(root)
+    config = read_phpunit_config(root)
+    if manifest is None and config.path is None and next(php_files(root), None) is None:
+        return None
+    package, source = "", "."
+    if manifest is not None:
+        autoload = manifest.get("autoload", {})
+        psr4 = autoload.get("psr-4", {}) if isinstance(autoload, dict) else {}
+        if isinstance(psr4, dict) and psr4:
+            namespace, directory = next(iter(psr4.items()))
+            if isinstance(directory, list):
+                directory = directory[0] if directory else "."
+            if isinstance(directory, str):
+                source = safe_relative(root, directory)
+                package = namespace.rstrip("\\")
+    return package, source, config.tests_dir
+
+
+def _resolve_php_layout(root: Path, *, mode: str, package_name: str | None, repo: str | None) -> TargetLayout:
+    from orchestrator.sdlc.php import read_phpunit_config
+
+    existing = detect_php_layout(root)
+    if mode == "existing" or (mode == "auto" and existing is not None):
+        package, source, tests = existing or ("", ".", "tests")
+        config = read_phpunit_config(root)
+        return TargetLayout(
+            package_name=package_name or package,
+            source_dir=source,
+            tests_dir=tests,
+            src_layout=source.startswith("src"),
+            mode="existing",
+            language="php",
+            build_tool="composer" if (root / "composer.json").is_file() else "phar",
+            test_suffix=config.suffix,
+            test_bootstrap=config.bootstrap,
+        )
+    return TargetLayout(
+        package_name or "App",
+        "src",
+        "tests",
+        True,
+        "new",
+        language="php",
+        build_tool="composer",
+        test_bootstrap="vendor/autoload.php",
+    )
+
+
 def is_effectively_empty(root: Path) -> bool:
     """True when the worktree holds no source the model could extend (a fresh
     clone of an empty repo is just ``.git`` + maybe a README/LICENSE). Used to
@@ -639,6 +694,8 @@ def resolve_layout(
         return _resolve_c_layout(root_path, mode=mode, package_name=package_name, repo=repo)
     if language == "cpp":
         return _resolve_cpp_layout(root_path, mode=mode, package_name=package_name, repo=repo)
+    if language == "php":
+        return _resolve_php_layout(root_path, mode=mode, package_name=package_name, repo=repo)
     if language == "go":
         return _resolve_go_layout(root_path, mode=mode, package_name=package_name, repo=repo)
     if language == "sql":
@@ -677,6 +734,7 @@ __all__ = [
     "detect_csharp_layout",
     "detect_existing_package",
     "detect_go_layout",
+    "detect_php_layout",
     "detect_java_layout",
     "detect_typescript_layout",
     "is_effectively_empty",

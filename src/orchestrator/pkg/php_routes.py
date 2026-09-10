@@ -205,85 +205,90 @@ def _walk_expr(
     rel: str,
     routes: list[PendingRoute],
 ) -> None:
-    if node.type == "member_call_expression":
-        obj = node.child_by_field_name("object")
-        name_node = node.child_by_field_name("name")
-        method = _text(name_node, source) if name_node is not None else ""
-        if method == "group" and obj is not None:
-            group_prefix = _group_prefix_of_chain(obj, source)
-            if group_prefix is not None:
+    # Vendored legacy PHP can contain expression trees deeper than Python's stack.
+    pending = [node]
+    while pending:
+        node = pending.pop()
+        if node.type == "member_call_expression":
+            obj = node.child_by_field_name("object")
+            name_node = node.child_by_field_name("name")
+            method = _text(name_node, source) if name_node is not None else ""
+            if method == "group" and obj is not None:
+                group_prefix = _group_prefix_of_chain(obj, source)
+                if group_prefix is not None:
+                    args = _call_args(node)
+                    _walk_group_body(
+                        _arg_value(args[0]) if args else None,
+                        namespace,
+                        use_map,
+                        _join_route(prefix, group_prefix),
+                        source,
+                        rel,
+                        routes,
+                    )
+                # else: a prefix this reader cannot resolve (`Route::prefix($v)`, a receiver
+                # that is not the `Route` facade). The body is NOT walked with the outer
+                # prefix: every route inside would be emitted at the wrong path and presented
+                # as grounded — the cross-repo false join go_routes.py refuses the same way.
+                continue
+            if (
+                obj is not None
+                and obj.type == "variable_name"
+                and _text(obj, source) == _SLIM_RECEIVER
+                and method in _LARAVEL_VERBS
+            ):
+                _register_route(
+                    method, _call_args(node), namespace, use_map, prefix, source, rel, node, routes
+                )
+                continue
+        elif node.type == "scoped_call_expression":
+            scope = node.child_by_field_name("scope")
+            name_node = node.child_by_field_name("name")
+            if (
+                scope is not None
+                and scope.type == "name"
+                and _text(scope, source) == "Route"
+                and name_node is not None
+                and _text(name_node, source) in _LARAVEL_VERBS
+            ):
+                _register_route(
+                    _text(name_node, source),
+                    _call_args(node),
+                    namespace,
+                    use_map,
+                    prefix,
+                    source,
+                    rel,
+                    node,
+                    routes,
+                )
+                continue
+            if (
+                scope is not None
+                and scope.type == "name"
+                and _text(scope, source) == "Route"
+                and name_node is not None
+                and _text(name_node, source) == "group"
+            ):
+                # The classic array form: `Route::group(['prefix' => 'v1', ...], fn)`.
                 args = _call_args(node)
-                _walk_group_body(
-                    _arg_value(args[0]) if args else None,
-                    namespace,
-                    use_map,
-                    _join_route(prefix, group_prefix),
-                    source,
-                    rel,
-                    routes,
-                )
-            # else: a prefix this reader cannot resolve (`Route::prefix($v)`, a receiver
-            # that is not the `Route` facade). The body is NOT walked with the outer
-            # prefix: every route inside would be emitted at the wrong path and presented
-            # as grounded — the cross-repo false join go_routes.py refuses the same way.
-            return
-        if (
-            obj is not None
-            and obj.type == "variable_name"
-            and _text(obj, source) == _SLIM_RECEIVER
-            and method in _LARAVEL_VERBS
-        ):
-            _register_route(method, _call_args(node), namespace, use_map, prefix, source, rel, node, routes)
-            return
-    elif node.type == "scoped_call_expression":
-        scope = node.child_by_field_name("scope")
-        name_node = node.child_by_field_name("name")
-        if (
-            scope is not None
-            and scope.type == "name"
-            and _text(scope, source) == "Route"
-            and name_node is not None
-            and _text(name_node, source) in _LARAVEL_VERBS
-        ):
-            _register_route(
-                _text(name_node, source),
-                _call_args(node),
-                namespace,
-                use_map,
-                prefix,
-                source,
-                rel,
-                node,
-                routes,
-            )
-            return
-        if (
-            scope is not None
-            and scope.type == "name"
-            and _text(scope, source) == "Route"
-            and name_node is not None
-            and _text(name_node, source) == "group"
-        ):
-            # The classic array form: `Route::group(['prefix' => 'v1', ...], fn)`.
-            args = _call_args(node)
-            attrs = _arg_value(args[0]) if args else None
-            group_prefix = _array_prefix(attrs, source) if attrs is not None else None
-            if group_prefix is not None and len(args) > 1:
-                _walk_group_body(
-                    _arg_value(args[1]),
-                    namespace,
-                    use_map,
-                    _join_route(prefix, group_prefix),
-                    source,
-                    rel,
-                    routes,
-                )
-            return  # same rule as above: an unreadable prefix means the body is not walked
-        # `Route::any`/`Route::match`/`Route::resource` and anything else — no verb this
-        # graph will assert (D2); fall through so a nested closure argument still scans.
+                attrs = _arg_value(args[0]) if args else None
+                group_prefix = _array_prefix(attrs, source) if attrs is not None else None
+                if group_prefix is not None and len(args) > 1:
+                    _walk_group_body(
+                        _arg_value(args[1]),
+                        namespace,
+                        use_map,
+                        _join_route(prefix, group_prefix),
+                        source,
+                        rel,
+                        routes,
+                    )
+                continue  # same rule as above: an unreadable prefix means the body is not walked
+            # `Route::any`/`Route::match`/`Route::resource` and anything else — no verb this
+            # graph will assert (D2); fall through so a nested closure argument still scans.
 
-    for child in node.named_children:
-        _walk_expr(child, namespace, use_map, prefix, source, rel, routes)
+        pending.extend(reversed(node.named_children))
 
 
 def _walk_group_body(

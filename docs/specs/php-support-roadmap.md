@@ -2,8 +2,8 @@
 
 **Status:** ✅ **All four phases DONE** on branch `feat/php-support` — P1 (comprehension), P2
 (corpus + CALLS), P3 (Laravel/Slim/Symfony routes + typed receivers), and P4
-(Eloquent/Doctrine entities). See D0-D8 below for the decisions as implemented; only **codegen**
-(explicitly deferred, D6/§9) remains. **Date:** 2026-09-08 · spine v3.32.0.
+(Eloquent/Doctrine entities). See D0-D8 below for the decisions as implemented; **codegen** is implemented in the
+[follow-on roadmap](php-codegen-roadmap.md), which records its validation status. **Date:** 2026-09-08 · spine v3.32.0.
 Adds a PHP front-end to the PKG extractor as one self-contained track of four phases, the same
 cadence as C#/C/C++ ([language-support-roadmap.md](language-support-roadmap.md)), SQL
 ([sql-support-roadmap.md](sql-support-roadmap.md)) and Go
@@ -36,7 +36,7 @@ assumes it.
 | **D3** | What a trait `use Loggable;` inside a class becomes | (a) `IMPLEMENTS` class→trait, trait is a `Type`, (b) `CONTAINS`, (c) skip | **(a).** `IMPLEMENTS` is documented as "subclass / interface impl" — a mixin is the same *behavioural* claim, and it is what makes blast radius right: editing a trait method must reach every class using it. (b) is a category error (the class does not own the trait); (c) hides the one construct PHP-specific reviewers will look for first. Closed enum, no new kind. |
 | **D4** | `.blade.php` and other templates | (a) skip by *filename* suffix `.blade.php`, (b) parse them, (c) drop `.php` files containing HTML | **(a).** `Path.suffix` of `x.blade.php` is `.php`, so the dispatcher will hand every Laravel view to the front-end. Blade is a template language; parsing it yields ERROR-heavy trees and phantom `Module` nodes named for views. A filename rule inside `PhpExtractor.extract` (return an empty batch) keeps the dispatcher language-agnostic. `.phtml` / `.twig` are not registered suffixes and need nothing. |
 | **D5** | `vendor/` (Composer's `node_modules`) | (a) add `"vendor"` to `DEFAULT_IGNORE_DIRS`, (b) PHP-only skip in the front-end, (c) nothing | **(a), with one check first.** A Laravel app carries ~10k vendored `.php` files; ingesting them presents Symfony as part of the repo (the `corpus/` phantom-node trap at scale). `vendor/` is also Go's vendoring dir — the Go roadmap flagged the same bloat and never fixed it. Risk: the `comprehension` gate is a *ratchet* on anchored facts over the five pinned repos; if any pinned tree has a `vendor/`, the count drops and `--check --pinned-corpus` fails. **P1 step 0, done:** shallow-cloned all five `evals/comprehension_corpus.yaml` repos at their pinned SHAs (vue-core, gin, fmt, libuv, flask) and grepped for a `vendor/` directory — none has one, so `"vendor"` was added unconditionally, no rebaseline needed. |
-| **D6** | Codegen (composer + PHPUnit) in this track | (a) defer to a follow-on spec, (b) include as P5 | **(a).** The toolchain is clean (`composer install` → `vendor/bin/phpunit`, hermetic) so it is *affordable* later — but the expansion roadmap's strategy is comprehension first, and adding `"php"` to `SUPPORTED_LANGUAGES` without the layout/scaffold/runner set re-opens the silent-Python-scaffold trap the Go track closed. `sdlc feature --language php` keeps exiting 2 until the follow-on lands. |
+| **D6** | Codegen (composer + PHPUnit) in this track | (a) defer to a follow-on spec, (b) include as P5 | **(a).** The toolchain is clean (`composer install` → `vendor/bin/phpunit`, hermetic) so it is *affordable* later — but the expansion roadmap's strategy is comprehension first, and adding `"php"` to `SUPPORTED_LANGUAGES` without the layout/scaffold/runner set re-opens the silent-Python-scaffold trap the Go track closed. The [follow-on](php-codegen-roadmap.md) now enables PHP with its complete runner set. |
 | **D7** | `require` / `include` of a string literal | (a) emit `IMPORTS` to a path-keyed module, literal paths only, (b) skip | **(a).** Non-namespaced PHP (WordPress, legacy apps) has no `use`; `require_once __DIR__ . '/inc/x.php'` *is* its import graph. Literal-only, resolved relative to the importing file, joined by path suffix the way C's `#include` is. **As built:** a new `_match_php_path` in `import_link.py`, not a reuse of `_match_c` itself (different prefix, own candidate list keyed off `.php`-suffixed module bodies) — same technique, small enough not to share code, dispatched ahead of the (now php-free) `_DOTTED_PREFIXES` branch by checking the target body's shape (`.php`-suffixed = a D7 path; anything else = handled by dedup alone, see D2). Computed paths yield nothing — precision-first. |
 | **D8** | Invention oracle (`pkg/scope.py`) | (a) `NOT_APPLICABLE["php"]` with a reason, (b) write a `_Php` walker | **(a).** PHP variables carry a `$` sigil; `f()` and `$f()` are different CST nodes (`function_call_expression` whose `function` child is a `name` vs a `variable_name`). A local cannot shadow a bare call, exactly as Java's separate namespaces make it not-applicable. The reason string is the deliverable — "0" and "not measured" are the two readings this project keeps confusing. |
 
@@ -254,14 +254,13 @@ corpus method is for. BookStack/WordPress remain the larger-scale sanity check b
 
 ## 9. Deferred (explicitly out of this track)
 
-- **Codegen** — `composer install` → `vendor/bin/phpunit`; layout/scaffold/`PhpToolEnvironment`/
-  `PhpTestRunner`/prompts/`php-conventions`. Own spec after P2 proves demand (D6).
+- **Codegen — implemented in the [follow-on](php-codegen-roadmap.md).** Composer and
+  pinned PHAR environments, `PhpUnitTestRunner`, layout/scaffold, prompts and conventions.
 - **WordPress hooks** (`add_action`/`add_filter` → callback) — a real call graph for that
   ecosystem, but no `EdgeKind` names "registered as a hook". Do not invent one; measure first.
 - **`Route::resource`** expansion, **Blade** templates, **Laravel migration DSL** as a schema
   source, **`__call`/magic** resolution.
-- **Preflight** (`php -l` / `phpstan`) — the pre-existing Python-only gap the Go roadmap
-  records; belongs with codegen.
+- **Preflight:** changed-file `php -l` is implemented with codegen; `phpstan` remains deferred.
 
 ## 10. Risks and gotchas
 
@@ -288,5 +287,5 @@ corpus method is for. BookStack/WordPress remain the larger-scale sanity check b
 2. P2 corpus + CALLS → corpus 1.00 precision, CALLS recall pinned — ✅ done (recall 0.50, all misses predicted)
 3. P3 routes + typed receivers → PHP provider in the multi-repo joiner  — ✅ done
 4. P4 Eloquent/Doctrine entities                              — ✅ done
-5. (follow-on) codegen                                        — planned outside the repo; validation target `synaptixs/aiemr`
+5. (follow-on) codegen                                        — implemented; validation recorded in php-codegen-roadmap.md
 ```

@@ -505,7 +505,11 @@ async def _repair_after_revision(
 
 def _is_test_path(rel: str) -> bool:
     name = Path(rel).name
-    return name.startswith("test_") or name.endswith("_test.py") or "tests/" in rel.replace("\\", "/")
+    return (
+        name.startswith("test_")
+        or name.endswith(("_test.py", "Test.php"))
+        or "tests" in {p.lower() for p in Path(rel.replace("\\", "/")).parts}
+    )
 
 
 async def _git(path: Path, *args: str) -> bool:
@@ -579,7 +583,7 @@ async def _changed_files(path: Path) -> list[str]:
 # set, test env + runner). `--language auto` detects from the worktree. Anything outside
 # this set is rejected at the CLI — historically an unknown value silently fell through
 # to the Python branch and scaffolded a Python project.
-SUPPORTED_LANGUAGES = frozenset({"python", "java", "typescript", "csharp", "c", "cpp", "go", "sql"})
+SUPPORTED_LANGUAGES = frozenset({"python", "java", "typescript", "csharp", "c", "cpp", "go", "php", "sql"})
 
 
 def unsupported_language_error(language: str) -> str | None:
@@ -611,6 +615,8 @@ def _resolve_language(path: Path, requested: str) -> str:
             return "typescript"
         if "csharp" in langs:
             return "csharp"
+        if "php" in langs:
+            return "php"
         if "go" in langs:
             return "go"
         if "cpp" in langs:
@@ -695,6 +701,7 @@ async def run_feature(
         make_test_runner,
         meson_toolchain_available,
         node_toolchain_available,
+        php_toolchain_available,
         run_with_autoheal,
     )
     from orchestrator.sdlc.testrunner import pytest_available
@@ -904,6 +911,8 @@ async def run_feature(
             "C# codegen needs the .NET SDK (`dotnet`) on PATH (install it, then retry).",
             code=2,
         )
+    elif lang == "php" and not php_toolchain_available():
+        raise FeatureRunError("PHP codegen needs `php` on PATH (install it, then retry).", code=2)
     elif lang == "go" and not go_toolchain_available():
         raise FeatureRunError(
             "Go codegen needs the Go toolchain (`go`) on PATH (install it, then retry).",
@@ -943,7 +952,10 @@ async def run_feature(
             )
     # ``ensure`` may install deps (Node ``<pm> install``); run it after the
     # toolchain preflight so a missing toolchain fails fast with a clear message.
-    await testenv.ensure(path)
+    try:
+        await testenv.ensure(path)
+    except RuntimeError as exc:
+        raise FeatureRunError(str(exc), code=2) from exc
     emit(f"[testenv] {testenv.describe()}")
     if lang == "python" and not await pytest_available(testenv.python):
         raise FeatureRunError(

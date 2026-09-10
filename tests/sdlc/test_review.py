@@ -306,3 +306,22 @@ async def test_a_real_verdict_is_not_flagged_unreviewed(tmp_path: Path) -> None:
 
     assert result.unreviewed is False  # 'I looked and cannot tell' is a judgement, not an absence
     assert result.uncertain
+
+
+def test_php_scaffold_and_lockfile_reach_the_judge(tmp_path: Path) -> None:
+    from orchestrator.sdlc.review import _read_source
+
+    (tmp_path / "phpunit.xml").write_text('<phpunit bootstrap="vendor/autoload.php"/>')
+    (tmp_path / "composer.lock").write_text('{"packages-dev": [{"name": "phpunit/phpunit"}]}')
+    (tmp_path / "Temperature.php").write_text("<?php namespace App; final class Temperature {}")
+    (tmp_path / ".gitignore").write_text("vendor/\n.phpunit.cache/\n")
+    (tmp_path / ".php-version").write_text("8.3")
+    context = _read_source(
+        tmp_path, ["The Composer scaffold autoloads App\\Temperature and PHPUnit tests pass"]
+    )
+    assert "phpunit.xml" in context
+    assert "vendor/autoload.php" in context
+    assert "composer.lock" in context
+    assert "final class Temperature" in context
+    assert ".gitignore" in context
+    assert ".php-version" in context

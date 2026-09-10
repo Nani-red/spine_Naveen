@@ -4,8 +4,7 @@
 engineer you delegate tickets to. From inside **Claude Code** you can ask it to read a
 requirement, ground new code in your repo's real structure, generate and test that code,
 and — when you say so — open a pull request. It works for **greenfield** (fresh) and
-**brownfield** (existing) repos across **Python, Java, TypeScript, C#, C, C++, and Go**
-(**PHP** too, for brownfield — comprehension is shipped, codegen is a later phase).
+**brownfield** (existing) repos across **Python, Java, TypeScript, C#, C, C++, Go, and PHP**.
 
 This guide takes you from zero to a delivered feature, entirely through Claude Code.
 
@@ -789,6 +788,7 @@ Comprehension covers **nine front-ends**. Spine only needs a language's toolchai
 | C | **CMake** (or **Meson + Ninja**) + a C compiler |
 | C++ | **CMake** (or **Meson + Ninja**) + a C++ compiler |
 | Go | the **`go`** toolchain (`go build` / `go test`); multi-module aware |
+| PHP | **PHP** (8.3 recommended); **Composer** when `composer.json` exists, otherwise a verified PHPUnit PHAR is downloaded outside the worktree |
 | SQL | nothing extra — schema, queries, stored procedures, ordered-migration folding |
 
 Comprehension front-ends beyond Python install as extras — one at a time
@@ -806,8 +806,9 @@ nothing is invented. Recall is 1.00 on everything except `CALLS`, which ranges f
 (C, SQL) to 0.50 (TypeScript); the gap is calls whose receiver is a variable rather than a
 name. Run `orchestrator pkg accuracy` to see the current numbers yourself.
 
-> **`--language` is not validated.** An unsupported value silently scaffolds a *Python*
-> project rather than erroring, so check your spelling.
+> Use `--language php` for PHP delivery. Existing PHPUnit layout and bootstrap settings
+> are preserved; only changed PHP files are linted and changed tests executed. See the
+> [PHP workflow](USER_GUIDE.md#php-code-generation) for Composer and legacy setup.
 
 ---
 
@@ -822,7 +823,7 @@ name. Run `orchestrator pkg accuracy` to see the current numbers yourself.
 | Codegen times out | Set a faster model: `ORCHESTRATOR_INTAKE_MODEL=...` (or `SDLC_CODEGEN_MODEL`). |
 | "live needs a repo to push to" | Pass `repo=...` or set `SDLC_REPO_URL`; ensure `GITHUB_TOKEN`/`GH_TOKEN` is set. |
 | A `live` call refuses to write | That's the gate — pass `confirm=true` together with `live=true`. |
-| Build fails for Java/TS/C#/C/C++/Go | The language toolchain isn't installed — see [§10](#10-language-support--toolchains). |
+| Build fails for Java/TS/C#/C/C++/Go/PHP | The language toolchain isn't installed — see [§10](#10-language-support--toolchains). |
 | Private repo clone fails | Set `GITHUB_TOKEN` (PAT) or configure the GitHub App. |
 
 For deeper diagnostics, ask Claude to run `doctor`, or run `orchestrator doctor` in a shell

@@ -1211,7 +1211,9 @@ class PlanNotApprovedError(Exception):
     """No current, approved plan for this spec — nothing should be built."""
 
 
-async def require_approved_plan(spec: dict[str, Any], *, root: Path | str = ".") -> PlanApproval:
+async def require_approved_plan(
+    spec: dict[str, Any], *, root: Path | str = ".", language: str = "python"
+) -> PlanApproval:
     """Refuse unless a human approved *this* plan, and it is still this plan.
 
     The check is a re-derivation, not a lookup: the plan is regenerated and its body
@@ -1233,7 +1235,11 @@ async def require_approved_plan(spec: dict[str, Any], *, root: Path | str = ".")
             f"the plan for {intent} was rejected by {approval.decided_by or 'a human'}{note}."
         )
 
-    current = plan_digest(await build_plan(spec, root=root))
+    # The CLI includes prior runs in its cost/confidence sections. Re-derive with
+    # the same history, otherwise any ticket that has run once is permanently stale.
+    current = plan_digest(
+        await build_plan(spec, root=root, language=language, journey=load_journey(intent, root=root))
+    )
     if current != approval.digest:
         raise PlanNotApprovedError(
             f"the plan for {intent} has changed since {approval.decided_by or 'it'} approved it "

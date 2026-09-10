@@ -1322,3 +1322,12 @@ async def test_a_fully_met_verdict_still_ships(monkeypatch: pytest.MonkeyPatch, 
     result = await run_feature("file://./spec.md", intent_id="intent-a", repo="https://x/widget")
 
     assert result.passed and judge.calls == 1
+
+
+async def test_language_php_requires_toolchain(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _install_pipeline(monkeypatch, tmp_path, runner=_PassingRunner)
+    monkeypatch.setattr("orchestrator.sdlc.testenv.php_toolchain_available", lambda: False)
+    with pytest.raises(FeatureRunError, match="PHP codegen needs") as exc:
+        await run_feature("file://./spec.md", intent_id="intent-a", language="php")
+    assert exc.value.code == 2
+    assert not list(tmp_path.rglob("pyproject.toml"))

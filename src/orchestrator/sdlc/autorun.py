@@ -355,7 +355,7 @@ async def autorun(
             # Before the graph, before any spend: was this plan read and approved? The gate
             # is here rather than before intake because it needs the spec to know which plan
             # it is asking about.
-            await _require_plan(ctx, enabled=plan_gate, emit=emit)
+            await _require_plan(ctx, enabled=plan_gate, emit=emit, language=language)
             store_graph, overview = _load_graph(ctx, emit=emit)
             # Research first, and before validity: a run that parks still leaves its Evidence
             # behind, which is the artifact a human is asked to judge the park on.
@@ -500,7 +500,9 @@ def _refuse_undecided_resume(record: Any, approvals_dir: Path | None, emit: Call
     )
 
 
-async def _require_plan(ctx: RunContext, *, enabled: bool, emit: Callable[[str], None]) -> None:
+async def _require_plan(
+    ctx: RunContext, *, enabled: bool, emit: Callable[[str], None], language: str = "auto"
+) -> None:
     """Refuse to build a ticket whose plan nobody approved.
 
     On by default, because a gate that has to be switched on is one nobody switches on.
@@ -517,7 +519,11 @@ async def _require_plan(ctx: RunContext, *, enabled: bool, emit: Callable[[str],
         emit("[plan] gate skipped (--no-plan-gate) — nothing was reviewed before this run")
         return
     try:
-        approval = await require_approved_plan(ctx.spec or {}, root=ctx.root)
+        from orchestrator.sdlc.feature_runner import _resolve_language
+
+        approval = await require_approved_plan(
+            ctx.spec or {}, root=ctx.root, language=_resolve_language(ctx.root, language)
+        )
     except PlanNotApprovedError as exc:
         ctx.record_stage("plan", "failed", str(exc))
         ctx.checkpoint(status="parked", parked_reason=str(exc))

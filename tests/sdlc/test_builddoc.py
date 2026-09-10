@@ -825,3 +825,32 @@ def test_an_unmeasured_language_keeps_the_original_wording() -> None:
     assert "per-method counts under-report" in prose
     assert "Measured `CALLS` recall" not in prose
     assert "0.00" not in prose
+
+
+@pytest.mark.asyncio
+async def test_php_plan_approval_uses_php_language(tmp_path: Path) -> None:
+    from orchestrator.sdlc.builddoc import build_plan, plan_digest, require_approved_plan, save_approval
+
+    (tmp_path / "Foo.php").write_text("<?php class Foo {}")
+    digest = plan_digest(await build_plan(_spec(), root=tmp_path, language="php"))
+    save_approval(_approval(digest), root=tmp_path)
+    assert (await require_approved_plan(_spec(), root=tmp_path, language="php")).decided_by == "falcon"
+
+
+async def test_approval_revalidation_includes_measured_run_history(tmp_path: Path) -> None:
+    from orchestrator.sdlc.builddoc import (
+        append_journey,
+        build_plan,
+        load_journey,
+        plan_digest,
+        require_approved_plan,
+        save_approval,
+    )
+
+    (tmp_path / "Foo.php").write_text("<?php class Foo {}")
+    append_journey(_run_entry(), intent_id="TCK-1", root=tmp_path)
+    document = await build_plan(
+        _spec(), root=tmp_path, language="php", journey=load_journey("TCK-1", root=tmp_path)
+    )
+    save_approval(_approval(digest=plan_digest(document)), root=tmp_path)
+    assert (await require_approved_plan(_spec(), root=tmp_path, language="php")).decided_by == "falcon"
