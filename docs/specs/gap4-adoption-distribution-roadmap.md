@@ -162,6 +162,16 @@ pull-request title is **attacker-controlled**, and interpolating `${{ github.eve
 inside a `run:` block lets a title containing `$(…)` execute. It is passed through `env:` and
 quoted, and a test asserts no step interpolates event data into a shell.
 
+**✅ 5c shipped 2026-09-09 — the governed half, without 5b.** [`.github/workflows/spine-sdlc.yml`](../../.github/workflows/spine-sdlc.yml)
+is 5a's shape applied to the write path: a `plan` job that runs intake → investigate →
+validity → design from a hand-written spec with **no credentials**, and a `build` job bound to
+a GitHub Environment whose required reviewers *are* the plan gate, recorded with `sdlc approve`
+before `sdlc autorun` runs. Single repo, monorepo package, multi-repo workspace and
+submodules, each proved by a fixture CI builds from scratch. It hosts the single-ticket path
+only — the Temporal batch still needs 5b's dependencies — and it refuses the two delivery
+shapes the runner does not support rather than building at the wrong level. The design is in
+the workflow's own header.
+
 **5b remains unscheduled: build it only against a named operator who wants to self-host.**
 An image nobody has asked to run is a maintenance burden with a version number.
 

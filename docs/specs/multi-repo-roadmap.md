@@ -517,6 +517,29 @@ the risk.
 Building delivery on an unmeasured join would be blast radius computed from a proposal again —
 verification-shaped, and fiction.
 
+## Submodules — a multi-repo laid out inside one checkout (2026-09-09)
+
+A superproject with submodules is this roadmap's case with the checkouts nested rather than
+side by side, and it exposed one gap. Per-repo identity already worked: `repo_state` runs
+`git -C <dir>`, so a submodule reports its own HEAD and its own clean/dirty state, and a
+pin that drifted makes the superproject dirty — which is the right answer. But **neither
+walker knew a submodule existed**: a submodule's `.git` is a file, the walkers pruned only
+ignored names and dot-prefixed directories, so the superproject's extraction descended into
+it. Declaring both in `repos.yaml` then double-counted every symbol under two ids
+(`py:lib@lib.core.helper` and `py:super@libs.lib.lib.core.helper`), and `from_mapping`'s
+overlap check — identical directories only — did not see nesting.
+
+The rule now: **a nested checkout is a boundary.** `is_nested_repo()` stops both walks at
+any child with a `.git` entry; `from_mapping` refuses a root nested inside another unless
+the inner one is a checkout of its own; `WorkspaceManager` clones with
+`--recurse-submodules` and populates submodules in every worktree. Declaration stays
+explicit — the superproject lists its submodules in `repos.yaml` like any sibling; nothing
+reads `.gitmodules`, by the same *declared, not guessed* rule as D1.
+
+Delivery into a submodule is the non-goal above with an order: a PR to the submodule's
+repository, then a pin bump here. The CI pipeline refuses it and says so — see the header of
+[`.github/workflows/spine-sdlc.yml`](../../.github/workflows/spine-sdlc.yml).
+
 ## Invariants
 
 > **The one idea underneath the first three.** Single-repo extraction has precision 1.00 and a

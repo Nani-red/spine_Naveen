@@ -596,6 +596,22 @@ def default_extractors(*, sql_dialect: str | None = None) -> list[LanguageExtrac
     return extractors
 
 
+def is_nested_repo(parent: Path, name: str) -> bool:
+    """``parent/name`` is another git checkout — a submodule, a worktree, a vendored clone.
+
+    A submodule's ``.git`` is a *file* (a pointer into the superproject's object store), so a
+    check for the directory alone would miss the common case. Either form marks a boundary.
+
+    Why the walkers stop here: a nested checkout has its own HEAD, its own clean/dirty state
+    and, in a multi-repo graph, its own scope key. Walking through it presents the inner
+    repo's symbols as the outer repo's — and if the inner one is *also* declared in
+    ``.spine/repos.yaml`` every symbol exists twice under two ids. Measured on a
+    superproject with one submodule: ``py:lib@lib.core.helper`` and
+    ``py:super@libs.lib.lib.core.helper`` in the same merged graph, nothing flagging it.
+    """
+    return (parent / name / ".git").exists()
+
+
 class RepoCodeExtractor:
     """Walk a repository → one merged ``FactBatch`` of grounded facts."""
 
@@ -690,15 +706,24 @@ class RepoCodeExtractor:
 
         ``doc_source`` has always sorted its walk for this reason; this is the same
         discipline for code.
+
+        The walk also stops at any nested git checkout (:func:`is_nested_repo`): a submodule
+        is another repository, not a subdirectory of this one.
         """
         for dirpath, dirnames, filenames in os.walk(root):
-            dirnames[:] = sorted(d for d in dirnames if d not in self._ignore_dirs and not d.startswith("."))
+            here = Path(dirpath)
+            dirnames[:] = sorted(
+                d
+                for d in dirnames
+                if d not in self._ignore_dirs and not d.startswith(".") and not is_nested_repo(here, d)
+            )
             for name in sorted(filenames):
                 yield Path(dirpath) / name
 
 
 __all__ = [
     "DEFAULT_IGNORE_DIRS",
+    "is_nested_repo",
     "LanguageExtractor",
     "PythonExtractor",
     "RepoCodeExtractor",

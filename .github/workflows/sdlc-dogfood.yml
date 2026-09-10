@@ -1,0 +1,50 @@
+# Spine's own SDLC pipeline, run on Spine — the reusable workflow exercised on this checkout.
+#
+# Two triggers. A pull request that touches the reusable workflow runs its `plan` job here,
+# plan-only, so a change to the published interface is seen working before it is tagged: a
+# workflow nothing runs is the "number nobody re-checks" failure ci.yml already names.
+# `workflow_dispatch` runs the whole thing — plan, the `spine-build` environment gate, then
+# the build — against a spec you name, safe by default.
+#
+# `install-from: ./repo[languages]` installs the checkout under test, not a release: the
+# reusable workflow checks the caller out at `repo/`, and this caller is Spine.
+name: SDLC dogfood
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/spine-sdlc.yml"
+      - ".github/workflows/sdlc-dogfood.yml"
+      - ".github/sdlc/**"
+  workflow_dispatch:
+    inputs:
+      spec:
+        description: "Spec to plan and build (JSON, inside this repository)."
+        type: string
+        default: ".github/sdlc/dogfood-spec.json"
+      live:
+        description: "Open the pull request (default: build locally, push nothing)."
+        type: boolean
+        default: false
+      max-cost:
+        description: "Cap on model spend, USD."
+        type: string
+        default: "5"
+
+permissions:
+  contents: read
+
+jobs:
+  spine:
+    uses: ./.github/workflows/spine-sdlc.yml
+    permissions:
+      contents: write
+      pull-requests: write
+    with:
+      spec: ${{ inputs.spec || '.github/sdlc/dogfood-spec.json' }}
+      install-from: "./repo[languages]"
+      build: ${{ github.event_name == 'workflow_dispatch' }}
+      live: ${{ inputs.live || false }}
+      max-cost: ${{ inputs.max-cost || '5' }}
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

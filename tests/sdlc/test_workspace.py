@@ -222,3 +222,46 @@ async def test_a_base_built_for_another_branch_is_not_reused(tmp_path: Path) -> 
         "sdlc2", "KEY-2"
     )
     assert (second / "marker.txt").read_text().strip() == "on-develop"
+
+
+async def _seed_superproject(tmp_path: Path) -> Path:
+    """A local ``super`` remote that pins a local ``lib`` remote as ``libs/lib``."""
+    lib = tmp_path / "lib-remote"
+    lib.mkdir()
+    await _run_git("init", cwd=lib)
+    await _run_git("config", "user.email", "seed@example.com", cwd=lib)
+    await _run_git("config", "user.name", "Seed", cwd=lib)
+    (lib / "core.py").write_text("def helper():\n    return 1\n", encoding="utf-8")
+    await _run_git("add", "core.py", cwd=lib)
+    await _run_git("commit", "-m", "lib", cwd=lib)
+
+    super_ = tmp_path / "super-remote"
+    await _seed_remote(super_)
+    await _run_git("submodule", "add", str(lib), "libs/lib", cwd=super_)
+    await _run_git("commit", "-m", "pin lib", cwd=super_)
+    return super_
+
+
+async def test_a_superproject_worktree_carries_its_submodules(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``git worktree add`` leaves every submodule directory empty; the manager fills them.
+
+    Without this the test env cannot import the submodule and codegen asked to touch it
+    writes into a folder git does not own. Local-path submodules need the ``file``
+    transport, which git disables by default — allowed here through git's environment
+    config so the code under test runs exactly as it does in production.
+    """
+    monkeypatch.setenv("GIT_CONFIG_COUNT", "1")
+    monkeypatch.setenv("GIT_CONFIG_KEY_0", "protocol.file.allow")
+    monkeypatch.setenv("GIT_CONFIG_VALUE_0", "always")
+    origin = await _seed_superproject(tmp_path)
+
+    manager = WorkspaceManager(root=tmp_path / "ws", repo_url=str(origin))
+    path = await manager.create("s1", "ISSUE-1")
+
+    assert (path / "libs" / "lib" / "core.py").is_file()
+    # And it is a checkout of its own, pinned where the superproject says.
+    pinned = (await _run_git("rev-parse", "HEAD:libs/lib", cwd=path)).strip()
+    actual = (await _run_git("rev-parse", "HEAD", cwd=path / "libs" / "lib")).strip()
+    assert actual == pinned

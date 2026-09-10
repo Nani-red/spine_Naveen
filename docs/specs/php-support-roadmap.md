@@ -288,5 +288,5 @@ corpus method is for. BookStack/WordPress remain the larger-scale sanity check b
 2. P2 corpus + CALLS → corpus 1.00 precision, CALLS recall pinned — ✅ done (recall 0.50, all misses predicted)
 3. P3 routes + typed receivers → PHP provider in the multi-repo joiner  — ✅ done
 4. P4 Eloquent/Doctrine entities                              — ✅ done
-5. (follow-on spec) codegen                                   — not started
+5. (follow-on) codegen                                        — planned outside the repo; validation target `synaptixs/aiemr`
 ```

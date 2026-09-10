@@ -176,6 +176,22 @@ def from_mapping(
         seen_paths[root] = key
         roots.append((key, root))
 
+    # A root inside another declared root is fine when the inner one is a git checkout of its
+    # own (a submodule, most often): the outer repo's walk stops at that boundary, so each
+    # file is scoped exactly once. A plain subdirectory has no boundary — the outer walk
+    # reaches every file the inner key also claims, and the merged graph carries every
+    # symbol twice under two ids. Refuse that at load, where the message can name the file.
+    for inner_key, inner in roots:
+        for outer_key, outer in roots:
+            if inner is outer or not inner.is_relative_to(outer):
+                continue
+            if not (inner / ".git").exists():
+                raise RepoConfigError(
+                    f"{where}: repo {inner_key!r} at {inner} is inside repo {outer_key!r} at {outer} "
+                    "but is not a git checkout of its own, so both keys would scope the same files "
+                    "— make it a submodule, or declare only one of them"
+                )
+
     declared = joins_from_list(joins, where=where)
     known = {key for key, _ in roots}
     for join in declared:
