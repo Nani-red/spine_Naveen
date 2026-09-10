@@ -71,7 +71,7 @@ CHEAP
 NOT CHEAP
 · "Only perl can parse Perl." tree-sitter is error-tolerant, so a hard file still
   yields the declarations that parse — but sub recall on legacy code WILL be below
-  1.00. State it, measure it on the classic validation repo (§8), and do not tune
+  1.00. State it, measure it on the classic validation repo (§10), and do not tune
   labels to hide it.
 · Inheritance is data (D5). Five spellings of one edge, all read literally.
 · A package is both container and class (D2). One decision; get it right in P1.
@@ -131,20 +131,44 @@ method; the per-front-end freshness test; the C-style path-suffix import join fo
 | Rose::DB::Object / Class::DBI | `__PACKAGE__->meta->setup(...)` | Same shape, second reader |
 | DBI raw SQL strings | — | a cross-language pass, its own spec |
 
+### 3.5 Testing the phases with Spine itself
+
+Every phase ends by running Spine on both validation repositories (§10) and pasting the numbers
+into §4 — the Kotlin track's rule ([kotlin-support-roadmap.md](kotlin-support-roadmap.md) §4):
+
+```bash
+# on a .git-less copy, so no commit-keyed cache is trusted (scripts/validate-frontend.py once it exists — §8.2)
+uv run --frozen orchestrator pkg extract <copy> --json | jq .summary
+uv run --frozen orchestrator pkg verify <copy>
+uv run --frozen orchestrator state <copy> --lens developer | grep -E "^- Stack|^- Size|Call graph"
+uv run --frozen orchestrator understand <copy>
+```
+
+and through the MCP tools a user meets: `profile_repo`, `map_repo`, `blast_radius` on a Mojolicious
+controller sub, `explain_symbol` on a package, `docs_for` on a POD-derived claim, `pkg_joins` against a
+small consumer fixture in P3. Before each phase touches Spine's own code, `blast_radius` on the
+registration symbols (§7) is re-run and the table refreshed; each phase's design goes through
+`design_change` with its D-rows as the intent, attached as evidence. **The Perl-specific measurement**
+is the parse census (§8.3): on the classic repository, `sub` declarations counted by `grep -c '^sub '`
+beside `Function` nodes from the graph, per file, so the recall ceiling the grammar imposes is a
+number in §4, not a caveat.
+
 ---
 
 ## 4. Phases — the living table
 
 | Phase | Work | Effort | Exit criteria | Status | Started | Finished | Evidence |
 |---|---|---|---|---|---|---|---|
-| **P1 Comprehension** | `perl_extractor.py` (§3.1, D2–D7); package-scope tracking; `finalize` repoint; registry: `default_extractors`, `FRONT_ENDS`, `EXTRA_PROBES`, `_GRAMMAR_MODULES`, profiler markers/needles, `scope.NOT_APPLICABLE` (D8), `_DOTTED_PREFIXES`, `insights._UNDERSCORE_LANGS`, `docs.py`/`doc_link.py` `pl`/`pm`; packaging (`perl` extra, `languages` meta-extra, mypy override, `ci.yml`); tests per [docs/reviewing/language-frontend-checklist.md](../reviewing/language-frontend-checklist.md); docs per [docs/reviewing/docs-matrix.md](../reviewing/docs-matrix.md) | ~4–6 d | `pkg extract` on both validation repos yields Module/Type/Function/Field + IMPORTS/CONTAINS/IMPLEMENTS from 0; `pkg verify` 0 errors; **sub recall on the classic repo measured** against `grep -c '^sub '` and written here; `scripts/docs_audit.py` clean; gate green with `--extra perl` | ⬜ | | | |
-| **P2 Corpus + CALLS** | `corpus/perl/{plain,instance_calls,exporter_default,isa_spellings,legacy_main,multi_package}` labelled from source first; §3.2 rows 1–6; D10's `finalize` pass; `--scoreboard`; freshness test | ~4–5 d | precision 1.00 on every kind; CALLS recall stated with predicted `known_gaps`; invention `NOT_APPLICABLE` with reason; `state` "Call graph: available" | ⬜ | | | |
+| **P1 Comprehension** | `scripts/parse-census.py` first (§8.3 — D1's number); `perl_extractor.py` (§3.1, D2–D7); package-scope tracking; `finalize` repoint; registry: `default_extractors`, `FRONT_ENDS`, `EXTRA_PROBES`, `_GRAMMAR_MODULES`, profiler markers/needles, `scope.NOT_APPLICABLE` (D8), `_DOTTED_PREFIXES`, `insights._UNDERSCORE_LANGS`, `docs.py`/`doc_link.py` `pl`/`pm`; packaging (`perl` extra, `languages` meta-extra, mypy override, `ci.yml`); tests per [docs/reviewing/language-frontend-checklist.md](../reviewing/language-frontend-checklist.md); docs per [docs/reviewing/docs-matrix.md](../reviewing/docs-matrix.md) | ~4–6 d | `pkg extract` on both validation repos yields Module/Type/Function/Field + IMPORTS/CONTAINS/IMPLEMENTS from 0; `pkg verify` 0 errors; **sub recall on the classic repo measured** against `grep -c '^sub '` and written here; `scripts/docs_audit.py` clean; gate green with `--extra perl` | ⬜ | | | |
+| **P2 Corpus + CALLS** | `corpus/perl/{plain,instance_calls,exporter_default,isa_spellings,legacy_main,multi_package}` labelled from source first; §3.2 rows 1–6; D10's `finalize` pass written on the shared helper (§8.5); `--scoreboard`; freshness test | ~4–5 d | precision 1.00 on every kind; CALLS recall stated with predicted `known_gaps`; invention `NOT_APPLICABLE` with reason; `state` "Call graph: available" | ⬜ | | | |
 | **P3 Routes + typed receivers** | `perl_routes.py` (Mojolicious full + Lite, Dancer2); §3.2 row 7; `corpus/perl/mojo_routes` | ~3–5 d | `Endpoint`s on the Mojolicious repo with `EXPOSES` to real controller subs; a Perl service joins as a provider in `pkg joins` | ⬜ | | | |
 | **P4 Data layer** | DBIx::Class `Entity`/`REFERENCES`/`Field` (§3.4); `corpus/perl/dbic` | ~2–4 d | entities linked; `data_layer_link` reconciles against a `.sql` schema; zero invented `REFERENCES` | ⬜ | | | |
-| **P5 Review + MR** | `/review-pr` on the branch; fix; one MR to `develop` with this table and every validation number as its body | ~1 d | verdict "mergeable"; every §7.1 row updated; CI green; no `episteme/` in the diff | ⬜ | | | |
+| **P5 Generic work** (§8) | whichever of §8.1 (`roadmap-status.py --check`), §8.2 (`validate-frontend.py`) and §8.4 (language-track template) the Kotlin track has not already landed; **§8.3 `parse-census.py` is Perl's to build** and lands in P1 because D1's recall number depends on it; §8.5 the shared `finalize` name-resolution helper if P2's D10 pass is the second implementation of it | ~2–3 d | each item's own exit in §8; this table passes §8.1 | ⬜ | | | |
+| **P6 Review + MR** | `/review-pr` on the branch; fix; one MR to `develop` with this table and every validation number as its body | ~1 d | verdict "mergeable"; every §6.1 row updated; CI green; no `episteme/` in the diff | ⬜ | | | |
 
-All phases land on `feat/perl-support`; delivery is **one MR**. **Rough total: ~14–21 days**, one
-engineer familiar with the PKG; codegen's ~7–11 days are in its own roadmap. No net-new *algorithm*; P1 is a day longer than PHP's because of
+All phases land on `feat/perl-support`; delivery is **one MR**. **Rough total: ~16–24 days**, one
+engineer familiar with the PKG; codegen's ~8–12 days are in its own roadmap. Phase order is fixed:
+P2's D10 pass needs P1's declarations; P3's typed receivers need P2's resolver table. No net-new *algorithm*; P1 is a day longer than PHP's because of
 package-scope tracking and the five inheritance spellings.
 
 ---
@@ -180,7 +204,7 @@ tests (`test_default_extractors`, `test_capabilities`, `test_verifier`, `test_sc
 
 **Untouched:** everything under `sdlc/` — the codegen track's files (D9).
 
-### 7.1 User-facing documentation — what changes, in which phase
+### 6.1 User-facing documentation — what changes, in which phase
 
 Updated in the phase that makes each row true, in the same commit as the code;
 `scripts/docs_audit.py` reports nothing STALE or MISSING before that commit.
@@ -203,7 +227,69 @@ Updated in the phase that makes each row true, in the same commit as the code;
 
 ---
 
-## 7. Packaging
+## 7. Blast radius — measured from the PKG, per registration site
+
+`blast_radius` on Spine's own graph at `d84e666`, this branch's base — the same measurement the
+Kotlin track took at the same commit, so the numbers hold for both until either lands. Re-run before
+each phase; a count that moved is a reason to re-read the callers, not to skip them.
+
+| Symbol | Callers | Touches | What the phase must respect |
+|---|---|---|---|
+| `pkg.extractor.default_extractors` | **13** — `RepoCodeExtractor.__init__`, `accuracy.score_corpus`, `verifier.GroundingVerifier._extractor_for`, 9 registry tests, the capability superset test | 28 | the gated append is read by the corpus scorer, the freshness verifier and the matrix test — the biconditional test for `perl` is not optional |
+| `pkg.persistence.extractor_fingerprint` | 8 — `_cache_path` + 7 tests | 10 | `tree_sitter_perl` in `_GRAMMAR_MODULES`; the cross-check test from #336 enforces it |
+| `pkg.import_link.link_imports` | 3 — `RepoCodeExtractor.extract` + 2 tests | 12 | `"perl"` joins `_DOTTED_PREFIXES` (D3); the `require "file"` path-suffix matcher is the C rule with a `perl:` marker |
+| `sdlc.feature_runner._resolve_language` | 4 — `run_feature`, `autorun._require_plan`, 2 tests | 9 | **not touched** (D9); the codegen track owns it |
+| `catalog.profile.ProjectProfile.from_repo` | via `_resolve_language`, `state`, `map_repo`, `profile_repo` | — | the suffix map and the `cpanfile`/`Makefile.PL`/`Build.PL`/`dist.ini` markers change what four surfaces report for every Perl repo; the profile test pins it |
+| `pkg.scope.NOT_APPLICABLE` / `WALKERS` | `invention.find_invented_calls`, `test_scope` roster test | — | a language missing from both is a roster-test failure; D8 puts Perl in `NOT_APPLICABLE` with its reason |
+
+The lesson the numbers carry, again: the site with the fewest callers (`extractor_fingerprint`, all
+tests) is the one the PHP track missed, and its failure was silent. Few callers is not low risk.
+
+---
+
+## 8. Generic work — built here or by the Kotlin track, reused by every later one
+
+The Kotlin roadmap's §9 lists six items; the two tracks share them rather than build them twice.
+**Rule:** whichever track reaches its generic-work phase first builds the shared item; the other
+rebases onto it and records "reused" in its evidence column. Perl adds two of its own.
+
+### 8.1 `scripts/roadmap-status.py --check` — the roadmap-currency gate *(shared)*
+Fails when a phase marked DONE has no Evidence or Finished date, or when a spec's Status line
+disagrees with its `SPEC-INDEX.md` row. Perl's §4 is the second table it reads; the
+`perl-codegen-roadmap.md` dependency line ("depends on support merged") is the first cross-spec
+check it enforces — a codegen phase cannot be Started before the support track's P2 is DONE.
+
+### 8.2 `scripts/validate-frontend.py <language> <git-url>` *(shared)*
+The real-repository smoke test as a script: shallow clone, `.git`-less copy, extract + verify +
+the `state` stack line, node kinds by language, top unresolved import targets, delete. Perl runs it
+on two repositories per phase (§10), so it takes a list of URLs, not one.
+
+### 8.3 `scripts/parse-census.py <grammar-module> <dir>` — **Perl builds this, in P1**
+What the Kotlin D1 decision was made from and the Perl D1 caveat depends on: parse every file of a
+language with its grammar and report files with an ERROR node, lines inside ERROR spans, and
+declaration counts by CST kind — the recall ceiling the grammar imposes before any extractor runs.
+Stdlib + `tree_sitter`; the grammar is passed by module name so every future track uses it for its
+D1 row. **Exit:** the classic Perl repository's number is in §4 P1's evidence, and
+`docs/reviewing/language-frontend-checklist.md` names the script as the D1 step.
+
+### 8.4 A language-track template *(shared)*
+`docs/specs/templates/language-track.md` — the skeleton this document, Kotlin's and PHP's share.
+
+### 8.5 A shared whole-repo name-resolution `finalize` helper — **Perl builds this, in P2**
+C# repoints guessed bases, PHP repoints guessed `new X()` targets, and Perl's D10 resolves bare calls
+through literal `@EXPORT` lists and `@ISA` chains — three copies of "once every declaration is
+known, fix the per-file guess". Lift the shape into `pkg/finalize_names.py` (declared-id index,
+repoint-or-drop policy per edge kind, an `external` placeholder factory) and make D10 the first
+front-end written against it; C# and PHP migrate when next touched. **Exit:** D10 is under 80 lines
+on top of the helper; the C# and PHP tests pass unchanged after migration.
+
+### 8.6 Client-side HTTP as a cross-language pass *(shared, Kotlin's P3 builds it)*
+Perl's `Mojo::UserAgent` / `HTTP::Tiny` / `LWP` calls become the third scanner once Kotlin's
+Retrofit generalises `python_client.py`; not in this track's phases, recorded so it is not lost.
+
+---
+
+## 9. Packaging
 
 - `tree-sitter-perl` 2.0.0: `language()` is the single export. **P1 step 1: confirm the parse in
   the project venv** (`uv run --frozen`), not only in the isolated probe used for D1.
@@ -212,7 +298,7 @@ Updated in the phase that makes each row true, in the same commit as the code;
 - One CST detail to verify in P1: 5.38 `field $x :param` parses as a `variable_declaration` with
   an `attrlist` — key on the `field` keyword token.
 
-## 8. Validation targets (ephemeral, docs-only names)
+## 10. Validation targets (ephemeral, docs-only names)
 
 Two poles, both public, shallow-cloned to a scratch dir, extracted on a `.git`-less copy, deleted
 after; names live in `docs/` only, never in `src/` or `tests/`:
@@ -228,7 +314,7 @@ after; names live in `docs/` only, never in `src/` or `tests/`:
 **Baseline to record before P1:** `pkg extract` on each yields 0 Perl nodes and the profiler
 reports no language.
 
-## 9. Out of scope — not Perl
+## 11. Out of scope — not Perl
 
 - **XS / C extensions** (`.xs`, `.c` under a Perl dist) — C, already covered by the C front-end.
 - **Extensionless scripts** (shebang-only `bin/` files) — a dispatcher change; measure demand.
@@ -236,7 +322,7 @@ reports no language.
 - **Embedded-SQL strings** in DBI calls — a cross-language pass, its own spec.
 - **Codegen and preflight** — the codegen track (D9).
 
-## 10. Risks and gotchas
+## 12. Risks and gotchas
 
 - **D2 is load-bearing.** Every id keys on it; changing it after P2 invalidates the corpus.
 - **Package scope is positional.** A sub emitted under the wrong package is a wrong id `pkg verify`
@@ -249,7 +335,7 @@ reports no language.
   lost — it is tracked on its branch from its first commit.
 - **Never commit `episteme/`.**
 
-## 11. Sequence
+## 13. Sequence
 
 ```
 0. Decide D1–D10 (this document)               — review; D2 first, it keys everything
@@ -257,6 +343,7 @@ reports no language.
 2. P2 corpus + CALLS → corpus 1.00 precision, exporter_default green, @EXPORT/@ISA pass
 3. P3 routes + typed receivers → Perl provider in the multi-repo joiner
 4. P4 DBIx::Class entities
-5. /review-pr, then one MR to develop
-6. open feat/perl-codegen — perl-codegen-roadmap.md
+5. P5 generic work → parse-census (P1 already), finalize helper (P2 already), the shared items not yet landed
+6. /review-pr, then one MR to develop
+7. open feat/perl-codegen — perl-codegen-roadmap.md
 ```

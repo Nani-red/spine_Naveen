@@ -59,6 +59,25 @@ commit as the work. DONE means the evidence column links a commit, a test, or a 
 | `sdlc/preflight.py` | the Perl branch of the preflight dispatcher (C6) |
 | `sdlc/feature_runner.py` | `SUPPORTED_LANGUAGES`, `_resolve_language`, the toolchain guard with a `FeatureRunError` hint naming `perl` and `prove` |
 
+### 2.1 Testing the phases with Spine itself
+
+Each phase ends with Spine's own surfaces, not only `prove`: `pkg_grounding` (MCP) on the
+generated module's landing site to record how many characters of PKG context the run used and which
+symbols it named; `blast_radius` on the generated sub after the run, which must list its new test as a
+caller; `sdlc_run_result` / the build document for the evidence cell; and `regression_gaps` on the
+brownfield repository before and after C-3, which must not grow. Before C-1 touches `sdlc/`,
+`blast_radius` on the symbols in §2.2 is re-run and the table refreshed.
+
+### 2.2 Blast radius — measured from the PKG
+
+At `d84e666` (this and the Kotlin track's base). `_resolve_language`: **4 callers** (`run_feature`,
+`autorun._require_plan`, two tests), 9 touches — the `auto` branch gains a Perl line, and `autorun`
+is the second production caller that must see it. To measure in C-1 step 0, with the command in the
+Kotlin roadmap §8: `resolve_layout`, `scaffold`, `make_test_runner` / the runner selection in
+`activities.py`, `SUPPORTED_LANGUAGES` readers in `cli/sdlc.py`, and `preflight.py`'s dispatcher.
+The PHP codegen merge (`fae8c30`) touched 38 files across `sdlc/`; its diff is the map of every site
+a language must reach, and the registry in §5.1 exists so the next language touches one.
+
 ---
 
 ## 3. Phases — the living table
@@ -68,9 +87,10 @@ commit as the work. DONE means the evidence column links a commit, a test, or a 
 | **C-1 Machinery** | §2 in full; unit tests: `test_scaffold_perl_*` (+ idempotency), `test_perl_toolchain_available` (monkeypatched `which`), layout detection, runner argv, the `FeatureRunError` hint; `tests/sdlc/test_perl_integration.py` gated on `perl_toolchain_available()` — scaffold → real `prove` **green and red** | ~3–4 d | integration test green and red against real `perl`/`prove`; `--language perl` validated; gate green | ⬜ | | | |
 | **C-2 Greenfield live-proven** | `sdlc feature --language perl` from a spec with a real model, `--safe`; `perl-conventions` selected; grounded on the Perl graph | ~1–2 d | `prove` green, independently re-run from a clean checkout; the run's build document names the grounding used | ⬜ | | | |
 | **C-3 Brownfield on the Mojolicious validation repo** | placement per C4 into an existing `lib/` tree; the owning `t/` targeted first, then the suite | ~2–3 d | `prove` green on the changed package **and** the whole suite, independently re-run; no package clause mismatch; grounding measured (chars of PKG context) | ⬜ | | | |
-| **C-4 Preflight + docs + MR** | C6; every row of §5; `/review-pr`; one MR to `develop` | ~1–2 d | preflight runs `perl -c` on a changed file and fails on a syntax error (tested); docs audit clean; verdict "mergeable" | ⬜ | | | |
+| **C-4 Generic work** (§5.1, §5.2) | the toolchain registry, built while adding Perl's row; the preflight dispatcher if the PHP track left an if-chain | ~1–2 d | `feature_runner`, `activities` and `preflight` select by one table; adding a language is one row + its classes; every existing language's codegen tests pass unchanged | ⬜ | | | |
+| **C-5 Preflight + docs + MR** | C6; every row of §6; `/review-pr`; one MR to `develop` | ~1–2 d | preflight runs `perl -c` on a changed file and fails on a syntax error (tested); docs audit clean; verdict "mergeable" | ⬜ | | | |
 
-**Rough total: ~7–11 days.** Delivery is one MR.
+**Rough total: ~8–12 days.** Delivery is one MR.
 
 ---
 
@@ -84,7 +104,36 @@ commit as the work. DONE means the evidence column links a commit, a test, or a 
   Hypothesis to confirm, the Go-style one: the Mojolicious suite is hermetic and green from a
   clean clone in under a minute, so the brownfield loop needs no environmental wall.
 
-## 5. User-facing documentation — updated in the phase that makes each row true
+## 5. Generic work — built here, reused by every later codegen track
+
+### 5.1 `sdlc/toolchains.py` — one registry instead of five if-chains *(Perl builds it, C-4)*
+Today a language's codegen is wired by `elif lang == "go"` branches in `feature_runner.py`
+(`_resolve_language`, the toolchain guard), `activities.py` (runner selection), `layout.py`,
+`scaffold.py`, `preflight.py` and `codegen.py`'s prompt maps — the PHP merge touched 38 files to add
+one language. A `Toolchain` record per language (`source_ext`, `layout`, `scaffold`, `environment`,
+`runner`, `available()`, `preflight`, prompt set, conventions skill id) in one table, with the
+call sites reading the table, makes the next language one row plus its classes. Perl's row is the
+first written against it; the existing languages migrate in the same phase, with their tests as the
+regression net. **Exit:** `grep -c 'lang == "' src/orchestrator/sdlc/*.py` drops to zero in the
+dispatch paths; `test_language_validation` proves an unknown language still exits 2.
+
+### 5.2 `make_preflight_runner(language)` *(if the PHP track did not already land it)*
+The Go roadmap's pre-existing gap: preflight was Python-only and skipped-as-pass elsewhere. If
+`preflight.py` after `fae8c30` dispatches by if-chain, it becomes a row in §5.1's registry; if it
+already dispatches by table, Perl adds `perl -c` to it and this item is "reused".
+
+### 5.3 The build-then-test runner template *(shared, exists)*
+`CTestRunner` → `GoTestRunner` → `PhpUnitTestRunner` → `ProveTestRunner` all have the shape
+"step 1 must pass, then step 2, early-return, `_clip`-ed output". Record it in the codegen section
+of `docs/reviewing/language-frontend-checklist.md` as the template with its four exit tests
+(green, red, missing toolchain hint, idempotent scaffold), so a runner PR is reviewed against it.
+
+### 5.4 Live-proof evidence format *(shared)*
+Every codegen track's "live-proven" claim carries the same four fields in its evidence cell:
+model, command, the independent re-run's command and result, and the grounding size. The Go 4.4
+false-green is the reason the second field is not optional.
+
+## 6. User-facing documentation — updated in the phase that makes each row true
 
 | Document | What must change | Phase |
 |---|---|---|
@@ -94,9 +143,10 @@ commit as the work. DONE means the evidence column links a commit, a test, or a 
 | `SETUP.md` | toolchain prerequisites | C-1 |
 | `CLI_REFERENCE.md` | `--language perl` in the `sdlc feature` reference | C-1 |
 | `docs/specs/STATE-OF-SPINE.md`, `SPEC-INDEX.md`, [perl-support-roadmap.md](perl-support-roadmap.md) D9 | status lines updated to the phase reached | every phase |
+| `docs/reviewing/language-frontend-checklist.md`, `CONTRIBUTING.md` | the codegen section: the toolchain registry row a new language adds, the runner template and its four exit tests (§5.1, §5.3) | C-4 |
 | `CHANGELOG.md` | one entry under Unreleased per phase | every phase |
 
-## 6. Risks and gotchas
+## 7. Risks and gotchas
 
 - **`cpanm` absent or offline** — best effort, logged, never a silent pass (C3).
 - **`@INC` and `-l`** — `prove -l` adds `lib/`; a repo with `blib/` or a custom `-I` in its
@@ -107,12 +157,13 @@ commit as the work. DONE means the evidence column links a commit, a test, or a 
   track does not run; the run says so and stops.
 - **Never commit `episteme/`;** the validation repository's name stays in `docs/`.
 
-## 7. Sequence
+## 8. Sequence
 
 ```
 depends on perl-support-roadmap.md merged (P1 + P2 at least)
 C-1 machinery        → prove green + red proven against real perl
 C-2 greenfield       → live-proven, independently re-run
 C-3 brownfield       → into the Mojolicious repo, owning t/ then the suite
-C-4 preflight + docs → /review-pr, then one MR to develop
+C-4 generic work     → the toolchain registry; every language one row
+C-5 preflight + docs → /review-pr, then one MR to develop
 ```
