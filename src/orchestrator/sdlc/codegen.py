@@ -799,7 +799,11 @@ _IMPLEMENT_SYSTEM_PHP = (
     "never replace them wholesale. Match existing namespaces and style; do not introduce "
     "namespaces into global legacy code. Without an autoloader, import using require_once "
     "__DIR__ . '/relative/path.php'. Use declare(strict_types=1) only for greenfield. "
-    "Every changed file must pass php -l on the target interpreter."
+    "Every changed file must pass php -l on the target interpreter. "
+    "Implement production code only: a separate author_tests phase writes the tests. "
+    "The pipeline already created the greenfield Composer/PHPUnit scaffold. Do not emit "
+    "composer.json, phpunit.xml, composer.lock or .gitignore unless the feature requires "
+    "a specific change, and then use anchored edits on the existing file."
 )
 _TESTS_SYSTEM_PHP = (
     "Write modern PHPUnit tests for the SPEC and CURRENT SOURCE FILES. "
@@ -809,7 +813,10 @@ _TESTS_SYSTEM_PHP = (
     "test* methods, and assertions for every acceptance criterion. Never use the obsolete "
     "PHPUnit_Framework_TestCase or require PHPUnit/Framework.php. Without Composer autoload, "
     "require_once __DIR__ . '/relative/path.php' for the class under test. Preserve configured "
-    "bootstrap. Do not modify the existing legacy suite or weaken assertions."
+    "bootstrap. Do not emit or edit composer.json, composer.lock, phpunit.xml or .gitignore "
+    "in this test-writing phase. Use plain test methods for cross-version compatibility; "
+    "PHPUnit 11 data providers require attributes, not @dataProvider comments. "
+    "Do not modify the existing legacy suite or weaken assertions."
 )
 _REFINE_SYSTEM_PHP = (
     "Fix a failing PHP lint or PHPUnit run using SPEC, CURRENT FILES and FAILURE OUTPUT. "

@@ -311,3 +311,14 @@ dotfiles; all now reach the judge.
 Replaying tickets also exposed an existing approval mismatch: the CLI renders
 measured run history into the plan, while revalidation omitted it. Revalidation
 now uses the same history, with a regression test.
+
+
+P3 episteme replay `3bd08673bd5b47c9` completed with **9,944 characters** of combined
+episteme and graph grounding, **three test iterations**, passing change-removal proof
+and semantic review. Independent PHP 7.4 / PHPUnit 9.6.36 replay passed **21 tests,
+36 assertions**. The fork PR now carries this replay's final two-file diff in commit
+`b109375`; one advisory long-line review finding remains in its generated test.
+
+P5: [Spine merge PR #350](https://github.com/synaptixs/spine/pull/350) is open against
+`develop`. Its aiemr episteme/plan job and real PHP runner tests passed in CI.
+The main quality job is still running.
