@@ -59,8 +59,6 @@ jobs:
   aiemr-plan:
     name: aiemr PHP plan (no model)
     runs-on: ubuntu-latest
-    env:
-      ORCHESTRATOR_MEMORY_BANK_DIR: ${{ runner.temp }}/aiemr-episteme
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -74,6 +72,8 @@ jobs:
       - name: Install checkout under test
         working-directory: spine
         run: uv sync --frozen --extra dev --extra languages
+      - name: Configure episteme location
+        run: echo "ORCHESTRATOR_MEMORY_BANK_DIR=$RUNNER_TEMP/aiemr-episteme" >> "$GITHUB_ENV"
       - name: Build focused aiemr episteme
         run: uv run --project spine orchestrator understand aiemr/library/classes
       - name: Plan the PHP compatibility ticket
@@ -94,8 +94,6 @@ jobs:
 
   aiemr-build:
     name: aiemr PHP build (dispatch only)
-    env:
-      ORCHESTRATOR_MEMORY_BANK_DIR: ${{ runner.temp }}/aiemr-episteme
     if: github.event_name == 'workflow_dispatch'
     needs: aiemr-plan
     environment: spine-build
@@ -119,6 +117,8 @@ jobs:
       - name: Install checkout under test
         working-directory: spine
         run: uv sync --frozen --extra languages
+      - name: Configure episteme location
+        run: echo "ORCHESTRATOR_MEMORY_BANK_DIR=$RUNNER_TEMP/aiemr-episteme" >> "$GITHUB_ENV"
       - name: Build focused aiemr episteme
         run: uv run --project spine orchestrator understand aiemr/library/classes
       - name: Prepare and record the environment-approved plan
