@@ -3,7 +3,7 @@
 
 [← Episteme](../README.md) · [Architecture](../architecture.md)
 
-**`orchestrator.runtime`** is one of 54 areas in this repo, in the `orchestrator` zone. It holds 20 modules — 52 types and 45 functions. It sits in the middle of the graph: 5 areas below it, 4 above. Changes here can reach both ways.
+**`orchestrator.runtime`** is one of 55 areas in this repo, in the `orchestrator` zone. It holds 20 modules — 52 types and 45 functions. It sits in the middle of the graph: 5 areas below it, 4 above. Changes here can reach both ways.
 
 ```mermaid
 flowchart LR
@@ -25,7 +25,7 @@ flowchart LR
   n0 --> n6
 ```
 
-**In the diagram:** **`orchestrator.runtime`** (this area) · [`orchestrator.ir`](orchestrator.ir.md) · [`orchestrator.registry`](orchestrator.registry.md) · [`orchestrator.sdlc`](orchestrator.sdlc.md) · [`orchestrator.temporal`](orchestrator.temporal.md) · [`orchestrator.core`](orchestrator.core.md) · `orchestrator.storage`
+**In the diagram:** **`orchestrator.runtime`** (this area) · `orchestrator.ir` · [`orchestrator.registry`](orchestrator.registry.md) · [`orchestrator.sdlc`](orchestrator.sdlc.md) · [`orchestrator.temporal`](orchestrator.temporal.md) · [`orchestrator.core`](orchestrator.core.md) · `orchestrator.storage`
 
 ## Modules
 
@@ -52,8 +52,8 @@ flowchart LR
 
 ## Depends on
 
-[`orchestrator.core`](orchestrator.core.md), [`orchestrator.ir`](orchestrator.ir.md), [`orchestrator.registry`](orchestrator.registry.md), [`orchestrator.sdlc`](orchestrator.sdlc.md), `orchestrator.storage`
+[`orchestrator.core`](orchestrator.core.md), `orchestrator.ir`, [`orchestrator.registry`](orchestrator.registry.md), [`orchestrator.sdlc`](orchestrator.sdlc.md), `orchestrator.storage`
 
 ## Depended on by
 
-[`orchestrator.ir`](orchestrator.ir.md), [`orchestrator.registry`](orchestrator.registry.md), [`orchestrator.sdlc`](orchestrator.sdlc.md), [`orchestrator.temporal`](orchestrator.temporal.md)
+`orchestrator.ir`, [`orchestrator.registry`](orchestrator.registry.md), [`orchestrator.sdlc`](orchestrator.sdlc.md), [`orchestrator.temporal`](orchestrator.temporal.md)
