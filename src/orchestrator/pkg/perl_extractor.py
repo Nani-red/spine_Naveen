@@ -1,7 +1,4 @@
-"""Perl front-end for the PKG extractor (10th language, P1 — comprehension only).
-
-CALLS resolution is P2 (perl-support-roadmap.md §3.2); this module emits nothing but
-``Module``/``Type``/``Function``/``Field`` and ``IMPORTS``/``CONTAINS``/``IMPLEMENTS``.
+"""Perl front-end for the PKG extractor (10th language; P1 comprehension + P2 CALLS).
 
 Parsing is via tree-sitter (``tree-sitter-perl``), an OPTIONAL dependency — install the
 ``perl`` extra. The import is lazy so the base install stays stdlib-only.
@@ -35,11 +32,42 @@ pragma and skipped. ``require Foo::Bar;`` (bareword) resolves like a ``use``;
 ``import_link.py``'s path-suffix matcher (the C rule) — a computed require argument yields
 nothing.
 
-**No ``finalize()``:** unlike PHP's same-namespace ``extends Bar`` guess (which needs a
-deferred repoint because a bare name could resolve either way), every Perl D5/D4 target here
-is already a literal, fully-qualified name — ``_emit_implements`` adds the external
+**No ``finalize()`` for D5/D4:** unlike PHP's same-namespace ``extends Bar`` guess (which
+needs a deferred repoint because a bare name could resolve either way), every Perl D5/D4
+target is already a literal, fully-qualified name — ``_emit_implements`` adds the external
 placeholder node eagerly, and ``FactBatch.add_node``'s own dedup upgrades it to grounded if
-the target is declared elsewhere in the repo. There is no guess to repoint.
+the target is declared elsewhere in the repo. ``finalize()`` exists only for P2's ``CALLS``
+pass (below), which genuinely needs whole-repo knowledge.
+
+**P2 — CALLS (§3.2), precision-first.** One instance of ``PerlExtractor`` is used for every
+file in a repo (``RepoCodeExtractor`` creates it once — see ``extractor.py``), so instance
+state accumulates across ``extract()`` calls exactly like ``PythonExtractor``'s
+``_routes``/``_orm``/``_calls`` — and ``finalize(batch)`` runs once, after every file is
+known, which is what makes a same-package call resolvable regardless of file order. Six call
+shapes, each resolved only when *verified*, never guessed:
+
+1. ``$self->m()`` / ``$class->m()`` / ``__PACKAGE__->m`` / ``shift->m`` → a sibling sub or
+   ``has`` field of the enclosing package.
+2. ``$self->SUPER::m()`` → the first parent D5 resolved (``owner.bases[0]``); skipped when
+   the package has no resolved base.
+3. ``Shop::Log->new`` (a qualified bareword receiver) → the sub when the target package
+   declares it, else the ``Type`` itself (instantiation is a call to the type).
+4. ``Shop::Util::fmt(...)`` (a qualified function call) → the exact id, a placeholder if
+   third-party — no guessing needed, the qualification *is* the verification.
+5. bare ``f()`` → same-package sub, else an explicit ``use X qw(... f ...)`` import, else
+   (D10) a literal ``@EXPORT`` of a first-party package pulled in by a bare ``use X;`` with
+   no list, else an ``@ISA``-inherited first-party sub — **first match wins, priority order
+   matters**, and D10's two steps go through ``finalize_names.resolve_or_drop`` so a
+   candidate that never grounds is dropped, never invented as an external placeholder (a
+   method-shaped target has no backstop — see the front-end checklist).
+6. Never emitted: ``&f``, ``&$code``, ``$self->$m()``, ``$obj->can('m')->()``, ``goto &f``,
+   string ``eval``, ``AUTOLOAD``. None of these produce a ``method``/``function``-typed
+   child in the grammar the way a static name does, so the scanner excludes them by
+   construction rather than by a negative-case check — see ``_scan_calls_in``.
+7. ``$obj->m()`` where ``$obj`` holds a typed/literal-constructor receiver (``my $log =
+   Shop::Log->new; $log->write``) is **P3**'s typed-receiver rule, not P2's — deliberately
+   unresolved here (the ``instance_calls`` corpus case is built to catch a P2 regression
+   that resolves it early).
 
 **Windows note (not a repo defect):** ``tree_sitter_perl.language()`` returns a bare Python
 ``int`` (``PyLong_FromVoidPtr``), unlike grammars that return a ``PyCapsule``. tree-sitter's
@@ -51,12 +79,13 @@ this is a local-Windows-development wrinkle in the upstream binding, not in this
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from orchestrator.pkg.extractor import rel_module_name
 from orchestrator.pkg.facts import Edge, EdgeKind, FactBatch, Node, NodeKind, Provenance
+from orchestrator.pkg.finalize_names import resolve_or_drop
 
 if TYPE_CHECKING:
     from tree_sitter import Node as TSNode
@@ -64,6 +93,8 @@ if TYPE_CHECKING:
 # `use parent`/`use base`/`use Mojo::Base` are inheritance spellings (D5), never a plain
 # IMPORTS edge — the module named here doesn't get *used*, it sets @ISA.
 _PARENT_LIKE_USE = frozenset({"parent", "base", "Mojo::Base"})
+# Conventional invocant names — the roadmap's own row 1 enumeration, not "any variable".
+_INVOCANT_NAMES = frozenset({"self", "class"})
 
 
 def _to_dotted(name: str) -> str:
@@ -140,9 +171,10 @@ def _string_or_wordlist_targets(node: TSNode | None, source: bytes) -> list[str]
     return []
 
 
-def _literal_isa_targets(rhs: TSNode | None, source: bytes) -> list[str]:
-    """``our @ISA = (...)``'s RHS — ``None``/anything non-literal anywhere means "computed",
-    so the whole assignment yields nothing (D5), unlike the mixed-list tolerance above.
+def _literal_array_assignment_targets(rhs: TSNode | None, source: bytes) -> list[str]:
+    """``our @ISA = (...)`` / ``our @EXPORT = (...)``'s RHS — ``None``/anything non-literal
+    anywhere means "computed", so the whole assignment yields nothing (D5), unlike the
+    mixed-list tolerance above.
     """
     if rhs is None:
         return []
@@ -155,11 +187,34 @@ def _literal_isa_targets(rhs: TSNode | None, source: bytes) -> list[str]:
             if text is None:
                 return []
             out.append(text)
+        elif n.type == "quoted_word_list":
+            content = _string_content_of(n, source)
+            if content is None:
+                return []
+            out.extend(content.split())
         elif n.type in ("parenthesized_expression", "list_expression"):
             stack.extend(n.named_children)
         else:
             return []  # a variable, a call, anything computed — the whole thing is unusable
     return out
+
+
+def _literal_push_targets(args: TSNode | None, array_name: str, source: bytes) -> list[str] | None:
+    """``push @ISA, 'X', 'Y'`` / ``push @EXPORT, 'f'`` — ``None`` when this isn't that shape
+    or an element is computed (D5-style all-or-nothing); ``[]`` is a valid "no targets".
+    """
+    if args is None or args.type != "list_expression":
+        return None
+    children = args.named_children
+    if not children or children[0].type != "array" or _varname_of(children[0], source) != array_name:
+        return None
+    targets: list[str] = []
+    for c in children[1:]:
+        text = _plain_string_literal_text(c, source) if c.type == "string_literal" else None
+        if text is None:
+            return None  # a computed element anywhere means the whole push is unusable
+        targets.append(text)
+    return targets
 
 
 def _has_field_names(args: TSNode | None, source: bytes) -> list[str]:
@@ -183,12 +238,45 @@ def _has_field_names(args: TSNode | None, source: bytes) -> list[str]:
 
 @dataclass
 class _Ctx:
-    """The package in scope. Mutated in place for statement-form ``package X;`` so the rest
-    of the *same* sibling loop sees the new owner; block-form gets its own fresh ``_Ctx``.
+    """The package in scope, plus this *file*'s bare-call resolution inputs (P2). Mutated in
+    place for statement-form ``package X;`` so the rest of the same sibling loop sees the new
+    owner; block-form gets its own fresh ``_Ctx`` — but ``use_func_map``/``bare_use_targets``
+    are shared across the whole file (a Perl ``use`` is lexically file-scoped from that point
+    on, not package-scoped), so those two are passed down, never copied.
     """
 
     package_id: str | None
     package_name: str | None
+    use_func_map: dict[str, str]
+    bare_use_targets: list[str]
+
+
+@dataclass
+class _TypeRec:
+    """Everything P2's CALLS pass needs about one package, built during the P1 walk and
+    read back in ``finalize()`` once every file's walk is done.
+    """
+
+    type_id: str
+    methods: dict[str, str] = field(default_factory=dict)
+    fields: dict[str, str] = field(default_factory=dict)
+    bases: list[str] = field(default_factory=list)
+    exports: set[str] = field(default_factory=set)
+
+
+@dataclass
+class _SubRec:
+    """One sub/method body, queued in P1's walk and scanned for CALLS in ``finalize()`` —
+    the two-pass split PHP/C# use, at repo scope instead of file scope, since a call's
+    target may live in a file that hasn't been walked yet.
+    """
+
+    caller_id: str
+    body: TSNode
+    owner_type_id: str | None  # None => implicit main / free sub, no $self/SUPER shapes
+    use_func_map: dict[str, str]
+    bare_use_targets: list[str]
+    rel: str
 
 
 class PerlExtractor:
@@ -196,6 +284,12 @@ class PerlExtractor:
 
     language: str = "perl"
     suffixes: tuple[str, ...] = (".pl", ".pm", ".t")
+
+    def __init__(self) -> None:
+        # Accumulate across every file in the repo — one instance per RepoCodeExtractor run
+        # (see the module docstring's P2 section).
+        self._types: dict[str, _TypeRec] = {}
+        self._subs: list[_SubRec] = []
 
     def module_name(self, path: Path, root: Path) -> str:
         # D2: always path-keyed — a Perl file has no single reliable namespace of its own
@@ -209,8 +303,14 @@ class PerlExtractor:
         batch = FactBatch()
         module_id = f"perl:{module or rel}"
         batch.add_node(Node(module_id, NodeKind.MODULE, module or rel, "perl", Provenance(rel, 1)))
-        ctx = _Ctx(package_id=None, package_name=None)
+        ctx = _Ctx(package_id=None, package_name=None, use_func_map={}, bare_use_targets=[])
         self._walk_siblings(tree.root_node.named_children, module_id, ctx, source, rel, batch)
+        return batch
+
+    def finalize(self, batch: FactBatch) -> FactBatch:
+        """P2: every file is walked by now, so every sub body can be scanned for CALLS."""
+        for sub in self._subs:
+            self._scan_calls_in(sub, batch)
         return batch
 
     # --- top-level / block-body dispatch --------------------------------------
@@ -239,7 +339,7 @@ class PerlExtractor:
                     self._handle_statement_expr(child, module_id, ctx, source, rel, batch)
             elif t in ("subroutine_declaration_statement", "method_declaration_statement"):
                 self._handle_sub(node, module_id, ctx, source, rel, batch)
-            # Control flow / other statements are out of scope for P1 comprehension.
+            # Control flow / other statements are out of scope for this front-end.
 
     def _handle_statement_expr(
         self, expr: TSNode, module_id: str, ctx: _Ctx, source: bytes, rel: str, batch: FactBatch
@@ -278,13 +378,19 @@ class PerlExtractor:
         end_line = node.end_point[0] + 1
         batch.add_node(Node(type_id, NodeKind.TYPE, name, "perl", Provenance(rel, line, end_line)))
         batch.add_edge(Edge(module_id, type_id, EdgeKind.CONTAINS, Provenance(rel, line)))
+        rec = self._types.setdefault(type_id, _TypeRec(type_id=type_id))
 
         if is_class:
-            self._handle_class_isa_attribute(node, type_id, source, rel, line, batch)
+            self._handle_class_isa_attribute(node, type_id, rec, source, rel, line, batch)
 
         block = _first_named_of_type(node, "block")
         if block is not None:
-            child_ctx = _Ctx(package_id=type_id, package_name=name)
+            child_ctx = _Ctx(
+                package_id=type_id,
+                package_name=name,
+                use_func_map=ctx.use_func_map,
+                bare_use_targets=ctx.bare_use_targets,
+            )
             self._walk_siblings(block.named_children, module_id, child_ctx, source, rel, batch)
         else:
             # Statement form: scope runs to the next package/class statement or EOF — mutate
@@ -293,7 +399,14 @@ class PerlExtractor:
             ctx.package_name = name
 
     def _handle_class_isa_attribute(
-        self, node: TSNode, type_id: str, source: bytes, rel: str, line: int, batch: FactBatch
+        self,
+        node: TSNode,
+        type_id: str,
+        rec: _TypeRec,
+        source: bytes,
+        rel: str,
+        line: int,
+        batch: FactBatch,
     ) -> None:
         """5.38 ``class Foo :isa(Bar)`` — D5's fifth spelling."""
         attrlist = _first_named_of_type(node, "attrlist")
@@ -305,7 +418,7 @@ class PerlExtractor:
             aname = _first_named_of_type(attr, "attribute_name")
             aval = _first_named_of_type(attr, "attribute_value")
             if aname is not None and aval is not None and _text(aname, source) == "isa":
-                self._emit_implements(type_id, _text(aval, source), rel, line, batch)
+                self._emit_implements(type_id, rec, _text(aval, source), rel, line, batch)
 
     # --- use / require -----------------------------------------------------
 
@@ -322,8 +435,9 @@ class PerlExtractor:
         if target in _PARENT_LIKE_USE:
             if ctx.package_id is None:
                 return
+            rec = self._types.setdefault(ctx.package_id, _TypeRec(type_id=ctx.package_id))
             for base in _string_or_wordlist_targets(args, source):
-                self._emit_implements(ctx.package_id, base, rel, line, batch)
+                self._emit_implements(ctx.package_id, rec, base, rel, line, batch)
             return
         if target[:1].islower():
             return  # a pragma (strict, warnings, utf8, feature, lib, constant, …)
@@ -334,6 +448,16 @@ class PerlExtractor:
         tid = f"perl:{_to_dotted(target)}"
         batch.add_node(Node(tid, NodeKind.TYPE, target, "perl", external=True))
         batch.add_edge(Edge(module_id, tid, EdgeKind.IMPORTS, Provenance(rel, line)))
+
+        # P2 row 5: an explicit `use X qw(f g)` names function imports directly (verified,
+        # never a guess — the source itself asserts the import). A bare `use X;` (no args at
+        # all) is D10's default-@EXPORT candidate instead; anything else (a single non-list
+        # arg, e.g. a version number) is neither and is left alone.
+        if args is None:
+            ctx.bare_use_targets.append(tid)
+        elif args.type == "quoted_word_list":
+            for fname in _string_or_wordlist_targets(args, source):
+                ctx.use_func_map[fname] = f"{tid}.{fname}"
 
     def _handle_require(
         self, node: TSNode, module_id: str, source: bytes, rel: str, batch: FactBatch
@@ -367,34 +491,34 @@ class PerlExtractor:
         line = expr.start_point[0] + 1
 
         if fn_text == "push":
-            self._handle_push_isa(args, ctx, rel, line, source, batch)
+            self._handle_push_isa_or_export(args, ctx, rel, line, source, batch)
         elif fn_text in ("extends", "with"):
             if ctx.package_id is None:
                 return
+            rec = self._types.setdefault(ctx.package_id, _TypeRec(type_id=ctx.package_id))
             for target in _string_or_wordlist_targets(args, source):
-                self._emit_implements(ctx.package_id, target, rel, line, batch)
+                self._emit_implements(ctx.package_id, rec, target, rel, line, batch)
         elif fn_text == "has":
             if ctx.package_id is None:
                 return
             for name in _has_field_names(args, source):
                 self._emit_field(ctx.package_id, name, rel, line, batch)
 
-    def _handle_push_isa(
+    def _handle_push_isa_or_export(
         self, args: TSNode | None, ctx: _Ctx, rel: str, line: int, source: bytes, batch: FactBatch
     ) -> None:
-        if ctx.package_id is None or args is None or args.type != "list_expression":
+        if ctx.package_id is None:
             return
-        children = args.named_children
-        if not children or children[0].type != "array" or _varname_of(children[0], source) != "ISA":
+        isa_targets = _literal_push_targets(args, "ISA", source)
+        if isa_targets is not None:
+            rec = self._types.setdefault(ctx.package_id, _TypeRec(type_id=ctx.package_id))
+            for t in isa_targets:
+                self._emit_implements(ctx.package_id, rec, t, rel, line, batch)
             return
-        targets: list[str] = []
-        for c in children[1:]:
-            text = _plain_string_literal_text(c, source) if c.type == "string_literal" else None
-            if text is None:
-                return  # a computed element anywhere means the whole push is unusable (D5)
-            targets.append(text)
-        for t in targets:
-            self._emit_implements(ctx.package_id, t, rel, line, batch)
+        export_targets = _literal_push_targets(args, "EXPORT", source)
+        if export_targets is not None:
+            rec = self._types.setdefault(ctx.package_id, _TypeRec(type_id=ctx.package_id))
+            rec.exports.update(export_targets)
 
     def _handle_assignment(self, expr: TSNode, ctx: _Ctx, source: bytes, rel: str, batch: FactBatch) -> None:
         children = expr.named_children
@@ -408,12 +532,18 @@ class PerlExtractor:
         if keyword != "our" or ctx.package_id is None:
             return
         arr = _first_named_of_type(lhs, "array")
-        if arr is None or _varname_of(arr, source) != "ISA":
+        arr_name = _varname_of(arr, source) if arr is not None else None
+        if arr_name not in ("ISA", "EXPORT"):
             return
         rhs = children[1] if len(children) > 1 else None
         line = expr.start_point[0] + 1
-        for target in _literal_isa_targets(rhs, source):
-            self._emit_implements(ctx.package_id, target, rel, line, batch)
+        targets = _literal_array_assignment_targets(rhs, source)
+        rec = self._types.setdefault(ctx.package_id, _TypeRec(type_id=ctx.package_id))
+        if arr_name == "ISA":
+            for target in targets:
+                self._emit_implements(ctx.package_id, rec, target, rel, line, batch)
+        else:
+            rec.exports.update(targets)
 
     def _maybe_field_decl(self, decl: TSNode, ctx: _Ctx, source: bytes, rel: str, batch: FactBatch) -> None:
         """5.38 ``field $x :param;`` / ``field $y :param = 0;`` (D6)."""
@@ -458,25 +588,175 @@ class PerlExtractor:
         fid = f"{owner_id}.{name}"
         batch.add_node(Node(fid, NodeKind.FUNCTION, name, "perl", Provenance(rel, line, end_line)))
         batch.add_edge(Edge(owner_id, fid, EdgeKind.CONTAINS, Provenance(rel, line)))
+        if ctx.package_id is not None:
+            rec = self._types.setdefault(ctx.package_id, _TypeRec(type_id=ctx.package_id))
+            rec.methods[name] = fid
+
+        body = _first_named_of_type(node, "block")
+        if body is not None:
+            self._subs.append(
+                _SubRec(
+                    caller_id=fid,
+                    body=body,
+                    owner_type_id=ctx.package_id,
+                    use_func_map=ctx.use_func_map,
+                    bare_use_targets=ctx.bare_use_targets,
+                    rel=rel,
+                )
+            )
+
+    # --- P2: CALLS -------------------------------------------------------------
+
+    def _scan_calls_in(self, sub: _SubRec, batch: FactBatch) -> None:
+        owner = self._types.get(sub.owner_type_id) if sub.owner_type_id else None
+        stack = list(sub.body.named_children)
+        while stack:
+            n = stack.pop()
+            if n.type == "method_call_expression":
+                self._handle_method_call(n, sub, owner, batch)
+            elif n.type == "function_call_expression":
+                self._handle_function_call(n, sub, owner, batch)
+            # Descend regardless — a call can nest inside another call's arguments, and
+            # method_call_expression's own children include the receiver/args to re-walk.
+            stack.extend(n.named_children)
+
+    def _handle_method_call(
+        self, expr: TSNode, sub: _SubRec, owner: _TypeRec | None, batch: FactBatch
+    ) -> None:
+        children = expr.named_children
+        if not children:
+            return
+        receiver = children[0]
+        method_node = _first_named_of_type(expr, "method")
+        if method_node is None:
+            return  # a dynamic method (`$self->$m()`) has no `method`-typed child — excluded
+        line = expr.start_point[0] + 1
+        mtext = _bytes_text(method_node)
+
+        if mtext.startswith("SUPER::"):
+            if owner is None or not owner.bases:
+                return  # row 2: skip when unresolved
+            target = f"{owner.bases[0]}.{mtext[len('SUPER::') :]}"
+            batch.add_edge(Edge(sub.caller_id, target, EdgeKind.CALLS, Provenance(sub.rel, line)))
+            return
+
+        if "::" in mtext:
+            return  # an unexpected qualified method shape — never seen in practice, skip
+
+        receiver_varname = _bytes_text(_first_named_of_type(receiver, "varname") or receiver)
+        if receiver.type == "scalar" and receiver_varname in _INVOCANT_NAMES:
+            self._resolve_sibling_or_field(sub, owner, mtext, line, batch)
+            return
+        if receiver.type == "func0op_call_expression" and _bytes_text(receiver) == "__PACKAGE__":
+            self._resolve_sibling_or_field(sub, owner, mtext, line, batch)
+            return
+        if receiver.type == "func1op_call_expression" and _bytes_text(receiver) == "shift":
+            self._resolve_sibling_or_field(sub, owner, mtext, line, batch)
+            return
+        receiver_text = _bytes_text(receiver)
+        if receiver.type == "bareword" and "::" in receiver_text:
+            # Row 3: `Shop::Log->new` — a qualified bareword receiver.
+            target_type_id = f"perl:{_to_dotted(receiver_text)}"
+            target_rec = self._types.get(target_type_id)
+            prov = Provenance(sub.rel, line)
+            if target_rec is not None and mtext in target_rec.methods:
+                batch.add_edge(Edge(sub.caller_id, target_rec.methods[mtext], EdgeKind.CALLS, prov))
+            else:
+                batch.add_node(Node(target_type_id, NodeKind.TYPE, receiver_text, "perl", external=True))
+                batch.add_edge(Edge(sub.caller_id, target_type_id, EdgeKind.CALLS, prov))
+        # Any other receiver shape (a plain variable, a chained call, …) is P3's
+        # typed-receiver territory or unresolvable — never guessed here.
+
+    def _resolve_sibling_or_field(
+        self, sub: _SubRec, owner: _TypeRec | None, name: str, line: int, batch: FactBatch
+    ) -> None:
+        if owner is None:
+            return
+        target = owner.methods.get(name) or owner.fields.get(name)
+        if target is not None:
+            batch.add_edge(Edge(sub.caller_id, target, EdgeKind.CALLS, Provenance(sub.rel, line)))
+
+    def _handle_function_call(
+        self, expr: TSNode, sub: _SubRec, owner: _TypeRec | None, batch: FactBatch
+    ) -> None:
+        fn_node = _first_named_of_type(expr, "function")
+        if fn_node is None:
+            return
+        fn_text = _bytes_text(fn_node)
+        line = expr.start_point[0] + 1
+
+        if "::" in fn_text:
+            # Row 4: `Shop::Util::fmt(...)` — the qualification is the verification.
+            pkg, _, func = fn_text.rpartition("::")
+            target = f"perl:{_to_dotted(pkg)}.{func}"
+            batch.add_node(Node(target, NodeKind.FUNCTION, func, "perl", external=True))
+            batch.add_edge(Edge(sub.caller_id, target, EdgeKind.CALLS, Provenance(sub.rel, line)))
+            return
+
+        # Row 5: bare f() — same-package sub, else explicit `use X qw(f)`, else D10.
+        if owner is not None and fn_text in owner.methods:
+            batch.add_edge(
+                Edge(sub.caller_id, owner.methods[fn_text], EdgeKind.CALLS, Provenance(sub.rel, line))
+            )
+            return
+        if fn_text in sub.use_func_map:
+            target = sub.use_func_map[fn_text]
+            batch.add_node(Node(target, NodeKind.FUNCTION, fn_text, "perl", external=True))
+            batch.add_edge(Edge(sub.caller_id, target, EdgeKind.CALLS, Provenance(sub.rel, line)))
+            return
+
+        # D10, first sub-step: a literal `@EXPORT` of a first-party package pulled in by a
+        # bare `use X;` with no list. Ambiguous (2+ candidates) is never guessed between.
+        export_candidates = [
+            f"{tid}.{fn_text}"
+            for tid in sub.bare_use_targets
+            if fn_text in self._types.get(tid, _TypeRec(type_id=tid)).exports
+            and fn_text in self._types.get(tid, _TypeRec(type_id=tid)).methods
+        ]
+        if len(export_candidates) == 1 and resolve_or_drop(
+            batch, sub.caller_id, export_candidates, EdgeKind.CALLS, Provenance(sub.rel, line)
+        ):
+            return
+
+        # D10, second sub-step: an @ISA-inherited first-party sub — the enclosing package's
+        # own (direct) bases, in D5 declaration order.
+        if owner is not None and owner.bases:
+            base_candidates = [f"{b}.{fn_text}" for b in owner.bases]
+            resolve_or_drop(batch, sub.caller_id, base_candidates, EdgeKind.CALLS, Provenance(sub.rel, line))
+        # Otherwise: skip. Never a guess.
 
     # --- shared emitters -------------------------------------------------------
 
     @staticmethod
-    def _emit_implements(owner_id: str, target_name: str, rel: str, line: int, batch: FactBatch) -> None:
+    def _emit_implements(
+        owner_id: str, rec: _TypeRec, target_name: str, rel: str, line: int, batch: FactBatch
+    ) -> None:
         if not target_name:
             return
         tid = f"perl:{_to_dotted(target_name)}"
         batch.add_node(Node(tid, NodeKind.TYPE, target_name, "perl", external=True))
         batch.add_edge(Edge(owner_id, tid, EdgeKind.IMPLEMENTS, Provenance(rel, line)))
+        rec.bases.append(tid)
 
-    @staticmethod
-    def _emit_field(owner_id: str, name: str, rel: str, line: int, batch: FactBatch) -> None:
+    def _emit_field(self, owner_id: str, name: str, rel: str, line: int, batch: FactBatch) -> None:
         clean = _strip_sigil(name)
         if not clean:
             return
         fid = f"{owner_id}.{clean}"
         batch.add_node(Node(fid, NodeKind.FIELD, clean, "perl", Provenance(rel, line)))
         batch.add_edge(Edge(owner_id, fid, EdgeKind.CONTAINS, Provenance(rel, line)))
+        rec = self._types.setdefault(owner_id, _TypeRec(type_id=owner_id))
+        rec.fields[clean] = fid
+
+
+def _bytes_text(node: TSNode | None) -> str:
+    """Like ``_text``, but for the P2 scan where the source bytes aren't threaded through —
+    tree-sitter nodes carry their own ``.text`` once parsed, so no separate ``source`` arg
+    is needed here.
+    """
+    if node is None:
+        return ""
+    return node.text.decode("utf-8", "replace").strip() if node.text is not None else ""
 
 
 def _perl_language(raw: Any) -> Any:
