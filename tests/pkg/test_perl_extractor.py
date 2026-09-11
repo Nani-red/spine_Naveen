@@ -88,6 +88,26 @@ def test_subs_are_functions_owned_by_the_package_in_scope(tmp_path: Path) -> Non
     assert ("perl:Shop.Cart.Sub", "perl:Shop.Cart.Sub.nested_sub") in contains
 
 
+def test_fully_qualified_sub_declares_into_that_package_not_the_current_one(tmp_path: Path) -> None:
+    """`sub Shop::Elsewhere::baz {}` declares into `Shop::Elsewhere` regardless of the
+    lexically-current package (valid Perl — no `package` block needed) — and the id
+    stays dotted (D3), never `::`-embedded. Nothing pinned this before: reverting the
+    B5 fix in `_handle_sub` left every other test in this file green."""
+    batch, _ = _facts(
+        tmp_path,
+        src="package Shop::Qual;\nsub Shop::Elsewhere::baz { 1 }\nsub main::top { 1 }\nsub normal { 1 }\n1;\n",
+        name="Qual.pm",
+    )
+    ids = {n.id for n in batch.nodes}
+    assert "perl:Shop.Elsewhere.baz" in ids
+    assert "perl:main.top" in ids
+    assert "perl:Shop.Qual.normal" in ids
+    assert not [i for i in ids if "::" in i]
+    contains = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CONTAINS}
+    assert ("perl:Shop.Elsewhere", "perl:Shop.Elsewhere.baz") in contains
+    assert ("perl:Shop.Qual", "perl:Shop.Qual.normal") in contains
+
+
 def test_implicit_main_keys_subs_on_the_file(tmp_path: Path) -> None:
     src = "sub usage {\n    return 1;\n}\n"
     batch, module = _facts(tmp_path, src=src, name="bin/report.pl")
@@ -197,6 +217,41 @@ def test_extends_and_with_super_resolves_the_real_parent_not_the_role(tmp_path: 
     calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
     assert ("perl:Shop.Cart.total", "perl:Shop.Base.helper") in calls
     assert ("perl:Shop.Cart.total", "perl:Shop.Role.Loggable.helper") not in calls
+
+
+def test_super_resolves_the_parent_that_declares_the_method(tmp_path: Path) -> None:
+    """Real bug found in review: `owner.bases[0]` always won, even when a *later*
+    parent in `use parent qw(A B)` is the one that actually declares the method.
+    Perl's default MRO is depth-first, left to right across `@ISA` — the first parent
+    that *declares* the method wins, not simply the first parent."""
+    files = {
+        "A.pm": "package Shop::A;\nsub ameth { return 1; }\n",
+        "B.pm": "package Shop::B;\nsub bmeth { return 2; }\n",
+        "C.pm": (
+            "package Shop::C;\nuse parent qw(Shop::A Shop::B);\n"
+            "sub go { my $s = shift; return $s->SUPER::bmeth(); }\n"
+        ),
+    }
+    batch = _repo_facts(tmp_path, files)
+    calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
+    assert ("perl:Shop.C.go", "perl:Shop.B.bmeth") in calls
+    assert ("perl:Shop.C.go", "perl:Shop.A") not in calls
+
+
+def test_super_with_several_parents_and_none_declaring_is_skipped(tmp_path: Path) -> None:
+    """Two or more parents and neither declares the method: the method is inherited
+    further up one of the chains, and which chain is not readable from this repo —
+    skip rather than name a parent the call may never reach."""
+    files = {
+        "A.pm": "package Shop::A;\nsub ameth { return 1; }\n",
+        "B.pm": "package Shop::B;\nsub bmeth { return 2; }\n",
+        "C.pm": (
+            "package Shop::C;\nuse parent qw(Shop::A Shop::B);\n"
+            "sub go { my $s = shift; return $s->SUPER::missing(); }\n"
+        ),
+    }
+    batch = _repo_facts(tmp_path, files)
+    assert not any(e.kind is EdgeKind.CALLS and e.src == "perl:Shop.C.go" for e in batch.edges)
 
 
 def test_isa_spellings_literal_only(tmp_path: Path) -> None:

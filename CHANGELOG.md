@@ -129,6 +129,16 @@ All notable changes to this project are documented here. Format loosely follows
   computed once per pass; and a unit test claiming to exercise the `require`-path-join
   end-to-end placed the requiring script under `bin/` (walker-ignored), passing by
   accident for a reason unrelated to what it claimed.
+- **`$self->SUPER::m()` always resolved through the first parent in `@ISA`, not the
+  first parent that actually declares the method — a re-review of the Perl track found
+  it live: `use parent qw(A B)` plus `SUPER::bmeth()`, declared only on `B`, emitted a
+  `CALLS` edge to `A` and none to `B`.** Perl's default MRO is depth-first, left to
+  right across `@ISA`; the resolver now walks every resolved parent in that order and
+  stops at the first one that declares the method, falling back to the old "call the
+  type" backstop only when exactly one parent is resolved, and skipping the call
+  entirely (rather than naming a guess) when several parents are resolved and none of
+  them declares it. Single-parent shapes are unaffected — `corpus/perl/super_calls`
+  still scores 1.00 precision/recall on every kind unchanged.
 
 ## 3.33.2 — the SDLC runs as a pipeline, and PHP builds
 

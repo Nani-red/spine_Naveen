@@ -112,7 +112,7 @@ method; the per-front-end freshness test; the C-style path-suffix import join fo
 | Call shape | Resolution | Emit |
 |---|---|---|
 | `$self->m()` / `$class->m()` / `__PACKAGE__->m` / `shift->m` | sibling sub **or `has` field** of the enclosing package | `CALLS` → `perl:Shop.Cart.m` |
-| `$self->SUPER::m()` | the first parent from D5 that resolved | `CALLS` → `perl:Parent.m`; skip when unresolved |
+| `$self->SUPER::m()` | the first D5-resolved parent, in default (depth-first, left-to-right) MRO order, that actually declares `m` | `CALLS` → the declaring parent's `perl:Parent.m`; with exactly one resolved parent that doesn't declare it, falls back to the `Type` itself (row 3's policy); with several parents and none declaring it, skip rather than guess which chain resolves it; skip outright when unresolved. **Known limitation:** `use mro 'c3'` changes the linearisation — this always follows the default DFS order (found in P6's second review: `use parent qw(A B)` + `SUPER::bmeth()` resolved to `A` even though only `B` declares `bmeth`) |
 | `Shop::Log->new` | qualified name | `CALLS` → the sub when declared; otherwise → the `Type` (instantiation is a call to the type) |
 | `Shop::Util::fmt(...)` | qualified name | `CALLS` → `perl:Shop.Util.fmt` — exact id, placeholder if third-party |
 | `f()` bare | same-package sub in this file, else a name in a `use X qw(... f ...)` list, else (D10) a literal `@EXPORT` of a first-party package imported without a list | `CALLS` → the sub; **otherwise skip** — never a guess. **Not** an `@ISA`-inherited sub (amended in P6 review — a bare call never dispatches through inheritance in real Perl; that was only true of method calls) |

@@ -52,10 +52,13 @@ shapes, each resolved only when *verified*, never guessed:
 
 1. ``$self->m()`` / ``$class->m()`` / ``__PACKAGE__->m`` / ``shift->m`` → a sibling sub or
    ``has`` field of the enclosing package.
-2. ``$self->SUPER::m()`` → the sub when the first parent D5 resolved (``owner.bases[0]``)
-   declares it, else the ``Type`` itself (row 3's own backstop — the base is verified, a
-   ``Mojo::Base``-style implicit constructor further up its chain is not); skipped only
-   when the package has no resolved base at all.
+2. ``$self->SUPER::m()`` → the sub on the first D5-resolved parent (Perl's default MRO:
+   depth-first, left to right across ``@ISA``) that actually declares it; if none of
+   several parents declare it, skipped rather than guessed; with exactly one resolved
+   parent, falls back to the ``Type`` itself (row 3's own backstop — the base is
+   verified, a ``Mojo::Base``-style implicit constructor further up its chain is not).
+   Skipped outright when the package has no resolved base at all. Known limitation:
+   ``use mro 'c3'`` changes the linearisation; this always follows the default DFS order.
 3. ``Shop::Log->new`` (a qualified bareword receiver) → the sub when the target package
    declares it, else the ``Type`` itself (instantiation is a call to the type).
 4. ``Shop::Util::fmt(...)`` (a qualified function call) → the exact id, a placeholder if
@@ -854,22 +857,36 @@ class PerlExtractor:
         if mtext.startswith("SUPER::"):
             if owner is None or not owner.bases:
                 return  # row 2: skip when unresolved
-            base_id = owner.bases[0]
             method = mtext[len("SUPER::") :]
-            base_rec = types.get(base_id)
             prov = Provenance(sub.rel, line)
-            if base_rec is not None and method in base_rec.methods:
-                batch.add_edge(Edge(sub.caller_id, base_rec.methods[method], EdgeKind.CALLS, prov))
-            else:
-                # Row 3's own backstop, not a fabricated `<base>.<method>` id: the base
-                # package doesn't declare `method` itself — inherited further up its own
-                # chain (a `Mojo::Base`-style implicit constructor is the common real case)
-                # or the base is genuinely third-party. Either way the base *is* verified
-                # (D5 resolved it literally), so the call is to the type, not to a guessed
-                # method that has no backstop.
-                base_name = base_id.rsplit(".", 1)[-1]
-                batch.add_node(Node(base_id, NodeKind.TYPE, base_name, "perl", external=base_rec is None))
-                batch.add_edge(Edge(sub.caller_id, base_id, EdgeKind.CALLS, prov))
+            # Perl's default MRO is depth-first, left to right across @ISA: the first
+            # parent that *declares* the method wins, not simply the first parent (found
+            # in review: `use parent qw(A B)` + `SUPER::bmeth` resolved to A even though
+            # only B declares `bmeth`). `use mro 'c3'` changes the linearisation; this
+            # follows the default DFS order only.
+            for base_id in owner.bases:
+                base_rec = types.get(base_id)
+                if base_rec is not None and method in base_rec.methods:
+                    batch.add_edge(Edge(sub.caller_id, base_rec.methods[method], EdgeKind.CALLS, prov))
+                    return
+            if len(owner.bases) > 1:
+                # Two or more parents and none of them declares it: the method is
+                # inherited further up one of the chains, and which chain is not
+                # readable from this repo. Skip rather than name a parent the call may
+                # never reach — the row-3 Type backstop below is only honest when there
+                # is exactly one candidate it could mean.
+                return
+            # Row 3's own backstop, not a fabricated `<base>.<method>` id: the base
+            # package doesn't declare `method` itself — inherited further up its own
+            # chain (a `Mojo::Base`-style implicit constructor is the common real case)
+            # or the base is genuinely third-party. Either way the base *is* verified
+            # (D5 resolved it literally), so the call is to the type, not to a guessed
+            # method that has no backstop.
+            base_id = owner.bases[0]
+            base_rec = types.get(base_id)
+            base_name = base_id.rsplit(".", 1)[-1]
+            batch.add_node(Node(base_id, NodeKind.TYPE, base_name, "perl", external=base_rec is None))
+            batch.add_edge(Edge(sub.caller_id, base_id, EdgeKind.CALLS, prov))
             return
 
         if "::" in mtext:
