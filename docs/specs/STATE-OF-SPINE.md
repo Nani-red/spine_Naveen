@@ -25,11 +25,11 @@ gates (before building, before merging). The product is **Spine**; it ships as
 | | Value | How it is known |
 |---|---|---|
 | Version | **3.33.2** | cutting now; 3.33.1 is the last on PyPI until this ships |
-| Languages extracted | **10** front-ends | Python, Java, TypeScript, C#, C, C++, Go, PHP, Perl, SQL — Perl has comprehension + `CALLS` (P1+P2 of [perl-support-roadmap.md](perl-support-roadmap.md)) |
+| Languages extracted | **10** front-ends | Python, Java, TypeScript, C#, C, C++, Go, PHP, Perl, SQL — Perl has comprehension + `CALLS` + routes (P1–P3 of [perl-support-roadmap.md](perl-support-roadmap.md)) |
 | PHP delivery | Composer or pinned PHPUnit PHAR | Configured test layout, changed-file lint, modern PHPUnit; [validation roadmap](php-codegen-roadmap.md) |
 | CLI commands | **56** | `grep -c '\.command(' src/orchestrator/cli/*.py`, summed |
-| Source modules | **356** | `find src/orchestrator -name '*.py'` |
-| Test functions | **3,125** across 319 files | `grep -rh '^def test_\|^async def test_' tests`; files via the same pattern with `-rl` |
+| Source modules | **357** | `find src/orchestrator -name '*.py'` |
+| Test functions | **3,133** across 319 files | `grep -rh '^def test_\|^async def test_' tests`; files via the same pattern with `-rl` |
 | Graph precision | **1.00** on every node and edge kind, all 10 front-ends | `orchestrator pkg accuracy` against a hand-labelled corpus |
 | `CALLS` recall | **1.00** (C, SQL) → **0.86** (TypeScript, on 14 labelled edges) · **0.67** (Perl, on 6 labelled edges) · **0.50** (PHP, on 8 labelled edges — the misses are P3's typed-receiver rule and the global-namespace fallback, both predicted `known_gaps`, not surprises) | same |
 | Grounding effect, `create` tickets | **29/50 grounded, 0/50 ungrounded** | 200-run controlled A/B, 2 frontier models, 5 passes |

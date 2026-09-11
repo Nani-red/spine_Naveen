@@ -1,5 +1,5 @@
 """PKG: the Perl front-end maps Perl source onto the universal facts (10th language;
-P1 comprehension + P2 CALLS, perl-support-roadmap.md §3.1-3.2).
+P1 comprehension, P2 CALLS, P3 routes + typed receivers — perl-support-roadmap.md §3.1-3.3).
 
 tree-sitter-perl is an optional extra, so these skip cleanly when it's absent.
 """
@@ -370,9 +370,9 @@ sub risky {
     assert not any(e.kind is EdgeKind.CALLS for e in batch.edges)
 
 
-def test_instance_calls_are_p3_not_p2(tmp_path: Path) -> None:
-    """The instance_calls corpus control: a literal-constructed receiver and a parameter
-    receiver are both P3's typed-receiver rule — P2 must not resolve either."""
+def test_instance_calls_typed_receiver_boundary(tmp_path: Path) -> None:
+    """The instance_calls corpus control (§3.2 row 7, P3): a literal-constructed receiver
+    resolves; an untyped parameter receiver — permanently — does not."""
     files = {
         "Log.pm": (
             "package Shop::Log;\nsub new { my ($c) = @_; return bless {}, $c; }\nsub write { return 1; }\n"
@@ -385,4 +385,91 @@ def test_instance_calls_are_p3_not_p2(tmp_path: Path) -> None:
     }
     batch = _repo_facts(tmp_path, files)
     calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
-    assert not any(dst == "perl:Shop.Log.write" for _, dst in calls)
+    assert ("perl:Shop.Cart.a", "perl:Shop.Log.write") in calls
+    assert not any(src == "perl:Shop.Cart.b" for src, _ in calls)
+
+
+# --- P3: routes (§3.3) ------------------------------------------------------
+
+
+def test_mojo_full_app_route_string_shorthand(tmp_path: Path) -> None:
+    src = (
+        "package MyApp;\nuse Mojo::Base 'Mojolicious';\n"
+        "sub startup {\n    my $self = shift;\n    my $r = $self->routes;\n"
+        "    $r->get('/orders')->to('orders#index');\n}\n"
+    )
+    batch = _repo_facts(tmp_path, {"App.pm": src})
+    by_id = {n.id: n for n in batch.nodes}
+    assert by_id["perl:endpoint:GET /orders"].kind is NodeKind.ENDPOINT
+    exposes = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.EXPOSES}
+    assert ("perl:endpoint:GET /orders", "perl:MyApp.Controller.Orders.index") in exposes
+
+
+def test_mojo_full_app_route_hash_form(tmp_path: Path) -> None:
+    src = (
+        "package MyApp;\n"
+        "sub startup {\n    my $self = shift;\n    my $r = $self->routes;\n"
+        "    $r->get('/orders')->to(controller => 'orders', action => 'index');\n}\n"
+    )
+    batch = _repo_facts(tmp_path, {"App.pm": src})
+    exposes = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.EXPOSES}
+    assert ("perl:endpoint:GET /orders", "perl:MyApp.Controller.Orders.index") in exposes
+
+
+def test_mojo_full_app_closure_handler_yields_endpoint_no_exposes(tmp_path: Path) -> None:
+    src = (
+        "package MyApp;\n"
+        "sub startup {\n    my $self = shift;\n    my $r = $self->routes;\n"
+        "    $r->get('/orders')->to(sub { return 1; });\n}\n"
+    )
+    batch = _repo_facts(tmp_path, {"App.pm": src})
+    by_id = {n.id: n for n in batch.nodes}
+    assert "perl:endpoint:GET /orders" in by_id
+    assert not any(e.kind is EdgeKind.EXPOSES for e in batch.edges)
+
+
+def test_mojo_full_app_any_verb_yields_nothing(tmp_path: Path) -> None:
+    src = (
+        "package MyApp;\n"
+        "sub startup {\n    my $self = shift;\n    my $r = $self->routes;\n"
+        "    $r->any('/orders')->to('orders#index');\n}\n"
+    )
+    batch = _repo_facts(tmp_path, {"App.pm": src})
+    assert not any(n.kind is NodeKind.ENDPOINT for n in batch.nodes)
+
+
+def test_mojo_full_app_computed_path_yields_nothing(tmp_path: Path) -> None:
+    src = (
+        "package MyApp;\n"
+        "sub startup {\n    my $self = shift;\n    my $r = $self->routes;\n"
+        "    my $id = 1;\n    $r->get(\"/orders/$id\")->to('orders#index');\n}\n"
+    )
+    batch = _repo_facts(tmp_path, {"App.pm": src})
+    assert not any(n.kind is NodeKind.ENDPOINT for n in batch.nodes)
+
+
+def test_mojo_under_group_composes_prefix(tmp_path: Path) -> None:
+    src = (
+        "package MyApp;\n"
+        "sub startup {\n    my $self = shift;\n    my $r = $self->routes;\n"
+        "    my $api = $r->under('/api');\n"
+        "    $api->get('/orders')->to('orders#index');\n}\n"
+    )
+    batch = _repo_facts(tmp_path, {"App.pm": src})
+    by_id = {n.id: n for n in batch.nodes}
+    assert "perl:endpoint:GET /api/orders" in by_id
+
+
+def test_mojo_lite_closure_route(tmp_path: Path) -> None:
+    src = "get '/x' => sub {\n    return 1;\n};\n"
+    batch = _repo_facts(tmp_path, {"app.pl": src})
+    by_id = {n.id: n for n in batch.nodes}
+    assert "perl:endpoint:GET /x" in by_id
+    assert not any(e.kind is EdgeKind.EXPOSES for e in batch.edges)
+
+
+def test_mojo_lite_named_handler_route(tmp_path: Path) -> None:
+    src = "get '/y' => \\&handler;\n\nsub handler {\n    return 1;\n}\n"
+    batch = _repo_facts(tmp_path, {"app.pl": src})
+    exposes = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.EXPOSES}
+    assert ("perl:endpoint:GET /y", "perl:app.pl.handler") in exposes

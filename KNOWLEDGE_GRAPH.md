@@ -133,7 +133,7 @@ a variable yields no edge, because a wrong edge is worse than an absent one.
 | `cpp` | ✓ | ✓ | ✓ | ✓ | · | · | · | · |
 | `go` | ✓ | ✓ | ✓ | ✓ | ✓ | · | · | · |
 | `php` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | · | · |
-| `perl` | ✓ | ✓ | ✓ | ✓ | · | · | · | · |
+| `perl` | ✓ | ✓ | ✓ | ✓ | ✓ | · | · | · |
 | `sql` | ✓ | · | ✓ | ✓ | · | ✓ | · | · |
 
 **Edges**
@@ -148,7 +148,7 @@ a variable yields no edge, because a wrong edge is worse than an absent one.
 | `cpp` | ✓ | ✓ | ✓ | ✓ | · | · | · | · | ✓ | · | · |
 | `go` | ✓ | ✓ | ✓ | ✓ | · | · | ✓ | · | ✓ | · | · |
 | `php` | ✓ | ✓ | ✓ | ✓ | · | · | ✓ | · | ✓ | · | · |
-| `perl` | ✓ | ✓ | · | ✓ | · | · | · | · | · | · | · |
+| `perl` | ✓ | ✓ | ✓ | ✓ | · | · | ✓ | · | · | · | · |
 | `sql` | · | ✓ | ✓ | · | ✓ | ✓ | · | · | ✓ | · | · |
 
 Read a `·` as *this front-end has no code that emits that kind* — not as *your repo
@@ -247,7 +247,7 @@ flowchart LR
   | C++ | ✅ classes/namespaces/inheritance | `pip install 'synaptixs-spine[cpp]'` |
   | Go | ✅ + interface satisfaction (`IMPLEMENTS`) | `pip install 'synaptixs-spine[go]'` |
   | PHP | ✅ + call graph (traits as `IMPLEMENTS`; `$this`/`self`/`parent`/`new`/static-call resolution, incl. typed receivers) + Laravel/Slim/Symfony routes + Eloquent/Doctrine entities | `pip install 'synaptixs-spine[php]'` |
-  | Perl | ✅ comprehension + call graph (every `package`/5.38 `class` is its own `Type`; inheritance across its five spellings as `IMPLEMENTS`; `$self->`/`SUPER::`/qualified/bare `CALLS`) — routes are a later phase | `pip install 'synaptixs-spine[perl]'` |
+  | Perl | ✅ comprehension + call graph + routes (every `package`/5.38 `class` is its own `Type`; inheritance across its five spellings as `IMPLEMENTS`; `$self->`/`SUPER::`/qualified/bare `CALLS` incl. a typed-receiver rule; Mojolicious/Mojolicious::Lite/Dancer2 routes as `Endpoint`+`EXPOSES`) | `pip install 'synaptixs-spine[perl]'` |
 
   Java lifts JAX-RS / Jakarta REST resource methods into `Endpoint` nodes with
   `EXPOSES` edges to their handlers. Both `javax.ws.rs` and `jakarta.ws.rs`
@@ -291,8 +291,13 @@ flowchart LR
   `__PACKAGE__`/`shift` calls to a sibling sub or field, `SUPER::` to the first resolved
   parent, a qualified `X->m()`/`X::f()` call, and a bare call resolved same-file, via an
   explicit `use X qw(f)` import, or (verified-only) a first-party `@EXPORT`/`@ISA` chain —
-  never a dynamic dispatch (`$self->$m()`, `&$code`, string `eval`). Framework routes are a
-  later phase of the same track.
+  never a dynamic dispatch (`$self->$m()`, `&$code`, string `eval`); a typed-receiver rule
+  additionally resolves `$obj->m()` when `$obj` holds a literal same-sub constructor.
+  Mojolicious full-app routes (`$r->get('/x')->to(...)`, `under('/api')` groups) and
+  Mojolicious::Lite/Dancer2's shared bareword DSL become `Endpoint` + `EXPOSES` — a
+  verb-less/`any` registration or a computed path yields nothing, a closure handler yields
+  an `Endpoint` with no `EXPOSES`. Data-layer entities (DBIx::Class) are a later phase of
+  the same track.
 - **Cached per commit.** Re-running on an unchanged tree reuses the cache; `--refresh`
   forces a re-extract. So `understand` is cheap to re-run as the code evolves.
 

@@ -1,0 +1,29 @@
+{
+  "language": "perl",
+  "case": "mojo_routes",
+  "why": "P3's Mojolicious full-app route reader (§3.3): the `'controller#action'` string shorthand, a closure handler (an `Endpoint` with no `EXPOSES` — no named symbol to point at), `->any` (no `ANY` verb in this graph, D2 of endpoints-typescript-go.md — nothing registered at all, not even an `Endpoint`), and a `my $api = $r->under('/api');` group whose prefix composes with a nested route using the `controller => .., action => ..` hash form.",
+  "root": ".repo",
+  "nodes": [
+    { "id": "perl:App.pm", "kind": "Module" },
+    { "id": "perl:MyApp", "kind": "Type" },
+    { "id": "perl:Mojolicious", "kind": "Type" },
+    { "id": "perl:MyApp.startup", "kind": "Function" },
+    { "id": "perl:endpoint:GET /orders", "kind": "Endpoint" },
+    { "id": "perl:endpoint:GET /orders/closure", "kind": "Endpoint" },
+    { "id": "perl:endpoint:GET /api/orders", "kind": "Endpoint" },
+    { "id": "perl:MyApp.Controller.Orders.index", "kind": "Function" }
+  ],
+  "edges": [
+    { "src": "perl:App.pm", "dst": "perl:MyApp", "kind": "CONTAINS" },
+    { "src": "perl:MyApp", "dst": "perl:MyApp.startup", "kind": "CONTAINS" },
+    { "src": "perl:MyApp", "dst": "perl:Mojolicious", "kind": "IMPLEMENTS" },
+    { "src": "perl:endpoint:GET /orders", "dst": "perl:MyApp.Controller.Orders.index", "kind": "EXPOSES" },
+    { "src": "perl:endpoint:GET /api/orders", "dst": "perl:MyApp.Controller.Orders.index", "kind": "EXPOSES" }
+  ],
+  "known_gaps": [],
+  "false_positives": [],
+  "excluded": [
+    "`$r->any('/orders/anything')->to('orders#index')` registers no Endpoint at all — not a miss, a deliberate non-fact (D2: no ANY-verb endpoint in this graph, endpoints-typescript-go.md)."
+  ],
+  "open_questions": []
+}

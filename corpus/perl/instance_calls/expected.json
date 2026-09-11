@@ -1,7 +1,7 @@
 {
   "language": "perl",
   "case": "instance_calls",
-  "why": "The documented P2/P3 boundary (roadmap §3.2 row 7): `my $log = Shop::Log->new; $log->write` and `$thing->write` on a parameter are both receiver-typed calls P2 deliberately does not resolve — only P3's typed-receiver rule does, and only for the literal-constructor shape (`$log`), never a bare parameter (`$thing` has no declared type to resolve, a permanent miss even after P3). `Shop::Log->new` itself (a qualified-receiver call, §3.2 row 3) is unrelated to this boundary and resolves in P2 like any other qualified call — this case's job is to prove P2 does NOT also resolve the two instance calls just because the qualified one nearby does.",
+  "why": "The documented P2/P3 boundary (roadmap §3.2 row 7), now on the P3 side of it: `my $log = Shop::Log->new; $log->write` resolves via P3's typed-receiver rule (a file-local constructor-assignment map); `$thing->write` on an untyped parameter has no declared type to resolve from and stays a permanent miss. `Shop::Log->new` itself (a qualified-receiver call, §3.2 row 3) is unrelated to this boundary and resolved back in P2 — this case's job is to prove P3 resolves exactly the literal-constructor shape and nothing more.",
   "root": ".repo",
   "nodes": [
     { "id": "perl:Calls.pm", "kind": "Module" },
@@ -25,12 +25,8 @@
   ],
   "known_gaps": [
     {
-      "edge": { "src": "perl:Shop.Cart.via_literal", "dst": "perl:Shop.Log.write", "kind": "CALLS" },
-      "why": "PREDICTED BEFORE SCORING. `$log` holds a literal `Shop::Log->new` constructor in the same sub — P3's typed-receiver rule resolves this; P2 does not."
-    },
-    {
       "edge": { "src": "perl:Shop.Cart.via_param", "dst": "perl:Shop.Log.write", "kind": "CALLS" },
-      "why": "PREDICTED BEFORE SCORING. `$thing` is an untyped parameter with no declared type to resolve from — a permanent miss, not just a P2-vs-P3 gap."
+      "why": "PREDICTED BEFORE SCORING, still true after P3. `$thing` is an untyped parameter with no declared type to resolve from — a permanent miss, not a phase boundary."
     }
   ],
   "false_positives": [],

@@ -1,4 +1,5 @@
-"""Perl front-end for the PKG extractor (10th language; P1 comprehension + P2 CALLS).
+"""Perl front-end for the PKG extractor (10th language; P1 comprehension, P2 CALLS, P3 routes
++ typed receivers).
 
 Parsing is via tree-sitter (``tree-sitter-perl``), an OPTIONAL dependency — install the
 ``perl`` extra. The import is lazy so the base install stays stdlib-only.
@@ -65,9 +66,20 @@ shapes, each resolved only when *verified*, never guessed:
    child in the grammar the way a static name does, so the scanner excludes them by
    construction rather than by a negative-case check — see ``_scan_calls_in``.
 7. ``$obj->m()`` where ``$obj`` holds a typed/literal-constructor receiver (``my $log =
-   Shop::Log->new; $log->write``) is **P3**'s typed-receiver rule, not P2's — deliberately
-   unresolved here (the ``instance_calls`` corpus case is built to catch a P2 regression
-   that resolves it early).
+   Shop::Log->new; $log->write``) — **P3**'s typed-receiver rule: ``_collect_local_constructor_types``
+   builds a file-local ``{varname: type_id}`` map per sub, and the receiver resolves through
+   it only when the target type actually declares the method (no ``->new``-style Type
+   fallback — an arbitrary method name has no "call the type" meaning). An untyped parameter
+   (``$thing`` with no local constructor assignment) stays permanently unresolved.
+
+**P3 — routes (§3.3, ``perl_routes.py``), same precision discipline.** Runs per-file inside
+``extract()`` (no whole-repo knowledge needed — a target controller sub is an eager external
+placeholder, grounded later by ordinary ``FactBatch`` dedup, like every other cross-file
+reference here): Mojolicious full-app route chains (``$r->get('/x')->to(...)``, ``my $api =
+$r->under('/api')`` groups) scanned inside every sub body, and Mojolicious::Lite/Dancer2's
+shared bareword DSL (``get '/x' => sub {...}`` / ``get '/y' => \\&handler``) scanned at
+statement scope. A verb-less/``any`` registration or a computed path emits nothing at all (D2,
+endpoints-typescript-go.md); a closure handler emits an ``Endpoint`` with no ``EXPOSES``.
 
 **Windows note (not a repo defect):** ``tree_sitter_perl.language()`` returns a bare Python
 ``int`` (``PyLong_FromVoidPtr``), unlike grammars that return a ``PyCapsule``. tree-sitter's
@@ -86,6 +98,7 @@ from typing import TYPE_CHECKING, Any
 from orchestrator.pkg.extractor import rel_module_name
 from orchestrator.pkg.facts import Edge, EdgeKind, FactBatch, Node, NodeKind, Provenance
 from orchestrator.pkg.finalize_names import resolve_or_drop
+from orchestrator.pkg.perl_routes import HTTP_VERBS, scan_lite_route, scan_mojo_full_app
 
 if TYPE_CHECKING:
     from tree_sitter import Node as TSNode
@@ -503,6 +516,11 @@ class PerlExtractor:
                 return
             for name in _has_field_names(args, source):
                 self._emit_field(ctx.package_id, name, rel, line, batch)
+        elif fn_text in HTTP_VERBS:
+            # Mojolicious::Lite / Dancer2 (P3, §3.3): `get '/x' => sub {...}` at statement
+            # scope, sharing one bareword DSL.
+            owner_id = ctx.package_id or f"perl:{rel}"
+            scan_lite_route(expr, owner_id, source, rel, batch)
 
     def _handle_push_isa_or_export(
         self, args: TSNode | None, ctx: _Ctx, rel: str, line: int, source: bytes, batch: FactBatch
@@ -604,16 +622,26 @@ class PerlExtractor:
                     rel=rel,
                 )
             )
+            # P3 (§3.3): a Mojolicious full-app route chain can appear in any sub, not only
+            # `startup` — shape-based detection costs nothing extra to run broadly. No
+            # finalize() needed: a target controller sub is an eager external placeholder,
+            # grounded later by ordinary FactBatch dedup, same as every other cross-file
+            # reference in this front-end.
+            app_package = ctx.package_id[len("perl:") :] if ctx.package_id is not None else None
+            scan_mojo_full_app(body, app_package, source, rel, batch)
 
     # --- P2: CALLS -------------------------------------------------------------
 
     def _scan_calls_in(self, sub: _SubRec, batch: FactBatch) -> None:
         owner = self._types.get(sub.owner_type_id) if sub.owner_type_id else None
+        # P3, §3.2 row 7: a file-local typed-receiver map (`my $log = Shop::Log->new`),
+        # collected once up front so the shape scan below doesn't care about source order.
+        local_types = _collect_local_constructor_types(sub.body)
         stack = list(sub.body.named_children)
         while stack:
             n = stack.pop()
             if n.type == "method_call_expression":
-                self._handle_method_call(n, sub, owner, batch)
+                self._handle_method_call(n, sub, owner, local_types, batch)
             elif n.type == "function_call_expression":
                 self._handle_function_call(n, sub, owner, batch)
             # Descend regardless — a call can nest inside another call's arguments, and
@@ -621,7 +649,12 @@ class PerlExtractor:
             stack.extend(n.named_children)
 
     def _handle_method_call(
-        self, expr: TSNode, sub: _SubRec, owner: _TypeRec | None, batch: FactBatch
+        self,
+        expr: TSNode,
+        sub: _SubRec,
+        owner: _TypeRec | None,
+        local_types: dict[str, str],
+        batch: FactBatch,
     ) -> None:
         children = expr.named_children
         if not children:
@@ -664,8 +697,20 @@ class PerlExtractor:
             else:
                 batch.add_node(Node(target_type_id, NodeKind.TYPE, receiver_text, "perl", external=True))
                 batch.add_edge(Edge(sub.caller_id, target_type_id, EdgeKind.CALLS, prov))
-        # Any other receiver shape (a plain variable, a chained call, …) is P3's
-        # typed-receiver territory or unresolvable — never guessed here.
+            return
+        # Row 7 (P3): a receiver holding a literal same-sub constructor
+        # (`my $log = Shop::Log->new; $log->write`) resolves through the assignment — but
+        # only when the target type actually declares the method; unlike row 3's `->new`
+        # fallback, there is no "call the type" backstop for an arbitrary method name.
+        if receiver.type == "scalar":
+            type_id = local_types.get(receiver_varname)
+            if type_id is not None:
+                target_rec = self._types.get(type_id)
+                if target_rec is not None and mtext in target_rec.methods:
+                    prov = Provenance(sub.rel, line)
+                    batch.add_edge(Edge(sub.caller_id, target_rec.methods[mtext], EdgeKind.CALLS, prov))
+        # Any other receiver shape (an untyped parameter, a chained call, …) is permanently
+        # unresolvable — never guessed here.
 
     def _resolve_sibling_or_field(
         self, sub: _SubRec, owner: _TypeRec | None, name: str, line: int, batch: FactBatch
@@ -757,6 +802,37 @@ def _bytes_text(node: TSNode | None) -> str:
     if node is None:
         return ""
     return node.text.decode("utf-8", "replace").strip() if node.text is not None else ""
+
+
+def _collect_local_constructor_types(body: TSNode) -> dict[str, str]:
+    """P3, §3.2 row 7: ``my $log = Shop::Log->new;`` anywhere in this sub body — a
+    ``{varname: type_id}`` map, order-independent (Perl reassignment mid-function isn't
+    tracked; "file-local" per the roadmap, not full control-flow analysis).
+    """
+    out: dict[str, str] = {}
+    stack = list(body.named_children)
+    while stack:
+        n = stack.pop()
+        if n.type == "assignment_expression":
+            children = n.named_children
+            if len(children) >= 2:
+                lhs, rhs = children[0], children[1]
+                if lhs.type == "variable_declaration" and rhs.type == "method_call_expression":
+                    scalar = _first_named_of_type(lhs, "scalar")
+                    varname_node = _first_named_of_type(scalar, "varname") if scalar is not None else None
+                    receiver = rhs.named_children[0] if rhs.named_children else None
+                    method_node = _first_named_of_type(rhs, "method")
+                    if (
+                        varname_node is not None
+                        and receiver is not None
+                        and receiver.type == "bareword"
+                        and "::" in _bytes_text(receiver)
+                        and method_node is not None
+                        and _bytes_text(method_node) == "new"
+                    ):
+                        out[_bytes_text(varname_node)] = f"perl:{_to_dotted(_bytes_text(receiver))}"
+        stack.extend(n.named_children)
+    return out
 
 
 def _perl_language(raw: Any) -> Any:

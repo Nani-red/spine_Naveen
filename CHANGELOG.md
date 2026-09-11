@@ -23,6 +23,22 @@ All notable changes to this project are documented here. Format loosely follows
   reports the recall ceiling (files with a parse `ERROR`, lines inside `ERROR` spans,
   declaration counts by CST kind) independent of any one front-end's extraction logic;
   reusable by every future language track for its own parser-choice evidence.
+- **Perl `CALLS` (P2 of the Perl support track).** Six call shapes, precision-first:
+  `$self`/`$class`/`__PACKAGE__`/`shift` calls to a sibling sub or field, `SUPER::` to the
+  first D5-resolved parent, a qualified `X->m()`/`X::f()` call, and a bare call resolved
+  same-file, via an explicit `use X qw(f)` import, or — verified-only, never guessed — a
+  first-party `@EXPORT`/`@ISA` chain. Built on a new shared
+  `pkg/finalize_names.py` whole-repo name-resolution helper (`declared_ids` +
+  `resolve_or_drop`); Perl's D10 fallback is its first implementation, reusable by C#/PHP
+  when next touched. `corpus/perl/{plain,instance_calls,exporter_default,isa_spellings,
+  legacy_main,multi_package}` added, labelled from source before scoring.
+- **Perl routes + typed receivers (P3).** `pkg/perl_routes.py`: Mojolicious full-app route
+  chains (`$r->get('/x')->to(...)`, `under('/api')` groups) and Mojolicious::Lite/Dancer2's
+  shared bareword DSL (`get '/x' => sub {...}` / `\&handler`) become `Endpoint` + `EXPOSES`
+  — a verb-less/`any` registration or a computed path emits nothing, a closure handler
+  emits an `Endpoint` with no `EXPOSES`. `$obj->m()` also now resolves when `$obj` holds a
+  literal same-sub constructor (`my $log = Shop::Log->new`). `corpus/perl/mojo_routes`
+  added.
 
 ## 3.33.2 — the SDLC runs as a pipeline, and PHP builds
 
