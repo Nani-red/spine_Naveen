@@ -91,6 +91,15 @@ All notable changes to this project are documented here. Format loosely follows
   review).** A malformed first data row after a matched phase-table header (wrong column
   count) made the document vanish from the results with no diagnostic. Now reported
   explicitly as its own finding instead of failing silent.
+- **`scripts/roadmap-status.py` could silently drop every row *after* a malformed one,
+  even mid-table.** A live instance: `perl-support-roadmap.md`'s own P5 evidence quoted
+  an example table row inside a code span, and the literal `|` characters in it split
+  that row into 10 cells — the parser treated the bad row as the end of the table,
+  dropping P5 and P6 with no diagnostic. `--check` stayed green because every check it
+  ran was against the 4 rows it *was* handed. Found only when asked to render the table
+  and two phases were missing. A malformed row is now skipped, not treated as
+  end-of-table, so later valid rows are no longer swallowed by an earlier bad one — and
+  the skip itself is reported.
 
 ## 3.33.2 — the SDLC runs as a pipeline, and PHP builds
 

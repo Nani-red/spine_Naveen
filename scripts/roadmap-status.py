@@ -27,11 +27,14 @@ Checks, each narrow enough to avoid the failure mode below:
    applies to the user-facing docs — roadmaps live outside that script's `USER_DOCS` list,
    so nothing was checking them. (Found live: `perl-support-roadmap.md` linked
    `kotlin-support-roadmap.md` twice; that file does not exist in this checkout.)
-6. **A malformed table never fails silently.** A document can carry the exact phase-table
-   header and still parse to zero rows (a dropped column, a stray `|` inside a cell) — that
-   used to mean the whole document was quietly skipped by every other check. Reported here
-   explicitly instead (found in review: this exact gap, before it ever misfired on a real
-   document).
+6. **A malformed table never fails silently.** A malformed row (wrong column count — most
+   often a literal `|` inside a cell's own prose) is skipped rather than treated as the end
+   of the table, so rows after it still get collected, and the skip itself is reported. It
+   used to be treated as end-of-table: found live, this exact shape (an inline code span
+   quoting a table-row example) silently dropped P5 and P6 from this roadmap's own table,
+   with no diagnostic — the review pass that added check 6 caught the *class* of bug; this
+   document's own table was still carrying a live instance of it, caught only when someone
+   asked to see the table rendered.
 
 **What this deliberately does not attempt:** classifying whether a spec's free-form prose
 elsewhere agrees with `SPEC-INDEX.md`'s free-form prose about it. `STATE-OF-SPINE.md` §8
@@ -90,17 +93,22 @@ class PhaseRow:
     evidence: str
 
 
-def _split_row(line: str) -> list[str] | None:
-    """A table row's cells, or ``None`` if ``line`` isn't a data row (the separator, or a
-    row with a different column count than the header it followed)."""
-    if not line.startswith("|"):
-        return None
-    cells = [c.strip() for c in line.strip().strip("|").split("|")]
-    if len(cells) != 8:
-        return None
-    if all(re.fullmatch(r":?-+:?", c) for c in cells):
-        return None  # the `|---|---|` separator
-    return cells
+def _cells(line: str) -> list[str]:
+    """Raw pipe-split cells of a table row line, no validation."""
+    return [c.strip() for c in line.strip().strip("|").split("|")]
+
+
+def _is_separator(cells: list[str]) -> bool:
+    return bool(cells) and all(re.fullmatch(r":?-+:?", c) for c in cells)
+
+
+#: Populated by the most recent ``phase_tables()`` call: doc -> raw text of every row
+#: line that started with ``|`` right after a matched header but did not split into 8
+#: cells — e.g. a literal ``|`` inside a cell's own prose (an inline code span quoting
+#: `` `| **C1** |` ``, say) silently produces a 9-or-10-cell row that used to just end
+#: the table right there, dropping every row after it with nothing printed. Found live:
+#: this exact shape swallowed P5 and P6 of this roadmap's own table.
+_LAST_MALFORMED: dict[Path, list[str]] = {}
 
 
 def phase_tables() -> dict[Path, list[PhaseRow]]:
@@ -111,8 +119,15 @@ def phase_tables() -> dict[Path, list[PhaseRow]]:
     with ``| **P1`` anywhere in the document, which would also catch an unrelated
     decisions table (`perl-codegen-roadmap.md` has one, `| # | Decision | Options |
     Recommendation |`, whose rows also start `| **C1** |`).
+
+    A line that starts with ``|`` but doesn't parse as a clean 8-cell row (the
+    malformed case above) is skipped, not treated as the end of the table — only a
+    line that doesn't start with ``|`` at all (blank, or prose) ends it. The skipped
+    line's raw text is recorded in ``_LAST_MALFORMED`` for ``check_header_found_but_unparsed``
+    to report.
     """
     tables: dict[Path, list[PhaseRow]] = {}
+    _LAST_MALFORMED.clear()
     if not SPECS.is_dir():
         return tables
     for doc in sorted(SPECS.glob("*.md")):
@@ -122,9 +137,14 @@ def phase_tables() -> dict[Path, list[PhaseRow]]:
                 continue
             rows: list[PhaseRow] = []
             for row_line in lines[i + 2 :]:
-                cells = _split_row(row_line)
-                if cells is None:
-                    break
+                if not row_line.startswith("|"):
+                    break  # the table block genuinely ended
+                cells = _cells(row_line)
+                if _is_separator(cells):
+                    continue
+                if len(cells) != 8:
+                    _LAST_MALFORMED.setdefault(doc, []).append(row_line.strip())
+                    continue
                 m = _PHASE_ID.match(cells[0])
                 if not m:
                     continue
@@ -234,25 +254,40 @@ def check_relative_links(tables: dict[Path, list[PhaseRow]]) -> list[str]:
 
 
 def check_header_found_but_unparsed(tables: dict[Path, list[PhaseRow]]) -> list[str]:
-    """A document can carry the exact phase-table header and still end up with zero rows in
-    ``tables`` — a malformed first data row (a dropped column, a stray ``|`` inside a cell)
-    makes ``_split_row`` return ``None`` immediately, and ``phase_tables()`` silently omits
-    the whole document rather than guessing. That silence is itself the failure mode this
-    whole script exists to avoid, so it is reported here explicitly instead of merely
-    skipping every other check for that document.
+    """Two ways a phase table can lose rows with nothing printed, both reported here:
+
+    1. **Zero rows at all.** A document can carry the exact phase-table header and still
+       end up entirely absent from ``tables`` — its first data row was malformed (wrong
+       column count) and ``phase_tables()`` has nothing to show for the document.
+    2. **A malformed row skipped mid-table.** A line that starts with ``|`` right after
+       the header but doesn't split into 8 cells no longer truncates the table (a line
+       that starts with ``|`` and merely has the wrong count is *skipped*, not treated as
+       the end — see ``phase_tables()``), but it still means one phase's row never made
+       it into the checked table at all. Most commonly a literal ``|`` inside a cell's
+       own prose (an inline code span quoting a table-row example, say) splits one row
+       into 9+ cells. Found live: exactly this shape silently dropped P5 and P6 from this
+       roadmap's own table before the skip-not-truncate fix — every other check passed
+       clean because it never had a reason to look past the 4 rows it was handed.
+
+    Both read from ``_LAST_MALFORMED``, populated by the ``phase_tables()`` call that
+    produced ``tables`` — call order matters, which is why every entry point calls
+    ``phase_tables()`` exactly once and reuses the result.
     """
     problems: list[str] = []
     if not SPECS.is_dir():
         return problems
     for doc in sorted(SPECS.glob("*.md")):
-        if doc in tables:
-            continue
         text = doc.read_text(encoding="utf-8")
-        if any(line.strip() == PHASE_HEADER for line in text.splitlines()):
+        has_header = any(line.strip() == PHASE_HEADER for line in text.splitlines())
+        if not has_header:
+            continue
+        if doc not in tables:
             problems.append(
                 f"{doc.name}: has the phase-table header but no row after it parsed as a "
                 "data row — malformed table? (wrong column count, or a stray '|' in a cell)"
             )
+        for bad_row in _LAST_MALFORMED.get(doc, []):
+            problems.append(f"{doc.name}: a table row was skipped, wrong column count — {bad_row[:80]!r}")
     return problems
 
 

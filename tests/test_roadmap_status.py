@@ -239,12 +239,13 @@ def test_no_phase_tables_is_not_an_error(status: ModuleType) -> None:
     assert status.check() == []
 
 
-def test_header_found_but_first_row_malformed_is_reported_not_silently_dropped(
+def test_header_found_but_only_row_malformed_is_reported_not_silently_dropped(
     status: ModuleType,
 ) -> None:
-    """A document whose header matches exactly but whose first data row has the wrong
+    """A document whose header matches exactly but whose only data row has the wrong
     column count (a dropped `|`) used to vanish from `tables` with no diagnostic at all —
-    every other check silently skipped it. This must surface as its own problem."""
+    every other check silently skipped it. Now reports both the zero-rows fact and the
+    specific malformed row."""
     doc = _write(
         status.ROOT,
         "x-roadmap.md",
@@ -254,8 +255,35 @@ def test_header_found_but_first_row_malformed_is_reported_not_silently_dropped(
     assert doc not in tables  # confirms the silent-drop this check exists to catch
 
     problems = status.check_header_found_but_unparsed(tables)
+    assert len(problems) == 2
+    assert all(doc.name in p for p in problems)
+    assert any("no row after it parsed" in p for p in problems)
+    assert any("was skipped" in p for p in problems)
+
+
+def test_a_malformed_row_mid_table_is_skipped_not_truncating(status: ModuleType) -> None:
+    """The bug found live in this repo's own roadmap: a literal `|` inside a cell's own
+    prose (quoting an example table row) split that one row into 9 cells. The old
+    behavior treated any non-8-cell row as the end of the table, silently dropping every
+    row after it — P5 and P6 vanished with zero rows parsed wrong and zero diagnostics.
+    A malformed row must be skipped, not treated as end-of-table, so rows after it still
+    get collected — and the skip itself must still be reported."""
+    doc = _write(
+        status.ROOT,
+        "x-roadmap.md",
+        f"{_HEADER}\n{_SEP}\n"
+        "| **P1 Good** | work | 1d | exit | ⬜ |  |  |  |\n"
+        # 9 cells: an extra "|" inside the evidence prose, e.g. quoting `| **C1** |`.
+        "| **P2 Bad** | work | 1d | exit | ⬜ |  |  | quoting `| x |` here |\n"
+        "| **P3 Good** | work | 1d | exit | ⬜ |  |  |  |\n",
+    )
+    tables = status.phase_tables()
+    assert [r.phase_id for r in tables[doc]] == ["P1", "P3"]  # P2 skipped, P3 still reached
+
+    problems = status.check_header_found_but_unparsed(tables)
     assert len(problems) == 1
-    assert doc.name in problems[0]
+    assert "was skipped" in problems[0]
+    assert "P2 Bad" in problems[0]
 
 
 def test_header_found_and_parsed_is_not_reported(status: ModuleType) -> None:
