@@ -39,6 +39,15 @@ All notable changes to this project are documented here. Format loosely follows
   emits an `Endpoint` with no `EXPOSES`. `$obj->m()` also now resolves when `$obj` holds a
   literal same-sub constructor (`my $log = Shop::Log->new`). `corpus/perl/mojo_routes`
   added.
+- **Perl DBIx::Class data layer (P4).** `pkg/perl_orm.py`: `__PACKAGE__->table('orders')`
+  is the literal marker for a Result class (never guessed from base class or shape),
+  `add_columns(...)` (bareword list or `name => {...}` hash, keys only) become `Field`s on
+  a new `Entity` (`perl:entity:Dotted.Path`, alongside the package's own `Type` node), and
+  `belongs_to`/`has_many`/`might_have` become `REFERENCES` — `src` always the declaring
+  entity, a target this repo never declares still gets the edge, to an external `Entity`
+  placeholder. Runs in `finalize()`, like `CALLS`: a relation target's local-vs-external
+  classification needs every file's declarations known first. `data_layer_link.py` needed
+  no Perl-specific wiring. `corpus/perl/dbic` added.
 
 ## 3.33.2 — the SDLC runs as a pipeline, and PHP builds
 

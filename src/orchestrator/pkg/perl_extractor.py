@@ -81,6 +81,16 @@ shared bareword DSL (``get '/x' => sub {...}`` / ``get '/y' => \\&handler``) sca
 statement scope. A verb-less/``any`` registration or a computed path emits nothing at all (D2,
 endpoints-typescript-go.md); a closure handler emits an ``Endpoint`` with no ``EXPOSES``.
 
+**P4 — data layer (§3.4, ``perl_orm.py``).** Runs in ``finalize()``, like CALLS (a relation
+target's local-vs-external classification needs every file's declarations known first).
+Marker: ``__PACKAGE__->table('orders')`` — the one call every DBIx::Class Result class must
+make, read literally rather than guessed from base class or shape. ``add_columns(...)``
+(bareword list or ``name => {...}`` hash — only the keys) become ``Field``s on the
+``Entity`` (``perl:entity:Dotted.Path``, a parallel id alongside the package's own ``Type``
+node). ``belongs_to``/``has_many``/``might_have`` become ``REFERENCES``, ``src`` the
+declaring entity; a target outside the repo still gets the edge, to an external placeholder
+``Entity`` — never silently dropped.
+
 **Windows note (not a repo defect):** ``tree_sitter_perl.language()`` returns a bare Python
 ``int`` (``PyLong_FromVoidPtr``), unlike grammars that return a ``PyCapsule``. tree-sitter's
 Windows binding parses a bare int via a 32-bit ``unsigned long`` format code, which
@@ -98,6 +108,8 @@ from typing import TYPE_CHECKING, Any
 from orchestrator.pkg.extractor import rel_module_name
 from orchestrator.pkg.facts import Edge, EdgeKind, FactBatch, Node, NodeKind, Provenance
 from orchestrator.pkg.finalize_names import resolve_or_drop
+from orchestrator.pkg.perl_orm import DBIC_RELATIONS
+from orchestrator.pkg.perl_orm import emit_entities as _emit_dbic_entities
 from orchestrator.pkg.perl_routes import HTTP_VERBS, scan_lite_route, scan_mojo_full_app
 
 if TYPE_CHECKING:
@@ -266,8 +278,8 @@ class _Ctx:
 
 @dataclass
 class _TypeRec:
-    """Everything P2's CALLS pass needs about one package, built during the P1 walk and
-    read back in ``finalize()`` once every file's walk is done.
+    """Everything P2's CALLS pass and P4's ORM pass need about one package, built during
+    the P1 walk and read back in ``finalize()`` once every file's walk is done.
     """
 
     type_id: str
@@ -275,6 +287,13 @@ class _TypeRec:
     fields: dict[str, str] = field(default_factory=dict)
     bases: list[str] = field(default_factory=list)
     exports: set[str] = field(default_factory=set)
+    # P4 (§3.4): set when this package calls `__PACKAGE__->table(...)` — DBIx::Class's own
+    # required marker for a Result class, read literally rather than guessed from base class.
+    is_dbic_entity: bool = False
+    dbic_table_line: int | None = None
+    dbic_rel: str = ""
+    dbic_columns: list[tuple[str, int]] = field(default_factory=list)
+    dbic_relations: list[tuple[str, int]] = field(default_factory=list)
 
 
 @dataclass
@@ -321,9 +340,13 @@ class PerlExtractor:
         return batch
 
     def finalize(self, batch: FactBatch) -> FactBatch:
-        """P2: every file is walked by now, so every sub body can be scanned for CALLS."""
+        """Every file is walked by now: P2's CALLS pass over every sub body, then P4's
+        DBIx::Class entities (whole-repo, so a relation target resolves the same way
+        regardless of which file declares it or which file references it first).
+        """
         for sub in self._subs:
             self._scan_calls_in(sub, batch)
+        _emit_dbic_entities(self._types, batch)
         return batch
 
     # --- top-level / block-body dispatch --------------------------------------
@@ -575,7 +598,10 @@ class PerlExtractor:
     def _handle_class_accessor_call(
         self, expr: TSNode, ctx: _Ctx, source: bytes, rel: str, batch: FactBatch
     ) -> None:
-        """``__PACKAGE__->mk_accessors(qw(a b))`` (D6, Class::Accessor)."""
+        """``__PACKAGE__->method(...)`` statement calls: ``mk_accessors`` (D6,
+        Class::Accessor) and DBIx::Class's ``table``/``add_columns``/relation declarators
+        (P4, §3.4) — same receiver shape, different method names.
+        """
         if ctx.package_id is None:
             return
         children = expr.named_children
@@ -584,12 +610,55 @@ class PerlExtractor:
         receiver, method_node = children[0], _first_named_of_type(expr, "method")
         if receiver.type != "func0op_call_expression" or _text(receiver, source) != "__PACKAGE__":
             return
-        if method_node is None or _text(method_node, source) != "mk_accessors":
+        if method_node is None:
             return
+        method = _text(method_node, source)
         line = expr.start_point[0] + 1
-        for arg in children[2:]:
-            for name in _string_or_wordlist_targets(arg, source):
-                self._emit_field(ctx.package_id, name, rel, line, batch)
+        args = children[2:]
+
+        if method == "mk_accessors":
+            for arg in args:
+                for name in _string_or_wordlist_targets(arg, source):
+                    self._emit_field(ctx.package_id, name, rel, line, batch)
+            return
+
+        rec = self._types.setdefault(ctx.package_id, _TypeRec(type_id=ctx.package_id))
+        if method == "table":
+            rec.is_dbic_entity = True
+            rec.dbic_table_line = line
+            rec.dbic_rel = rel
+        elif method == "add_columns":
+            for arg in args:
+                if arg.type == "list_expression":
+                    items = arg.named_children
+                    is_hash_form = any(c.type == "anonymous_hash_expression" for c in items)
+                    for i, item in enumerate(items):
+                        if is_hash_form:
+                            # `add_columns(id => {...}, name => {...})` — only the keys
+                            # (each an `autoquoted_bareword`) are read, never the
+                            # type-info hash values (D6-style: declared, not guessed).
+                            if i % 2 == 0 and item.type == "autoquoted_bareword":
+                                rec.dbic_columns.append((_text(item, source), line))
+                        elif item.type == "autoquoted_bareword":
+                            rec.dbic_columns.append((_text(item, source), line))
+                        else:
+                            for name in _string_or_wordlist_targets(item, source):
+                                rec.dbic_columns.append((name, line))
+                else:
+                    for name in _string_or_wordlist_targets(arg, source):
+                        rec.dbic_columns.append((name, line))
+        elif method in DBIC_RELATIONS and args:
+            # `belongs_to(customer => 'App::Schema::Result::Customer', 'customer_id')` —
+            # a bareword relation name (unused for the edge), then the target class as the
+            # first string literal in the list.
+            target_arg = args[0]
+            if target_arg.type == "list_expression":
+                for item in target_arg.named_children:
+                    if item.type == "string_literal":
+                        target = _plain_string_literal_text(item, source)
+                        if target:
+                            rec.dbic_relations.append((target, line))
+                        break
 
     # --- subs ----------------------------------------------------------------
 

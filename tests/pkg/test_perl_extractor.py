@@ -473,3 +473,73 @@ def test_mojo_lite_named_handler_route(tmp_path: Path) -> None:
     batch = _repo_facts(tmp_path, {"app.pl": src})
     exposes = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.EXPOSES}
     assert ("perl:endpoint:GET /y", "perl:app.pl.handler") in exposes
+
+
+# --- P4: DBIx::Class entities (§3.4) ----------------------------------------
+
+
+def test_dbic_table_marker_and_columns(tmp_path: Path) -> None:
+    src = (
+        "package App::Schema::Result::Order;\n"
+        "use base 'DBIx::Class::Core';\n"
+        "__PACKAGE__->table('orders');\n"
+        "__PACKAGE__->add_columns(qw(id total));\n"
+    )
+    batch = _repo_facts(tmp_path, {"Order.pm": src})
+    by_id = {n.id: n for n in batch.nodes}
+    eid = "perl:entity:App.Schema.Result.Order"
+    assert by_id[eid].kind is NodeKind.ENTITY
+    assert by_id[eid].external is False
+    assert by_id[f"{eid}.id"].kind is NodeKind.FIELD
+    assert by_id[f"{eid}.total"].kind is NodeKind.FIELD
+    contains = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CONTAINS}
+    assert (eid, f"{eid}.id") in contains
+    assert (eid, f"{eid}.total") in contains
+
+
+def test_dbic_columns_hash_form_reads_only_keys(tmp_path: Path) -> None:
+    src = (
+        "package App::Schema::Result::Order;\n"
+        "__PACKAGE__->table('orders');\n"
+        "__PACKAGE__->add_columns(id => { data_type => 'int' }, total => { data_type => 'text' });\n"
+    )
+    batch = _repo_facts(tmp_path, {"Order.pm": src})
+    by_id = {n.id: n for n in batch.nodes}
+    eid = "perl:entity:App.Schema.Result.Order"
+    assert by_id[f"{eid}.id"].kind is NodeKind.FIELD
+    assert by_id[f"{eid}.total"].kind is NodeKind.FIELD
+
+
+def test_dbic_relations_both_directions_and_external_target(tmp_path: Path) -> None:
+    files = {
+        "Order.pm": (
+            "package App::Schema::Result::Order;\n"
+            "__PACKAGE__->table('orders');\n"
+            "__PACKAGE__->belongs_to(customer => 'App::Schema::Result::Customer', 'customer_id');\n"
+            "__PACKAGE__->has_many(items => 'App::Schema::Result::OrderItem', 'order_id');\n"
+        ),
+        "OrderItem.pm": (
+            "package App::Schema::Result::OrderItem;\n"
+            "__PACKAGE__->table('order_items');\n"
+            "__PACKAGE__->belongs_to(order => 'App::Schema::Result::Order', 'order_id');\n"
+        ),
+    }
+    batch = _repo_facts(tmp_path, files)
+    refs = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.REFERENCES}
+    order_eid = "perl:entity:App.Schema.Result.Order"
+    item_eid = "perl:entity:App.Schema.Result.OrderItem"
+    customer_eid = "perl:entity:App.Schema.Result.Customer"
+    assert (order_eid, item_eid) in refs
+    assert (item_eid, order_eid) in refs
+    assert (order_eid, customer_eid) in refs
+    by_id = {n.id: n for n in batch.nodes}
+    assert by_id[customer_eid].external is True
+    assert by_id[order_eid].external is False
+
+
+def test_dbic_no_table_marker_is_not_an_entity(tmp_path: Path) -> None:
+    """A plain package with a `belongs_to`-named method of its own isn't a DBIC Result
+    class without the `table(...)` marker — never guessed from shape alone."""
+    src = "package Shop::Cart;\nsub belongs_to { return 1; }\n"
+    batch = _repo_facts(tmp_path, {"Cart.pm": src})
+    assert not any(n.kind is NodeKind.ENTITY for n in batch.nodes)
