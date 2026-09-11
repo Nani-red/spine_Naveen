@@ -29,7 +29,7 @@ gates (before building, before merging). The product is **Spine**; it ships as
 | PHP delivery | Composer or pinned PHPUnit PHAR | Configured test layout, changed-file lint, modern PHPUnit; [validation roadmap](php-codegen-roadmap.md) |
 | CLI commands | **56** | `grep -c '\.command(' src/orchestrator/cli/*.py`, summed |
 | Source modules | **358** | `find src/orchestrator -name '*.py'` |
-| Test functions | **3,137** across 319 files | `grep -rh '^def test_\|^async def test_' tests`; files via the same pattern with `-rl` |
+| Test functions | **3,159** across 321 files | `grep -rh '^def test_\|^async def test_' tests`; files via the same pattern with `-rl` |
 | Graph precision | **1.00** on every node and edge kind, all 10 front-ends | `orchestrator pkg accuracy` against a hand-labelled corpus |
 | `CALLS` recall | **1.00** (C, SQL) → **0.86** (TypeScript, on 14 labelled edges) · **0.67** (Perl, on 6 labelled edges) · **0.50** (PHP, on 8 labelled edges — the misses are P3's typed-receiver rule and the global-namespace fallback, both predicted `known_gaps`, not surprises) | same |
 | Grounding effect, `create` tickets | **29/50 grounded, 0/50 ungrounded** | 200-run controlled A/B, 2 frontier models, 5 passes |

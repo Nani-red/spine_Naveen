@@ -48,6 +48,31 @@ All notable changes to this project are documented here. Format loosely follows
   placeholder. Runs in `finalize()`, like `CALLS`: a relation target's local-vs-external
   classification needs every file's declarations known first. `data_layer_link.py` needed
   no Perl-specific wiring. `corpus/perl/dbic` added.
+- **`scripts/roadmap-status.py`** — the roadmap-currency gate for every language track's
+  phase table (§8.1 of `docs/specs/templates/language-track.md`): a DONE phase with no
+  Evidence/Finished, a codegen phase started before its named comprehension dependency is
+  DONE, a document's own top Status line contradicting its own phase table, an unindexed
+  roadmap, or a broken relative link. Deliberately narrower than the free-prose spec-status
+  classifier `STATE-OF-SPINE.md` §8 tried and withdrew at 33% precision — every check here
+  reads structured table cells or compares a document against itself.
+- **`scripts/validate-frontend.py`** — the real-repository smoke test as a script (§8.2):
+  shallow-clone, extract, verify, the `state` stack line, node counts by language, top
+  unresolved import targets, delete. Reuses the same SSRF-guarded `resolve_repo_source`/
+  `materialize_repo_source` the CLI's repo-argument resolution already uses.
+- **`docs/specs/templates/language-track.md`** — the shared roadmap skeleton (§8.4),
+  generalized from `perl-support-roadmap.md`'s own section shape for the next language
+  track to start from instead of re-deriving it.
+
+### Fixed
+
+- **Perl `SUPER::m()` could fabricate a method id nothing declared.** Found live on the
+  first full real-repo run this track completed (`validate-frontend.py` against
+  `mojolicious/mojo`): 10 dangling `CALLS` edges, all `SUPER::new()` into a `Mojo::Base`
+  -style parent that never declares an explicit `sub new` (the constructor comes from
+  further up the chain). `perl_extractor.py`'s `SUPER::` handling now reuses the
+  already-verified `Shop::Log->new` policy — call the resolved `Type` itself when it
+  doesn't declare the method, rather than guessing `<base>.<method>`. `corpus/perl/
+  super_calls` added; no case had exercised `SUPER::` before this.
 
 ## 3.33.2 — the SDLC runs as a pipeline, and PHP builds
 

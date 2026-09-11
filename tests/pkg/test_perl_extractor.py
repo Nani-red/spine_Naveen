@@ -270,6 +270,40 @@ def test_calls_super_skipped_when_no_base_resolved(tmp_path: Path) -> None:
     assert not any(e.kind is EdgeKind.CALLS for e in batch.edges)
 
 
+def test_calls_super_falls_back_to_type_when_base_doesnt_declare_it(tmp_path: Path) -> None:
+    """A `Mojo::Base`-style base: declared in this repo, but `new` isn't an explicit `sub` —
+    it's provided implicitly further up the chain. Real bug, found live against Mojolicious's
+    own repo (`validate-frontend.py`): ``perl:Mojo.Log.new -CALLS-> perl:Mojo.EventEmitter.new``
+    was emitted with no ``Mojo::EventEmitter::new`` node ever declared — a fabricated method id
+    with no backstop. Row 3's own policy (call the type, not a guessed method) now applies here
+    too."""
+    files = {
+        "Base.pm": "package Shop::Base;\nuse Mojo::Base -base;\n",
+        "Cart.pm": (
+            "package Shop::Cart;\nuse parent -norequire, 'Shop::Base';\n"
+            "sub new { my $self = shift; $self->SUPER::new(@_); }\n"
+        ),
+    }
+    batch = _repo_facts(tmp_path, files)
+    calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
+    assert ("perl:Shop.Cart.new", "perl:Shop.Base") in calls
+    assert ("perl:Shop.Cart.new", "perl:Shop.Base.new") not in calls
+    by_id = {n.id: n for n in batch.nodes}
+    assert by_id["perl:Shop.Base"].external is False  # declared locally, just no `new` sub
+
+
+def test_calls_super_falls_back_to_external_type_when_base_undeclared(tmp_path: Path) -> None:
+    src = (
+        "package Shop::Cart;\nuse parent -norequire, 'Some::External::Base';\n"
+        "sub new { my $self = shift; $self->SUPER::new(@_); }\n"
+    )
+    batch = _repo_facts(tmp_path, {"Cart.pm": src})
+    calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
+    assert ("perl:Shop.Cart.new", "perl:Some.External.Base") in calls
+    by_id = {n.id: n for n in batch.nodes}
+    assert by_id["perl:Some.External.Base"].external is True
+
+
 def test_calls_qualified_receiver_new(tmp_path: Path) -> None:
     files = {
         "Log.pm": "package Shop::Log;\nsub new { my ($c) = @_; return bless {}, $c; }\n",

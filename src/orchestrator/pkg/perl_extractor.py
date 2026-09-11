@@ -49,8 +49,10 @@ shapes, each resolved only when *verified*, never guessed:
 
 1. ``$self->m()`` / ``$class->m()`` / ``__PACKAGE__->m`` / ``shift->m`` → a sibling sub or
    ``has`` field of the enclosing package.
-2. ``$self->SUPER::m()`` → the first parent D5 resolved (``owner.bases[0]``); skipped when
-   the package has no resolved base.
+2. ``$self->SUPER::m()`` → the sub when the first parent D5 resolved (``owner.bases[0]``)
+   declares it, else the ``Type`` itself (row 3's own backstop — the base is verified, a
+   ``Mojo::Base``-style implicit constructor further up its chain is not); skipped only
+   when the package has no resolved base at all.
 3. ``Shop::Log->new`` (a qualified bareword receiver) → the sub when the target package
    declares it, else the ``Type`` itself (instantiation is a call to the type).
 4. ``Shop::Util::fmt(...)`` (a qualified function call) → the exact id, a placeholder if
@@ -738,8 +740,22 @@ class PerlExtractor:
         if mtext.startswith("SUPER::"):
             if owner is None or not owner.bases:
                 return  # row 2: skip when unresolved
-            target = f"{owner.bases[0]}.{mtext[len('SUPER::') :]}"
-            batch.add_edge(Edge(sub.caller_id, target, EdgeKind.CALLS, Provenance(sub.rel, line)))
+            base_id = owner.bases[0]
+            method = mtext[len("SUPER::") :]
+            base_rec = self._types.get(base_id)
+            prov = Provenance(sub.rel, line)
+            if base_rec is not None and method in base_rec.methods:
+                batch.add_edge(Edge(sub.caller_id, base_rec.methods[method], EdgeKind.CALLS, prov))
+            else:
+                # Row 3's own backstop, not a fabricated `<base>.<method>` id: the base
+                # package doesn't declare `method` itself — inherited further up its own
+                # chain (a `Mojo::Base`-style implicit constructor is the common real case)
+                # or the base is genuinely third-party. Either way the base *is* verified
+                # (D5 resolved it literally), so the call is to the type, not to a guessed
+                # method that has no backstop.
+                base_name = base_id.rsplit(".", 1)[-1]
+                batch.add_node(Node(base_id, NodeKind.TYPE, base_name, "perl", external=base_rec is None))
+                batch.add_edge(Edge(sub.caller_id, base_id, EdgeKind.CALLS, prov))
             return
 
         if "::" in mtext:
