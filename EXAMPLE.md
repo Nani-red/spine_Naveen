@@ -173,9 +173,8 @@ Every step above trusted the graph. That trust should be earned with a number, n
 orchestrator pkg accuracy
 ```
 
-It scores the extractor against a committed corpus of 38 hand-labelled cases covering
-9 of Spine's 10 front-ends (Perl is comprehension-only so far — its corpus lands with
-`CALLS` in a later phase). **Precision is 1.00 on every node kind and every edge kind, in every corpus-scored language** —
+It scores the extractor against a committed corpus of 44 hand-labelled cases covering
+all 10 of Spine's front-ends. **Precision is 1.00 on every node kind and every edge kind, in every language** —
 so nothing you saw in steps 3–6 was invented. Recall is 1.00 on everything except `CALLS`:
 
 | language | `CALLS` recall |

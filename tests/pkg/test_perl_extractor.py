@@ -1,6 +1,6 @@
-"""PKG: the Perl front-end maps Perl source onto the universal facts (10th language, P1).
+"""PKG: the Perl front-end maps Perl source onto the universal facts (10th language;
+P1 comprehension + P2 CALLS, perl-support-roadmap.md §3.1-3.2).
 
-Comprehension only — no CALLS here, that's P2 (perl-support-roadmap.md §3.2).
 tree-sitter-perl is an optional extra, so these skip cleanly when it's absent.
 """
 
@@ -206,3 +206,183 @@ def test_end_to_end_via_repo_extractor_resolves_require_by_path_suffix(tmp_path:
     by_id = {n.id: n for n in batch.nodes}
     target = by_id["perl:lib/common.pl"]
     assert target.grounded is True
+
+
+# --- P2: CALLS (§3.2) -------------------------------------------------------
+
+
+def _repo_facts(tmp_path: Path, files: dict[str, str]) -> FactBatch:
+    for rel, src in files.items():
+        f = tmp_path / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(src, encoding="utf-8")
+    return RepoCodeExtractor([PerlExtractor()]).extract(tmp_path)
+
+
+def test_calls_sibling_method_via_self_class_package_shift(tmp_path: Path) -> None:
+    src = """\
+package Shop::Cart;
+
+sub helper { return 1; }
+
+sub a { my $self = shift; $self->helper(); }
+sub b { my ($class) = @_; $class->helper(); }
+sub c { __PACKAGE__->helper(); }
+sub d { shift->helper(); }
+sub e { $self->nonexistent(); }
+"""
+    batch = _repo_facts(tmp_path, {"Cart.pm": src})
+    calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
+    for caller in "abcd":
+        assert ("perl:Shop.Cart." + caller, "perl:Shop.Cart.helper") in calls
+    # `e` calls a name Shop::Cart never declares — never fabricated.
+    assert not any(src == "perl:Shop.Cart.e" for src, _ in calls)
+
+
+def test_calls_has_field_via_self(tmp_path: Path) -> None:
+    src = """\
+package Shop::Cart;
+has items => (is => 'rw');
+
+sub total { my $self = shift; $self->items(); }
+"""
+    batch = _repo_facts(tmp_path, {"Cart.pm": src})
+    calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
+    assert ("perl:Shop.Cart.total", "perl:Shop.Cart.items") in calls
+
+
+def test_calls_super(tmp_path: Path) -> None:
+    files = {
+        "Base.pm": "package Shop::Base;\nsub helper { return 1; }\n",
+        "Cart.pm": (
+            "package Shop::Cart;\nuse parent -norequire, 'Shop::Base';\n"
+            "sub total { my $self = shift; $self->SUPER::helper(); }\n"
+        ),
+    }
+    batch = _repo_facts(tmp_path, files)
+    calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
+    assert ("perl:Shop.Cart.total", "perl:Shop.Base.helper") in calls
+
+
+def test_calls_super_skipped_when_no_base_resolved(tmp_path: Path) -> None:
+    src = "package Shop::Cart;\nsub total { my $self = shift; $self->SUPER::helper(); }\n"
+    batch = _repo_facts(tmp_path, {"Cart.pm": src})
+    assert not any(e.kind is EdgeKind.CALLS for e in batch.edges)
+
+
+def test_calls_qualified_receiver_new(tmp_path: Path) -> None:
+    files = {
+        "Log.pm": "package Shop::Log;\nsub new { my ($c) = @_; return bless {}, $c; }\n",
+        "Cart.pm": "package Shop::Cart;\nsub total { Shop::Log->new; }\n",
+    }
+    batch = _repo_facts(tmp_path, files)
+    calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
+    assert ("perl:Shop.Cart.total", "perl:Shop.Log.new") in calls
+
+
+def test_calls_qualified_receiver_falls_back_to_type_when_undeclared(tmp_path: Path) -> None:
+    src = "package Shop::Cart;\nsub total { Shop::External->new; }\n"
+    batch = _repo_facts(tmp_path, {"Cart.pm": src})
+    calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
+    assert ("perl:Shop.Cart.total", "perl:Shop.External") in calls
+    by_id = {n.id: n for n in batch.nodes}
+    assert by_id["perl:Shop.External"].external is True
+
+
+def test_calls_qualified_function(tmp_path: Path) -> None:
+    files = {
+        "Util.pm": "package Shop::Util;\nsub fmt { return 1; }\n",
+        "Cart.pm": "package Shop::Cart;\nsub total { Shop::Util::fmt(); }\n",
+    }
+    batch = _repo_facts(tmp_path, files)
+    calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
+    assert ("perl:Shop.Cart.total", "perl:Shop.Util.fmt") in calls
+
+
+def test_calls_bare_same_file_sub(tmp_path: Path) -> None:
+    src = "package Shop::Cart;\nsub helper { return 1; }\nsub total { helper(); }\n"
+    batch = _repo_facts(tmp_path, {"Cart.pm": src})
+    calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
+    assert ("perl:Shop.Cart.total", "perl:Shop.Cart.helper") in calls
+
+
+def test_calls_bare_explicit_use_qw_import(tmp_path: Path) -> None:
+    files = {
+        "Util.pm": "package Shop::Util;\nsub fmt { return 1; }\n",
+        "Cart.pm": "package Shop::Cart;\nuse Shop::Util qw(fmt);\nsub total { fmt(); }\n",
+    }
+    batch = _repo_facts(tmp_path, files)
+    calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
+    assert ("perl:Shop.Cart.total", "perl:Shop.Util.fmt") in calls
+
+
+def test_calls_bare_d10_default_export(tmp_path: Path) -> None:
+    files = {
+        "Util.pm": "package Shop::Util;\nour @EXPORT = qw(fmt);\nsub fmt { return 1; }\n",
+        "Cart.pm": "package Shop::Cart;\nuse Shop::Util;\nsub total { fmt(); }\n",
+    }
+    batch = _repo_facts(tmp_path, files)
+    calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
+    assert ("perl:Shop.Cart.total", "perl:Shop.Util.fmt") in calls
+
+
+def test_calls_bare_d10_skips_third_party_default_export(tmp_path: Path) -> None:
+    """`use Carp;` (bare) then `croak()` — Carp is never declared in-repo, so D10 must
+    refuse, exactly the exporter_default corpus case's control."""
+    src = "package Shop::Cart;\nuse Carp;\nsub total { croak('bad'); }\n"
+    batch = _repo_facts(tmp_path, {"Cart.pm": src})
+    assert not any(e.kind is EdgeKind.CALLS for e in batch.edges)
+
+
+def test_calls_bare_d10_isa_inherited(tmp_path: Path) -> None:
+    files = {
+        "Base.pm": "package Shop::Base;\nsub helper { return 1; }\n",
+        "Cart.pm": ("package Shop::Cart;\nuse parent -norequire, 'Shop::Base';\nsub total { helper(); }\n"),
+    }
+    batch = _repo_facts(tmp_path, files)
+    calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
+    assert ("perl:Shop.Cart.total", "perl:Shop.Base.helper") in calls
+
+
+def test_calls_bare_unresolved_is_skipped(tmp_path: Path) -> None:
+    src = "package Shop::Cart;\nsub total { nonexistent_sub(); }\n"
+    batch = _repo_facts(tmp_path, {"Cart.pm": src})
+    assert not any(e.kind is EdgeKind.CALLS for e in batch.edges)
+
+
+def test_calls_never_fabricates_dynamic_or_string_eval_shapes(tmp_path: Path) -> None:
+    """Row 6: `&f`, `$self->$m()`, `$obj->can('m')->()`, `goto &f`, string `eval`, and
+    `AUTOLOAD` must never produce a CALLS edge — excluded by CST shape, not a blocklist."""
+    src = """\
+package Shop::Cart;
+
+sub helper { return 1; }
+
+sub risky {
+    my $self = shift;
+    my $m = 'helper';
+    &helper;
+    $self->$m();
+    eval "helper()";
+}
+"""
+    batch = _repo_facts(tmp_path, {"Cart.pm": src})
+    assert not any(e.kind is EdgeKind.CALLS for e in batch.edges)
+
+
+def test_instance_calls_are_p3_not_p2(tmp_path: Path) -> None:
+    """The instance_calls corpus control: a literal-constructed receiver and a parameter
+    receiver are both P3's typed-receiver rule — P2 must not resolve either."""
+    files = {
+        "Log.pm": (
+            "package Shop::Log;\nsub new { my ($c) = @_; return bless {}, $c; }\nsub write { return 1; }\n"
+        ),
+        "Cart.pm": (
+            "package Shop::Cart;\n"
+            "sub a { my $log = Shop::Log->new; $log->write; }\n"
+            "sub b { my ($self, $thing) = @_; $thing->write; }\n"
+        ),
+    }
+    batch = _repo_facts(tmp_path, files)
+    calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
+    assert not any(dst == "perl:Shop.Log.write" for _, dst in calls)

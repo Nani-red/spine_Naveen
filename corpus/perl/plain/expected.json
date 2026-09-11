@@ -1,0 +1,30 @@
+{
+  "language": "perl",
+  "case": "plain",
+  "why": "The Perl control: a package with `use parent`, an explicit `use X qw(f)` import, three subs, and every P2 CALLS shape that never needs a guess — `$self->` (row 1), a bare call resolved via an explicit qw() import (row 5), and a fully-qualified call (row 4). 1.00/1.00 by design.",
+  "root": ".repo",
+  "nodes": [
+    { "id": "perl:Cart.pm", "kind": "Module" },
+    { "id": "perl:Shop.Cart", "kind": "Type" },
+    { "id": "perl:Shop.Base", "kind": "Type" },
+    { "id": "perl:Shop.Tax", "kind": "Type" },
+    { "id": "perl:Shop.Cart.new", "kind": "Function" },
+    { "id": "perl:Shop.Cart.total", "kind": "Function" },
+    { "id": "perl:Shop.Cart.helper", "kind": "Function" },
+    { "id": "perl:Shop.Tax.rate", "kind": "Function" }
+  ],
+  "edges": [
+    { "src": "perl:Cart.pm", "dst": "perl:Shop.Cart", "kind": "CONTAINS" },
+    { "src": "perl:Shop.Cart", "dst": "perl:Shop.Cart.new", "kind": "CONTAINS" },
+    { "src": "perl:Shop.Cart", "dst": "perl:Shop.Cart.total", "kind": "CONTAINS" },
+    { "src": "perl:Shop.Cart", "dst": "perl:Shop.Cart.helper", "kind": "CONTAINS" },
+    { "src": "perl:Shop.Cart", "dst": "perl:Shop.Base", "kind": "IMPLEMENTS" },
+    { "src": "perl:Cart.pm", "dst": "perl:Shop.Tax", "kind": "IMPORTS" },
+    { "src": "perl:Shop.Cart.total", "dst": "perl:Shop.Cart.helper", "kind": "CALLS" },
+    { "src": "perl:Shop.Cart.total", "dst": "perl:Shop.Tax.rate", "kind": "CALLS" }
+  ],
+  "known_gaps": [],
+  "false_positives": [],
+  "excluded": [],
+  "open_questions": []
+}

@@ -26,9 +26,8 @@ The PKG is built **from your code** (deterministic, no LLM). Spine reads it befo
 writes anything, so generated code matches your repo's real structure and conventions.
 
 Its accuracy is measured rather than asserted: **precision 1.00 on every node and edge kind
-across 9 of Spine's 10 front-ends** (Perl is comprehension-only so far — its corpus lands
-with `CALLS` in a later phase) — nothing in the graph is invented — with the remaining gap
-being missing `CALLS` edges, not wrong ones (§10).
+across all 10 of Spine's front-ends** — nothing in the graph is invented — with the
+remaining gap being missing `CALLS` edges, not wrong ones (§10).
 
 ---
 
@@ -248,7 +247,7 @@ flowchart LR
   | C++ | ✅ classes/namespaces/inheritance | `pip install 'synaptixs-spine[cpp]'` |
   | Go | ✅ + interface satisfaction (`IMPLEMENTS`) | `pip install 'synaptixs-spine[go]'` |
   | PHP | ✅ + call graph (traits as `IMPLEMENTS`; `$this`/`self`/`parent`/`new`/static-call resolution, incl. typed receivers) + Laravel/Slim/Symfony routes + Eloquent/Doctrine entities | `pip install 'synaptixs-spine[php]'` |
-  | Perl | ✅ comprehension (every `package`/5.38 `class` is its own `Type`; inheritance across its five spellings as `IMPLEMENTS`) — `CALLS` and routes are later phases | `pip install 'synaptixs-spine[perl]'` |
+  | Perl | ✅ comprehension + call graph (every `package`/5.38 `class` is its own `Type`; inheritance across its five spellings as `IMPLEMENTS`; `$self->`/`SUPER::`/qualified/bare `CALLS`) — routes are a later phase | `pip install 'synaptixs-spine[perl]'` |
 
   Java lifts JAX-RS / Jakarta REST resource methods into `Endpoint` nodes with
   `EXPOSES` edges to their handlers. Both `javax.ws.rs` and `jakarta.ws.rs`
@@ -288,7 +287,12 @@ flowchart LR
   (`perl:Shop.Cart`). Inheritance resolves across five literal spellings into `IMPLEMENTS`
   (`use parent`/`use base`, `our @ISA`/`push @ISA`, Moo/Moose `extends`, `use Mojo::Base`,
   5.38 `:isa(...)`) — a computed `@ISA` yields nothing. `has`/`Class::Accessor`/5.38 `field`
-  become `Field`s. `CALLS` and framework routes are later phases of the same track.
+  become `Field`s. `CALLS` resolves six shapes precision-first — `$self`/`$class`/
+  `__PACKAGE__`/`shift` calls to a sibling sub or field, `SUPER::` to the first resolved
+  parent, a qualified `X->m()`/`X::f()` call, and a bare call resolved same-file, via an
+  explicit `use X qw(f)` import, or (verified-only) a first-party `@EXPORT`/`@ISA` chain —
+  never a dynamic dispatch (`$self->$m()`, `&$code`, string `eval`). Framework routes are a
+  later phase of the same track.
 - **Cached per commit.** Re-running on an unchanged tree reuses the cache; `--refresh`
   forces a re-extract. So `understand` is cheap to re-run as the code evolves.
 
@@ -562,7 +566,7 @@ reviews honest.
   runtime behavior, dynamic dispatch it can't see, or values only known at execution.
 - **Parser coverage.** Python/Java/TypeScript/C#/C/C++/**Go**/**PHP**/**Perl** and **SQL**
   today — ten front-ends. Other languages aren't extracted yet (their files are simply not
-  represented). Perl comprehension only (no `CALLS` yet). For C, parsing is
+  represented). For C, parsing is
   pre-preprocessor — heavy macro use yields partial facts (we never run `cpp`). For SQL, the
   dialect is auto-detected (override with `--dialect`); UTF-16 and `GO`-separated SQL Server
   scripts are handled (see §4). Stored-procedure bodies are re-parsed

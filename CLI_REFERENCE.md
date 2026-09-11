@@ -521,15 +521,21 @@ orchestrator pkg accuracy [PATH] [OPTIONS]
 | `--tests` | Test target(s) for `--oracle runtime`; defaults to the repo's own. |
 | `--dialect` | SQL dialect (postgres\|mysql\|tsql\|oracle\|…); default: auto-detect. |
 
-**Current corpus results** (38 fixture cases — 34 single-language, 4 multi-repo — across all 9
-front-ends). Precision is **1.00 on every node kind and every edge kind in all 9 languages**; recall is 1.00 on every kind except `CALLS`:
+**Current corpus results** (44 fixture cases — 40 single-language, 4 multi-repo — across
+all 10 front-ends, Perl's corpus landing in P2 of its own track). Precision is **1.00 on
+every node kind and every edge kind in every language**; recall is 1.00 on every kind
+except `CALLS`:
 
 | language | `CALLS` recall |
 |---|---|
 | `c` `sql` | 1.00 |
 | `python` | 0.73 |
-| `cpp` `csharp` `go` `java` | 0.67 |
+| `cpp` `csharp` `go` `java` `perl` | 0.67 |
 | `typescript` | 0.50 |
+
+Perl's 0.67 is 4 of 6 labelled `CALLS` edges in its own corpus — the 2 misses are both the
+documented P2/P3 typed-receiver boundary (`instance_calls`, predicted `known_gaps`), not
+surprises.
 
 Every remaining loss is the documented instance-dispatch skip — a call whose receiver is a
 variable rather than a name. Invention stands at **0 invented targets across 15,212 call
