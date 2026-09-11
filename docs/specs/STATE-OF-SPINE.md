@@ -3,7 +3,7 @@
 **The one document to read.** Verified against source on **2026-09-10**, at the 3.33.2 release
 cut. Every number below was re-measured that day.
 
-> **Why this exists.** `docs/specs/` holds **88** markdown files — **84 specs** plus this
+> **Why this exists.** `docs/specs/` holds **89** markdown files — **85 specs** plus this
 > page, [`README`](README.md) and [`SPEC-INDEX`](SPEC-INDEX.md) — with 6 archived, 10 build
 > documents, and 17 root-level user documents.
 > Answering "where do we stand?" required opening five of them and reconciling three that
@@ -25,12 +25,12 @@ gates (before building, before merging). The product is **Spine**; it ships as
 | | Value | How it is known |
 |---|---|---|
 | Version | **3.33.2** | cutting now; 3.33.1 is the last on PyPI until this ships |
-| Languages extracted | **9** front-ends | Python, Java, TypeScript, C#, C, C++, Go, PHP, SQL |
+| Languages extracted | **10** front-ends | Python, Java, TypeScript, C#, C, C++, Go, PHP, Perl, SQL — Perl is comprehension-only (P1 of [perl-support-roadmap.md](perl-support-roadmap.md)) |
 | PHP delivery | Composer or pinned PHPUnit PHAR | Configured test layout, changed-file lint, modern PHPUnit; [validation roadmap](php-codegen-roadmap.md) |
 | CLI commands | **56** | `grep -c '\.command(' src/orchestrator/cli/*.py`, summed |
-| Source modules | **354** | `find src/orchestrator -name '*.py'` |
-| Test functions | **3,090** across 317 files | `grep -rh '^def test_\|^async def test_' tests`; files via the same pattern with `-rl` |
-| Graph precision | **1.00** on every node and edge kind, all 9 front-ends | `orchestrator pkg accuracy` against a hand-labelled corpus |
+| Source modules | **355** | `find src/orchestrator -name '*.py'` |
+| Test functions | **3,107** across 318 files | `grep -rh '^def test_\|^async def test_' tests`; files via the same pattern with `-rl` |
+| Graph precision | **1.00** on every node and edge kind, 9 of 10 front-ends (Perl's corpus lands with `CALLS` in a later phase) | `orchestrator pkg accuracy` against a hand-labelled corpus |
 | `CALLS` recall | **1.00** (C, SQL) → **0.86** (TypeScript, on 14 labelled edges) · **0.50** (PHP, on 8 labelled edges — the misses are P3's typed-receiver rule and the global-namespace fallback, both predicted `known_gaps`, not surprises) | same |
 | Grounding effect, `create` tickets | **29/50 grounded, 0/50 ungrounded** | 200-run controlled A/B, 2 frontier models, 5 passes |
 | Same, across two codebases | **47/68 vs 3/68** | replicated on an unrelated external repo |
@@ -84,7 +84,7 @@ that would matter if it were wrong — and it is the thinnest-evidenced cell on 
 `CALLS` scores 1.00 precision and 1.00 recall, **on a corpus of exactly one labelled call edge**.
 That is a passing test, not a measurement. The fallback is confined to two keywords followed by a
 parenthesis, so the blast radius is small, but anyone quoting SQL call accuracy should quote the
-denominator with it. Everything else in all nine front-ends comes off the tree.
+denominator with it. Everything else in all nine corpus-scored front-ends comes off the tree.
 
 **Why not one parser for all eight?** Because a second implementation of a language is a second
 *opinion* about what the language means, and the two diverge on the hard cases. Using CPython's

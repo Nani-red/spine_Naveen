@@ -4,6 +4,26 @@ All notable changes to this project are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); the package is `synaptixs-spine`
 (import/CLI stay `orchestrator`).
 
+## Unreleased
+
+### Added
+
+- **Perl comprehension (P1 of the Perl support track).** The 10th PKG front-end:
+  `pkg/perl_extractor.py` maps `.pl`/`.pm`/`.t` source onto `Module` (always path-keyed —
+  a Perl file may hold zero, one, or several packages), `Type` (every `package`/5.38
+  `class` — a package is both namespace and class, D2), `Function` (subs and 5.38
+  methods), and `Field` (Moo/Moose `has`, `Class::Accessor` `mk_accessors`, 5.38 `field`).
+  Inheritance resolves across five literal spellings into `IMPLEMENTS` (`use parent`/
+  `use base`, `our @ISA`/`push @ISA`, Moo/Moose `extends`, `use Mojo::Base`, 5.38
+  `:isa(...)`) — a computed `@ISA` yields nothing, never a guess. `CALLS`, framework
+  routes, and codegen are later phases of the same track
+  ([perl-support-roadmap.md](docs/specs/perl-support-roadmap.md)); `perl` stays out of
+  `SUPPORTED_LANGUAGES` until the codegen track lands. `pip install 'synaptixs-spine[perl]'`.
+- **`scripts/parse-census.py`** — parses every file of a language with its grammar and
+  reports the recall ceiling (files with a parse `ERROR`, lines inside `ERROR` spans,
+  declaration counts by CST kind) independent of any one front-end's extraction logic;
+  reusable by every future language track for its own parser-choice evidence.
+
 ## 3.33.2 — the SDLC runs as a pipeline, and PHP builds
 
 ### Added
