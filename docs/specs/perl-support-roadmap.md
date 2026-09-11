@@ -239,9 +239,11 @@ each phase; a count that moved is a reason to re-read the callers, not to skip t
 | `pkg.persistence.extractor_fingerprint` | **8** (confirmed post-P1) — `_cache_path` + 7 tests | 10 | `tree_sitter_perl` in `_GRAMMAR_MODULES`; the cross-check test from #336 enforces it |
 | `pkg.import_link.link_imports` | **3** (confirmed post-P1) — `RepoCodeExtractor.extract` + 2 tests | 12 | **As built:** `"perl"` is *not* in `_DOTTED_PREFIXES` — a `use`/bareword-`require` target names a package, which is a `Type` under D2, so it already joins via the exact dotted id (same reasoning as PHP, D2 vs D7). Only a literal `require "path.pl"` (a path-keyed `Module`) needs the new `_match_perl_path` C-style matcher |
 | `sdlc.feature_runner._resolve_language` | 4 — `run_feature`, `autorun._require_plan`, 2 tests | 9 | **not touched** (D9); the codegen track owns it — confirmed: no edit made here |
-| `catalog.profile.ProjectProfile.from_repo` | via `_resolve_language`, `state`, `map_repo`, `profile_repo` | — | the suffix map and the `cpanfile`/`Makefile.PL`/`Build.PL`/`dist.ini` markers change what four surfaces report for every Perl repo; the profile test pins it |
-| `pkg.scope.NOT_APPLICABLE` / `WALKERS` | `invention.find_invented_calls`, `test_scope` roster test | — | a language missing from both is a roster-test failure; D8 puts Perl in `NOT_APPLICABLE` with its reason |
-
+=======
+| `pkg.extractor.default_extractors` | **13** — `RepoCodeExtractor.__init__`, `accuracy.score_corpus`, `verifier.GroundingVerifier._extractor_for`, 9 registry tests, the capability superset test | 28 | the gated append is read by the corpus scorer, the freshness verifier and the matrix test — the biconditional test for `perl` is not optional |
+| `pkg.persistence.extractor_fingerprint` | 8 — `_cache_path` + 7 tests | 10 | `tree_sitter_perl` in `_GRAMMAR_MODULES`; the cross-check test from #336 enforces it |
+| `pkg.import_link.link_imports` | 3 — `RepoCodeExtractor.extract` + 2 tests | 12 | `"perl"` joins `_DOTTED_PREFIXES` (D3); the `require "file"` path-suffix matcher is the C rule with a `perl:` marker |
+| `sdlc.feature_runner._resolve_language` | 4 — `run_feature`, `autorun._require_plan`, 2 tests | 9 | **not touched** (D9); the codegen track owns it |
 The lesson the numbers carry, again: the site with the fewest callers (`extractor_fingerprint`, all
 tests) is the one the PHP track missed, and its failure was silent. Few callers is not low risk.
 
