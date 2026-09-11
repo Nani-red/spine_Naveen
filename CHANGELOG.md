@@ -73,6 +73,24 @@ All notable changes to this project are documented here. Format loosely follows
   already-verified `Shop::Log->new` policy — call the resolved `Type` itself when it
   doesn't declare the method, rather than guessing `<base>.<method>`. `corpus/perl/
   super_calls` added; no case had exercised `SUPER::` before this.
+- **Perl `belongs_to`/`has_many`/`might_have` could target the wrong entity (P6 review).**
+  `perl_extractor.py` took "the first string literal in the argument list" as the DBIx::Class
+  relation target — correct only when the relation name was a bareword
+  (`belongs_to(customer => 'App::Schema::Result::Customer', ...)`). A quoted name
+  (`belongs_to('customer', 'App::Schema::Result::Customer', ...)`, equally valid
+  DBIx::Class) made it pick the *name* as the target, fabricating a `REFERENCES` edge to a
+  node the source never declares. Now reads DBIx::Class's own positional signature —
+  the target is always argument position 1, regardless of how the name is spelled.
+  `corpus/perl/dbic` extended to exercise the quoted spelling.
+- **`scripts/validate-frontend.py` could crash on one bad repo and abort the rest of an
+  unattended multi-repo run (P6 review).** The clone/extract/verify/state block had no
+  exception handling; a clone timeout or an extraction edge case on one URL took the whole
+  run down with a raw traceback. Now a per-repo boundary: reports the failure and moves to
+  the next URL, matching the script's own purpose.
+- **`scripts/roadmap-status.py` could silently drop a whole document from every check (P6
+  review).** A malformed first data row after a matched phase-table header (wrong column
+  count) made the document vanish from the results with no diagnostic. Now reported
+  explicitly as its own finding instead of failing silent.
 
 ## 3.33.2 — the SDLC runs as a pipeline, and PHP builds
 

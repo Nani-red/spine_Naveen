@@ -1,7 +1,7 @@
 {
   "language": "perl",
   "case": "dbic",
-  "why": "P4's DBIx::Class reader (§3.4): the real ORM marker (`__PACKAGE__->table(...)`, never the shape of the package), `add_columns(...)` becoming `Field`s on the `Entity` (not the `Type`), and `belongs_to`/`has_many` becoming `REFERENCES` in both directions between two declared Result classes — plus one relation to a class this repo never declares. That third-party target still gets a `REFERENCES` edge, to an external `Entity` node — 'the outside target stays external', not silently dropped.",
+  "why": "P4's DBIx::Class reader (§3.4): the real ORM marker (`__PACKAGE__->table(...)`, never the shape of the package), `add_columns(...)` becoming `Field`s on the `Entity` (not the `Type`), and `belongs_to`/`has_many` becoming `REFERENCES` in both directions between two declared Result classes — plus one relation to a class this repo never declares. That third-party target still gets a `REFERENCES` edge, to an external `Entity` node — 'the outside target stays external', not silently dropped. `Order.pm` spells the relation name as a bareword (`belongs_to(customer => ...)`), `OrderItem.pm` spells it as a quoted string (`belongs_to('order', ...)`) — both valid DBIx::Class, and the target must resolve to the same place (DBIx::Class's own positional argument 1) regardless of which spelling names the relation. A P5 review found the extractor reading 'the first string literal in the list' instead, which the quoted-name spelling breaks (it would pick the name, not the target) — this case now pins both spellings.",
   "root": ".repo",
   "nodes": [
     { "id": "perl:Order.pm", "kind": "Module" },

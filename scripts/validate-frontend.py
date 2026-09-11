@@ -67,53 +67,62 @@ def validate_one(language: str, url: str) -> bool:
         print(f"  REFUSED: {exc}")
         return False
 
-    with materialize_repo_source(source, log=lambda m: print(f"  {m}")) as repo:
-        batch = RepoCodeExtractor().extract(repo)
-        store = FactStore(batch)
-        summary = store.summary()
-        print(
-            f"  extract: {summary['grounded_nodes']} grounded nodes, "
-            f"{summary['external_nodes']} external, {summary['edges']} edges"
-        )
-        per_kind = {k[len("edges_") :]: v for k, v in summary.items() if k.startswith("edges_")}
-        if per_kind:
-            print("    " + "  ".join(f"{k.upper()} {v}" for k, v in per_kind.items()))
+    # A per-repo boundary, deliberately broad: this script's whole purpose is an
+    # unattended run across a list of real repos (§8.2), so a clone timeout, a private
+    # repo gone missing, or an extraction edge case on one URL must report and move on to
+    # the next — not take the rest of the list down with a raw traceback. `main()`'s loop
+    # relies on this function never raising.
+    try:
+        with materialize_repo_source(source, log=lambda m: print(f"  {m}")) as repo:
+            batch = RepoCodeExtractor().extract(repo)
+            store = FactStore(batch)
+            summary = store.summary()
+            print(
+                f"  extract: {summary['grounded_nodes']} grounded nodes, "
+                f"{summary['external_nodes']} external, {summary['edges']} edges"
+            )
+            per_kind = {k[len("edges_") :]: v for k, v in summary.items() if k.startswith("edges_")}
+            if per_kind:
+                print("    " + "  ".join(f"{k.upper()} {v}" for k, v in per_kind.items()))
 
-        by_lang_kind = Counter((n.language or "?", n.kind.value) for n in batch.nodes if not n.external)
-        print("  nodes by language:")
-        for (lang, kind), count in sorted(by_lang_kind.items()):
-            print(f"    {lang:12s} {kind:10s} {count}")
+            by_lang_kind = Counter((n.language or "?", n.kind.value) for n in batch.nodes if not n.external)
+            print("  nodes by language:")
+            for (lang, kind), count in sorted(by_lang_kind.items()):
+                print(f"    {lang:12s} {kind:10s} {count}")
 
-        report = verify_batch(batch, repo)
-        for issue in report.issues:
-            print(f"  [{issue.severity}] {issue.check}: {issue.message}")
-        print(
-            f"  pkg verify: {'OK' if report.ok else 'FAILED'} — "
-            f"{len(report.errors)} error(s), {len(report.warnings)} warning(s)"
-        )
+            report = verify_batch(batch, repo)
+            for issue in report.issues:
+                print(f"  [{issue.severity}] {issue.check}: {issue.message}")
+            print(
+                f"  pkg verify: {'OK' if report.ok else 'FAILED'} — "
+                f"{len(report.errors)} error(s), {len(report.warnings)} warning(s)"
+            )
 
-        state, _ = load_current_state(repo, refresh=True)
-        counted = " · ".join(f"{v} {k.lower()}s" for k, v in state.counts.items() if v)
-        print(
-            f"  state: languages={list(state.languages)} framework={state.framework or '—'} "
-            f"size={state.namespaces} namespaces (~{state.areas} areas) · {counted} "
-            f"call_graph={'available' if state.has_calls else 'not available'}"
-        )
+            state, _ = load_current_state(repo, refresh=True)
+            counted = " · ".join(f"{v} {k.lower()}s" for k, v in state.counts.items() if v)
+            print(
+                f"  state: languages={list(state.languages)} framework={state.framework or '—'} "
+                f"size={state.namespaces} namespaces (~{state.areas} areas) · {counted} "
+                f"call_graph={'available' if state.has_calls else 'not available'}"
+            )
 
-        unresolved: Counter[str] = Counter()
-        by_id = {n.id: n for n in batch.nodes}
-        for e in batch.edges:
-            if e.kind is not EdgeKind.IMPORTS:
-                continue
-            dst = by_id.get(e.dst)
-            if dst is not None and dst.external:
-                unresolved[dst.name] += 1
-        if unresolved:
-            print("  top unresolved import targets:")
-            for name, count in unresolved.most_common(10):
-                print(f"    {count:4d}  {name}")
+            unresolved: Counter[str] = Counter()
+            by_id = {n.id: n for n in batch.nodes}
+            for e in batch.edges:
+                if e.kind is not EdgeKind.IMPORTS:
+                    continue
+                dst = by_id.get(e.dst)
+                if dst is not None and dst.external:
+                    unresolved[dst.name] += 1
+            if unresolved:
+                print("  top unresolved import targets:")
+                for name, count in unresolved.most_common(10):
+                    print(f"    {count:4d}  {name}")
 
-        return bool(report.ok)
+            return bool(report.ok)
+    except Exception as exc:
+        print(f"  FAILED: {type(exc).__name__}: {exc}")
+        return False
 
 
 def main() -> int:

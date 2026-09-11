@@ -438,13 +438,14 @@ orchestrator pkg verify .        # does the graph contradict itself? (dangling e
 orchestrator pkg accuracy        # precision & recall per kind, per language, vs a labelled corpus
 ```
 
-Against the committed corpus of 44 fixture cases (40 single-language, 4 multi-repo) across
+Against the committed corpus of 47 fixture cases (43 single-language, 4 multi-repo) across
 all 10 of Spine's front-ends, **precision is 1.00 on every node kind and every edge kind in every language**, and recall is 1.00 on every
 kind except `CALLS`:
 
 | language | `CALLS` recall |
 |---|---|
 | `c` `sql` | 1.00 |
+| `perl` | 0.89 |
 | `python` | 0.73 |
 | `cpp` `csharp` `go` `java` | 0.67 |
 | `typescript` | 0.50 |

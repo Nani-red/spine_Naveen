@@ -808,11 +808,11 @@ one), but `sdlc feature --language perl` still exits 2 — codegen (`cpanm --ins
 `SUPPORTED_LANGUAGES` until that track's first commit adds the whole machinery.
 
 **How accurate is the graph these tools read?** Measured against a committed corpus covering
-9 of Spine's 10 front-ends (Perl's corpus lands with `CALLS` in a later phase): **precision
-1.00 on every node and edge kind, in every corpus-scored language** —
-nothing is invented. Recall is 1.00 on everything except `CALLS`, which ranges from 1.00
-(C, SQL) to 0.50 (TypeScript); the gap is calls whose receiver is a variable rather than a
-name. Run `orchestrator pkg accuracy` to see the current numbers yourself.
+all 10 of Spine's front-ends: **precision 1.00 on every node and edge kind, in every
+corpus-scored language** — nothing is invented. Recall is 1.00 on everything except `CALLS`,
+which ranges from 1.00 (C, SQL) to 0.50 (TypeScript); the gap is calls whose receiver is a
+variable rather than a name. Run `orchestrator pkg accuracy` to see the current numbers
+yourself.
 
 > Use `--language php` for PHP delivery. Existing PHPUnit layout and bootstrap settings
 > are preserved; only changed PHP files are linted and changed tests executed. See the

@@ -650,17 +650,20 @@ class PerlExtractor:
                     for name in _string_or_wordlist_targets(arg, source):
                         rec.dbic_columns.append((name, line))
         elif method in DBIC_RELATIONS and args:
-            # `belongs_to(customer => 'App::Schema::Result::Customer', 'customer_id')` —
-            # a bareword relation name (unused for the edge), then the target class as the
-            # first string literal in the list.
+            # DBIx::Class's own positional signature: `->belongs_to($rel_name,
+            # $related_class, $cond, \%attrs)`. The target class is always position 1 —
+            # read positionally, not as "the first string literal in the list": the
+            # relation name may *also* be a quoted string (`belongs_to('customer', 'App
+            # ::Schema::Result::Customer', ...)`, valid DBIx::Class, not just the bareword
+            # form `customer => ...`), and taking the first string literal encountered
+            # would then pick the *name*, not the target — a real bug found in review.
             target_arg = args[0]
             if target_arg.type == "list_expression":
-                for item in target_arg.named_children:
-                    if item.type == "string_literal":
-                        target = _plain_string_literal_text(item, source)
-                        if target:
-                            rec.dbic_relations.append((target, line))
-                        break
+                items = target_arg.named_children
+                if len(items) >= 2 and items[1].type == "string_literal":
+                    target = _plain_string_literal_text(items[1], source)
+                    if target:
+                        rec.dbic_relations.append((target, line))
 
     # --- subs ----------------------------------------------------------------
 

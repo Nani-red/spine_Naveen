@@ -27,6 +27,11 @@ Checks, each narrow enough to avoid the failure mode below:
    applies to the user-facing docs — roadmaps live outside that script's `USER_DOCS` list,
    so nothing was checking them. (Found live: `perl-support-roadmap.md` linked
    `kotlin-support-roadmap.md` twice; that file does not exist in this checkout.)
+6. **A malformed table never fails silently.** A document can carry the exact phase-table
+   header and still parse to zero rows (a dropped column, a stray `|` inside a cell) — that
+   used to mean the whole document was quietly skipped by every other check. Reported here
+   explicitly instead (found in review: this exact gap, before it ever misfired on a real
+   document).
 
 **What this deliberately does not attempt:** classifying whether a spec's free-form prose
 elsewhere agrees with `SPEC-INDEX.md`'s free-form prose about it. `STATE-OF-SPINE.md` §8
@@ -228,12 +233,36 @@ def check_relative_links(tables: dict[Path, list[PhaseRow]]) -> list[str]:
     return problems
 
 
+def check_header_found_but_unparsed(tables: dict[Path, list[PhaseRow]]) -> list[str]:
+    """A document can carry the exact phase-table header and still end up with zero rows in
+    ``tables`` — a malformed first data row (a dropped column, a stray ``|`` inside a cell)
+    makes ``_split_row`` return ``None`` immediately, and ``phase_tables()`` silently omits
+    the whole document rather than guessing. That silence is itself the failure mode this
+    whole script exists to avoid, so it is reported here explicitly instead of merely
+    skipping every other check for that document.
+    """
+    problems: list[str] = []
+    if not SPECS.is_dir():
+        return problems
+    for doc in sorted(SPECS.glob("*.md")):
+        if doc in tables:
+            continue
+        text = doc.read_text(encoding="utf-8")
+        if any(line.strip() == PHASE_HEADER for line in text.splitlines()):
+            problems.append(
+                f"{doc.name}: has the phase-table header but no row after it parsed as a "
+                "data row — malformed table? (wrong column count, or a stray '|' in a cell)"
+            )
+    return problems
+
+
 CHECKS = (
     check_evidence_completeness,
     check_cross_spec_dependency,
     check_top_status_freshness,
     check_indexed,
     check_relative_links,
+    check_header_found_but_unparsed,
 )
 
 

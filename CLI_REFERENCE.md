@@ -521,21 +521,24 @@ orchestrator pkg accuracy [PATH] [OPTIONS]
 | `--tests` | Test target(s) for `--oracle runtime`; defaults to the repo's own. |
 | `--dialect` | SQL dialect (postgres\|mysql\|tsql\|oracle\|…); default: auto-detect. |
 
-**Current corpus results** (44 fixture cases — 40 single-language, 4 multi-repo — across
-all 10 front-ends, Perl's corpus landing in P2 of its own track). Precision is **1.00 on
-every node kind and every edge kind in every language**; recall is 1.00 on every kind
-except `CALLS`:
+**Current corpus results** (47 fixture cases — 43 single-language, 4 multi-repo — across
+all 10 front-ends, Perl's own corpus grown across P2–P5 of its track: 9 cases). Precision is
+**1.00 on every node kind and every edge kind in every language**; recall is 1.00 on every
+kind except `CALLS`:
 
 | language | `CALLS` recall |
 |---|---|
 | `c` `sql` | 1.00 |
+| `perl` | 0.89 |
 | `python` | 0.73 |
-| `cpp` `csharp` `go` `java` `perl` | 0.67 |
+| `cpp` `csharp` `go` `java` | 0.67 |
 | `typescript` | 0.50 |
 
-Perl's 0.67 is 4 of 6 labelled `CALLS` edges in its own corpus — the 2 misses are both the
-documented P2/P3 typed-receiver boundary (`instance_calls`, predicted `known_gaps`), not
-surprises.
+Perl's 0.89 is 8 of 9 labelled `CALLS` edges in its own corpus — the one miss is a
+permanent, documented one (`instance_calls`, an untyped parameter with no declared type to
+resolve a method call through); the other predicted P2/P3-boundary miss was resolved in P3
+(a literal same-sub constructor now resolves), and `super_calls` (P5) added 3 more, all
+resolved.
 
 Every remaining loss is the documented instance-dispatch skip — a call whose receiver is a
 variable rather than a name. Invention stands at **0 invented targets across 15,212 call

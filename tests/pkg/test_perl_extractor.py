@@ -571,6 +571,29 @@ def test_dbic_relations_both_directions_and_external_target(tmp_path: Path) -> N
     assert by_id[order_eid].external is False
 
 
+def test_dbic_relation_with_quoted_name_resolves_the_target_not_the_name(tmp_path: Path) -> None:
+    """`belongs_to('customer', 'App::Schema::Result::Customer', 'customer_id')` — a quoted
+    relation name, valid DBIx::Class and not just the bareword `customer => ...` spelling.
+    Real bug found in review: taking "the first string literal in the arg list" picks the
+    *name* here, not the target, fabricating a `REFERENCES` edge to a node named `customer`
+    that the source never declares. The target is always DBIx::Class's own positional
+    argument 1 regardless of how argument 0 (the name) is spelled."""
+    files = {
+        "Order.pm": (
+            "package App::Schema::Result::Order;\n"
+            "__PACKAGE__->table('orders');\n"
+            "__PACKAGE__->belongs_to('customer', 'App::Schema::Result::Customer', 'customer_id');\n"
+        ),
+    }
+    batch = _repo_facts(tmp_path, files)
+    refs = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.REFERENCES}
+    order_eid = "perl:entity:App.Schema.Result.Order"
+    customer_eid = "perl:entity:App.Schema.Result.Customer"
+    assert (order_eid, customer_eid) in refs
+    by_id = {n.id: n for n in batch.nodes}
+    assert "perl:entity:customer" not in by_id
+
+
 def test_dbic_no_table_marker_is_not_an_entity(tmp_path: Path) -> None:
     """A plain package with a `belongs_to`-named method of its own isn't a DBIC Result
     class without the `table(...)` marker — never guessed from shape alone."""

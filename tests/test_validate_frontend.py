@@ -53,6 +53,27 @@ def test_validate_one_refuses_a_disallowed_source(
     assert "REFUSED" in capsys.readouterr().out
 
 
+def test_validate_one_reports_and_continues_when_extraction_raises(
+    validate: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A crash inside the clone/extract/verify/state block (a clone timeout, a private repo
+    gone missing, an extractor edge case) must be caught and reported, not propagate —
+    `main()`'s loop over multiple URLs depends on this function never raising, or one bad
+    repo takes the rest of an unattended run down with it."""
+    from orchestrator.pkg import RepoCodeExtractor
+
+    def boom(self: object, root: object) -> None:
+        raise RuntimeError("simulated extraction failure")
+
+    monkeypatch.setattr(RepoCodeExtractor, "extract", boom)
+    (tmp_path / "greet.py").write_text("def hello():\n    pass\n", encoding="utf-8")
+
+    ok = validate.validate_one("python", str(tmp_path))
+
+    assert ok is False
+    assert "FAILED: RuntimeError: simulated extraction failure" in capsys.readouterr().out
+
+
 def test_main_fails_when_any_repo_fails(validate: ModuleType, monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[str] = []
 

@@ -237,3 +237,31 @@ def test_working_relative_link_and_bare_urls_pass(status: ModuleType) -> None:
 def test_no_phase_tables_is_not_an_error(status: ModuleType) -> None:
     _write(status.ROOT, "unrelated.md", "# Nothing to see\n\nJust prose, no table here.\n")
     assert status.check() == []
+
+
+def test_header_found_but_first_row_malformed_is_reported_not_silently_dropped(
+    status: ModuleType,
+) -> None:
+    """A document whose header matches exactly but whose first data row has the wrong
+    column count (a dropped `|`) used to vanish from `tables` with no diagnostic at all —
+    every other check silently skipped it. This must surface as its own problem."""
+    doc = _write(
+        status.ROOT,
+        "x-roadmap.md",
+        f"{_HEADER}\n{_SEP}\n| **P1 Thing** | work | 1d | exit | ⬜ |  |  |\n",  # 7 cells, not 8
+    )
+    tables = status.phase_tables()
+    assert doc not in tables  # confirms the silent-drop this check exists to catch
+
+    problems = status.check_header_found_but_unparsed(tables)
+    assert len(problems) == 1
+    assert doc.name in problems[0]
+
+
+def test_header_found_and_parsed_is_not_reported(status: ModuleType) -> None:
+    _write(
+        status.ROOT,
+        "x-roadmap.md",
+        f"{_HEADER}\n{_SEP}\n| **P1 Thing** | work | 1d | exit | ⬜ |  |  |  |\n",
+    )
+    assert status.check_header_found_but_unparsed(status.phase_tables()) == []
