@@ -160,6 +160,45 @@ def test_with_role_is_implements(tmp_path: Path) -> None:
     assert ("perl:Shop.Cart", "perl:Shop.Role.Loggable") in implements
 
 
+def test_with_role_alone_does_not_feed_super(tmp_path: Path) -> None:
+    """Real bug found in review: `with`/`extends` both used to append to the same
+    `bases` list `SUPER::` reads. A role never participates in `SUPER::` dispatch in real
+    Perl (roles flatten into the consumer at composition time) — `with 'SomeRole'` alone,
+    no real parent, must leave `SUPER::helper()` unresolved even though `SomeRole`
+    declares `helper` and gets a real `IMPLEMENTS` edge."""
+    files = {
+        "Role.pm": "package Shop::Role::Loggable;\nsub helper { return 1; }\n",
+        "Cart.pm": (
+            "package Shop::Cart;\nwith 'Shop::Role::Loggable';\n"
+            "sub total { my $self = shift; $self->SUPER::helper(); }\n"
+        ),
+    }
+    batch = _repo_facts(tmp_path, files)
+    implements = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.IMPLEMENTS}
+    assert ("perl:Shop.Cart", "perl:Shop.Role.Loggable") in implements  # the role edge is real
+    assert not any(e.kind is EdgeKind.CALLS for e in batch.edges)  # but SUPER:: has no base
+
+
+def test_extends_and_with_super_resolves_the_real_parent_not_the_role(tmp_path: Path) -> None:
+    """A class consuming a role *and* extending a real parent — `SUPER::helper()` must
+    resolve through the real parent, never through the role, regardless of which
+    statement (`with` or `extends`) appears first in source order."""
+    files = {
+        "Base.pm": "package Shop::Base;\nsub helper { return 1; }\n",
+        "Role.pm": "package Shop::Role::Loggable;\nsub helper { return 2; }\n",
+        "Cart.pm": (
+            "package Shop::Cart;\n"
+            "with 'Shop::Role::Loggable';\n"
+            "extends 'Shop::Base';\n"
+            "sub total { my $self = shift; $self->SUPER::helper(); }\n"
+        ),
+    }
+    batch = _repo_facts(tmp_path, files)
+    calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
+    assert ("perl:Shop.Cart.total", "perl:Shop.Base.helper") in calls
+    assert ("perl:Shop.Cart.total", "perl:Shop.Role.Loggable.helper") not in calls
+
+
 def test_isa_spellings_literal_only(tmp_path: Path) -> None:
     src = (
         "package Shop::A;\n"
@@ -197,15 +236,25 @@ def test_computed_require_yields_nothing(tmp_path: Path) -> None:
 
 
 def test_end_to_end_via_repo_extractor_resolves_require_by_path_suffix(tmp_path: Path) -> None:
+    """Real bug found in review: this test used to place the requiring script under
+    `bin/`, which `extractor.DEFAULT_IGNORE_DIRS` treats as .NET build output and skips
+    for every language — the walker never extracted `bin/report.pl` at all, so the
+    `require` edge this test claims to exercise was never even created. The assertion
+    still passed, for an unrelated reason: `lib/common.pl` is grounded simply because it's
+    a real, directly-walked file, regardless of whether anything requires it. `scripts/`
+    isn't ignored (the `legacy_main` corpus fixture moved here for the same reason), and
+    the test now checks the actual IMPORTS edge exists, not just that the target happens
+    to be grounded some other way."""
     (tmp_path / "lib").mkdir()
     (tmp_path / "lib" / "common.pl").write_text("sub helper { 1 }\n", encoding="utf-8")
-    (tmp_path / "bin").mkdir()
-    (tmp_path / "bin" / "report.pl").write_text('require "lib/common.pl";\n', encoding="utf-8")
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "scripts" / "report.pl").write_text('require "lib/common.pl";\n', encoding="utf-8")
 
     batch = RepoCodeExtractor([PerlExtractor()]).extract(tmp_path)
+    imports = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.IMPORTS}
+    assert ("perl:scripts/report.pl", "perl:lib/common.pl") in imports
     by_id = {n.id: n for n in batch.nodes}
-    target = by_id["perl:lib/common.pl"]
-    assert target.grounded is True
+    assert by_id["perl:lib/common.pl"].grounded is True
 
 
 # --- P2: CALLS (§3.2) -------------------------------------------------------
@@ -350,14 +399,67 @@ def test_calls_bare_explicit_use_qw_import(tmp_path: Path) -> None:
     assert ("perl:Shop.Cart.total", "perl:Shop.Util.fmt") in calls
 
 
+def test_use_qw_import_is_scoped_to_the_declaring_package_not_the_file(tmp_path: Path) -> None:
+    """Real Perl bug found in review: `use X qw(f)` runs `X->import(qw(f))` at compile
+    time, and `Exporter`-style `import` installs `f` into whichever package `caller()`
+    names *at that line* — package-scoped, not file-scoped. A later `package Bar;` in the
+    same file does not inherit `package Foo;`'s `use Shop::Util qw(fmt);`, so `fmt()`
+    called from `Bar` must stay unresolved, never fabricated as `Shop::Util::fmt`."""
+    files = {
+        "Util.pm": "package Shop::Util;\nsub fmt { return 1; }\n",
+        "Cart.pm": (
+            "package Shop::Foo;\nuse Shop::Util qw(fmt);\nsub a { fmt(); }\n\n"
+            "package Shop::Bar;\nsub b { fmt(); }\n"
+        ),
+    }
+    batch = _repo_facts(tmp_path, files)
+    calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
+    assert ("perl:Shop.Foo.a", "perl:Shop.Util.fmt") in calls  # Foo's own import resolves
+    assert not any(src == "perl:Shop.Bar.b" for src, _dst in calls)  # Bar never imported it
+
+
+def test_use_qw_import_is_visible_when_the_same_package_reopens(tmp_path: Path) -> None:
+    """The other half of the same rule: Perl's symbol table is per-package, not
+    per-block, so `package Foo;` reopened later in the same file still sees what it
+    imported the first time — package-scoping must not become "one shot per block"."""
+    files = {
+        "Util.pm": "package Shop::Util;\nsub fmt { return 1; }\n",
+        "Cart.pm": (
+            "package Shop::Foo;\nuse Shop::Util qw(fmt);\n\n"
+            "package Shop::Bar;\nsub noop { return 1; }\n\n"
+            "package Shop::Foo;\nsub a { fmt(); }\n"
+        ),
+    }
+    batch = _repo_facts(tmp_path, files)
+    calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
+    assert ("perl:Shop.Foo.a", "perl:Shop.Util.fmt") in calls
+
+
 def test_calls_bare_d10_default_export(tmp_path: Path) -> None:
     files = {
-        "Util.pm": "package Shop::Util;\nour @EXPORT = qw(fmt);\nsub fmt { return 1; }\n",
+        "Util.pm": (
+            "package Shop::Util;\nuse Exporter;\nour @ISA = qw(Exporter);\n"
+            "our @EXPORT = qw(fmt);\nsub fmt { return 1; }\n"
+        ),
         "Cart.pm": "package Shop::Cart;\nuse Shop::Util;\nsub total { fmt(); }\n",
     }
     batch = _repo_facts(tmp_path, files)
     calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
     assert ("perl:Shop.Cart.total", "perl:Shop.Util.fmt") in calls
+
+
+def test_calls_bare_d10_skips_export_without_exporter_base(tmp_path: Path) -> None:
+    """Real bug found in review: `@EXPORT` is inert unless something reads it, and only
+    `Exporter`'s own `import()` does. A package that sets `@EXPORT` without inheriting
+    `Exporter` never actually makes the sub callable unqualified — `use X;` silently does
+    nothing, and `fmt()` would die with "Undefined subroutine" at runtime. D10 must not
+    resolve this, even though the shape otherwise looks identical to the case above."""
+    files = {
+        "Util.pm": "package Shop::Util;\nour @EXPORT = qw(fmt);\nsub fmt { return 1; }\n",
+        "Cart.pm": "package Shop::Cart;\nuse Shop::Util;\nsub total { fmt(); }\n",
+    }
+    batch = _repo_facts(tmp_path, files)
+    assert not any(e.kind is EdgeKind.CALLS for e in batch.edges)
 
 
 def test_calls_bare_d10_skips_third_party_default_export(tmp_path: Path) -> None:
@@ -368,14 +470,19 @@ def test_calls_bare_d10_skips_third_party_default_export(tmp_path: Path) -> None
     assert not any(e.kind is EdgeKind.CALLS for e in batch.edges)
 
 
-def test_calls_bare_d10_isa_inherited(tmp_path: Path) -> None:
+def test_calls_bare_does_not_search_isa(tmp_path: Path) -> None:
+    """Real Perl bug found in review: a bare `f()` never dispatches through `@ISA` — that
+    is method-dispatch-only (`$self->m()`/`Class->m()`). `Shop::Cart` inheriting from
+    `Shop::Base` does not give a bare `helper()` inside `Shop::Cart` access to
+    `Shop::Base::helper`; Perl raises "Undefined subroutine" at runtime. D10 originally
+    resolved this (wrongly) as its second sub-step — removed, not kept as a documented
+    gap, since nothing about it was ever true of the language."""
     files = {
         "Base.pm": "package Shop::Base;\nsub helper { return 1; }\n",
         "Cart.pm": ("package Shop::Cart;\nuse parent -norequire, 'Shop::Base';\nsub total { helper(); }\n"),
     }
     batch = _repo_facts(tmp_path, files)
-    calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
-    assert ("perl:Shop.Cart.total", "perl:Shop.Base.helper") in calls
+    assert not any(e.kind is EdgeKind.CALLS for e in batch.edges)
 
 
 def test_calls_bare_unresolved_is_skipped(tmp_path: Path) -> None:
@@ -402,6 +509,21 @@ sub risky {
 """
     batch = _repo_facts(tmp_path, {"Cart.pm": src})
     assert not any(e.kind is EdgeKind.CALLS for e in batch.edges)
+
+
+def test_calls_qualified_ampersand_call_never_emits_a_sigil_in_the_id(tmp_path: Path) -> None:
+    """Real bug found in review: `&Shop::Util::fmt()` (the old calling convention, fully
+    qualified) parses with the same `&`-prefixed `function` node as bare `&f` — before the
+    fix it slipped past row 4's qualified-call branch (only checks for `::`, not the
+    sigil) and emitted `perl:&Shop.Util.fmt`, a literal `&` embedded in the id. Row 6
+    excludes every ampersand-form call as a class, qualified or not."""
+    files = {
+        "Util.pm": "package Shop::Util;\nsub fmt { return 1; }\n",
+        "Cart.pm": "package Shop::Cart;\nsub total { &Shop::Util::fmt(); }\n",
+    }
+    batch = _repo_facts(tmp_path, files)
+    assert not any(e.kind is EdgeKind.CALLS for e in batch.edges)
+    assert not any("&" in n.id for n in batch.nodes)
 
 
 def test_instance_calls_typed_receiver_boundary(tmp_path: Path) -> None:
@@ -462,6 +584,57 @@ def test_mojo_full_app_closure_handler_yields_endpoint_no_exposes(tmp_path: Path
     assert not any(e.kind is EdgeKind.EXPOSES for e in batch.edges)
 
 
+def test_mojo_full_app_route_from_a_helper_method_yields_endpoint_no_exposes(tmp_path: Path) -> None:
+    """Real bug found in review: a route registered from a helper/plugin method (not
+    literally `startup`) used to resolve the controller against *that method's own*
+    package — `MyApp::Routes::install` produced `perl:MyApp.Routes.Controller.Orders.index`,
+    a placeholder that never grounds, since the real target (if it exists) lives under the
+    actual app class `MyApp`, not the helper. The `Endpoint` is still real and still
+    emitted; only the guessed-namespace `EXPOSES` is withheld."""
+    src = (
+        "package MyApp::Routes;\n"
+        "sub install {\n    my $r = shift;\n"
+        "    $r->get('/orders')->to('orders#index');\n}\n"
+    )
+    batch = _repo_facts(tmp_path, {"Routes.pm": src})
+    by_id = {n.id: n for n in batch.nodes}
+    assert "perl:endpoint:GET /orders" in by_id
+    assert not any(e.kind is EdgeKind.EXPOSES for e in batch.edges)
+    assert not any("MyApp.Routes.Controller" in n.id for n in batch.nodes)
+
+
+def test_mojo_full_app_explicit_namespace_overrides_helper_method(tmp_path: Path) -> None:
+    """The other half of the same fix: an explicit `namespace => 'X'` in the hash form is
+    the developer's own literal statement of which app it belongs to — honoured even from
+    a non-`startup` helper method, since it needs no guessing at all."""
+    src = (
+        "package MyApp::Routes;\n"
+        "sub install {\n    my $r = shift;\n"
+        "    $r->get('/orders')->to(namespace => 'MyApp', controller => 'orders', action => 'index');\n}\n"
+    )
+    batch = _repo_facts(tmp_path, {"Routes.pm": src})
+    exposes = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.EXPOSES}
+    assert ("perl:endpoint:GET /orders", "perl:MyApp.Controller.Orders.index") in exposes
+
+
+def test_mojo_full_app_hyphenated_controller_dots_not_double_colons(tmp_path: Path) -> None:
+    """Real bug found in review: `_camelize('foo-bar')` produced `Foo::Bar` (Mojolicious's
+    own real class-name separator), spliced straight into an otherwise fully-dotted id —
+    `perl:MyApp.Controller.Foo::Bar.show`, a literal `::` next to dots (D3 violated), which
+    never matches the real declaration's own dotted id (`perl:MyApp.Controller.Foo.Bar.show`
+    — `_to_dotted` converts every `::`). Must dedup onto the real node when one exists."""
+    src = (
+        "package MyApp;\nuse Mojo::Base 'Mojolicious';\n"
+        "sub startup {\n    my $self = shift;\n    my $r = $self->routes;\n"
+        "    $r->get('/foo-bar')->to('foo-bar#show');\n}\n"
+    )
+    other = "package MyApp::Controller::Foo::Bar;\nsub show { return 1; }\n"
+    batch = _repo_facts(tmp_path, {"App.pm": src, "FooBar.pm": other})
+    exposes = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.EXPOSES}
+    assert ("perl:endpoint:GET /foo-bar", "perl:MyApp.Controller.Foo.Bar.show") in exposes
+    assert not any("::" in n.id for n in batch.nodes)
+
+
 def test_mojo_full_app_any_verb_yields_nothing(tmp_path: Path) -> None:
     src = (
         "package MyApp;\n"
@@ -507,6 +680,20 @@ def test_mojo_lite_named_handler_route(tmp_path: Path) -> None:
     batch = _repo_facts(tmp_path, {"app.pl": src})
     exposes = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.EXPOSES}
     assert ("perl:endpoint:GET /y", "perl:app.pl.handler") in exposes
+
+
+def test_dancer2_del_verb_emits_delete_not_del(tmp_path: Path) -> None:
+    """Real bug found in review: Dancer2 spells DELETE as the bareword `del` (`delete` is
+    a Perl builtin), and the endpoint's own name/id used to be built from `verb.upper()`
+    with no normalization — `perl:endpoint:DEL /x`, unjoinable against any cross-language
+    consumer that made a real HTTP `DELETE` request. The verb is still recognized as `del`
+    to trigger the route (Mojolicious spells the same HTTP method `delete`), but the
+    emitted `Endpoint` always reads the real HTTP method name."""
+    src = "del '/x' => sub {\n    return 1;\n};\n"
+    batch = _repo_facts(tmp_path, {"app.pl": src})
+    by_id = {n.id: n for n in batch.nodes}
+    assert "perl:endpoint:DELETE /x" in by_id
+    assert "perl:endpoint:DEL /x" not in by_id
 
 
 # --- P4: DBIx::Class entities (§3.4) ----------------------------------------
@@ -571,6 +758,22 @@ def test_dbic_relations_both_directions_and_external_target(tmp_path: Path) -> N
     assert by_id[order_eid].external is False
 
 
+def test_dbic_has_one_relation_is_references(tmp_path: Path) -> None:
+    """`has_one` — a required 1:1 relation, the fourth DBIx::Class relation declarator
+    alongside belongs_to/has_many/might_have. Missing from the recognized set originally
+    (found in review); `many_to_many` stays deliberately excluded (see perl_orm.py)."""
+    files = {
+        "Order.pm": (
+            "package App::Schema::Result::Order;\n"
+            "__PACKAGE__->table('orders');\n"
+            "__PACKAGE__->has_one(receipt => 'App::Schema::Result::Receipt', 'order_id');\n"
+        ),
+    }
+    batch = _repo_facts(tmp_path, files)
+    refs = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.REFERENCES}
+    assert ("perl:entity:App.Schema.Result.Order", "perl:entity:App.Schema.Result.Receipt") in refs
+
+
 def test_dbic_relation_with_quoted_name_resolves_the_target_not_the_name(tmp_path: Path) -> None:
     """`belongs_to('customer', 'App::Schema::Result::Customer', 'customer_id')` — a quoted
     relation name, valid DBIx::Class and not just the bareword `customer => ...` spelling.
@@ -600,3 +803,48 @@ def test_dbic_no_table_marker_is_not_an_entity(tmp_path: Path) -> None:
     src = "package Shop::Cart;\nsub belongs_to { return 1; }\n"
     batch = _repo_facts(tmp_path, {"Cart.pm": src})
     assert not any(n.kind is NodeKind.ENTITY for n in batch.nodes)
+
+
+# ---- one extractor instance reused across repos (a real usage, not a hypothetical) -------
+#
+# `RepoCodeExtractor.__init__` builds each front-end once; a caller looping over several
+# repos with one `RepoCodeExtractor` (`load_or_extract_repos` in persistence.py, the engine
+# behind `pkg extract --repos` and multi-repo `investigate`) reuses that same `PerlExtractor`
+# instance across every repo's `.extract()` call. Confirmed real, found in review: `finalize()`
+# never cleared `_types`/`_subs`, so a later repo's graph carried the previous repo's facts.
+
+
+def test_types_and_subs_do_not_leak_across_repos_sharing_one_extractor(tmp_path: Path) -> None:
+    repo_a = tmp_path / "repo_a"
+    repo_b = tmp_path / "repo_b"
+    (repo_a / "Base.pm").parent.mkdir(parents=True, exist_ok=True)
+    (repo_a / "Base.pm").write_text(
+        "package Shop::Base;\nsub helper { return 1; }\nsub caller_sub { helper(); }\n",
+        encoding="utf-8",
+    )
+    (repo_b / "Other.pm").parent.mkdir(parents=True, exist_ok=True)
+    (repo_b / "Other.pm").write_text("package Other::Thing;\nsub noop { return 1; }\n", encoding="utf-8")
+
+    shared = RepoCodeExtractor([PerlExtractor()])
+    shared.extract(repo_a)  # populates the shared PerlExtractor's _types/_subs
+    batch_b = shared.extract(repo_b)  # must not carry repo A's facts into repo B's graph
+
+    ids = {n.id for n in batch_b.nodes}
+    assert not any(i.startswith("perl:Shop.Base") for i in ids), "repo A's Type leaked into repo B"
+    calls = {(e.src, e.dst) for e in batch_b.edges if e.kind is EdgeKind.CALLS}
+    assert not any("Shop.Base" in src or "Shop.Base" in dst for src, dst in calls), (
+        "repo A's CALLS edge leaked into repo B"
+    )
+    assert any(i == "perl:Other.Thing" for i in ids)  # repo B's own facts are still there
+
+
+def test_finalize_still_resolves_within_the_same_repo_after_the_reset(tmp_path: Path) -> None:
+    """The reset in `finalize()` must not throw away facts within the same repo — only
+    facts belonging to a *different* one, extracted through a later `.extract()` call.
+    Same-package bare calls (row 5) must still resolve exactly as before the fix."""
+    files = {
+        "Cart.pm": "package Shop::Cart;\nsub helper { return 1; }\nsub total { helper(); }\n",
+    }
+    batch = _repo_facts(tmp_path, files)
+    calls = {(e.src, e.dst) for e in batch.edges if e.kind is EdgeKind.CALLS}
+    assert ("perl:Shop.Cart.total", "perl:Shop.Cart.helper") in calls

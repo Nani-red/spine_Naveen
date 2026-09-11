@@ -32,6 +32,8 @@ def resolve_or_drop(
     candidates: Iterable[str],
     kind: EdgeKind,
     provenance: Provenance,
+    *,
+    declared: frozenset[str] | None = None,
 ) -> bool:
     """Add ``src --kind--> candidate`` for the first candidate already grounded in
     ``batch``, in the order given; add nothing if none grounded. Returns whether an edge
@@ -41,8 +43,18 @@ def resolve_or_drop(
     target has no backstop (docs/reviewing/language-frontend-checklist.md: "a guessed
     method id has no backstop and must not be emitted unverified"). The caller decides what
     counts as a candidate and in what order; this only decides whether one already exists.
+
+    ``declared`` lets a caller that resolves *many* candidates across one ``finalize()``
+    pass compute ``declared_ids(batch)`` once and reuse it, rather than this function
+    rescanning the whole (and only growing) node list on every single call — found in
+    review: Perl's own D10 pass rebuilt it per bare-call resolution attempt, genuinely
+    quadratic in repo size (800 classes × 25 subs measured at ~49.5s). Left as an optional
+    keyword, defaulting to the original per-call recompute, so an existing or future caller
+    that (unlike Perl's finalize pass) adds grounded nodes mid-resolution keeps seeing them
+    without opting in to anything.
     """
-    declared = declared_ids(batch)
+    if declared is None:
+        declared = declared_ids(batch)
     for candidate in candidates:
         if candidate in declared:
             batch.add_edge(Edge(src, candidate, kind, provenance))

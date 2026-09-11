@@ -32,7 +32,11 @@ from orchestrator.pkg.facts import Edge, EdgeKind, FactBatch, Node, NodeKind, Pr
 # DBIx::Class relationship declarators (§3.4). Rose::DB::Object/Class::DBI ("same shape,
 # second reader" per the roadmap) aren't in P4's corpus and aren't read here — a documented
 # gap, not an oversight; add a reader for them the same way if real demand shows up.
-DBIC_RELATIONS = frozenset({"belongs_to", "has_many", "might_have"})
+# `many_to_many` deliberately excluded: its signature isn't `($rel_name, $related_class,
+# ...)` like the other four (it names a linking relation + a foreign relation, not a
+# target class directly), so the same positional read would be wrong for it — a
+# documented gap, not an oversight.
+DBIC_RELATIONS = frozenset({"belongs_to", "has_many", "might_have", "has_one"})
 
 
 class _TypeRecLike(Protocol):

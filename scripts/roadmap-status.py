@@ -14,35 +14,38 @@ Checks, each narrow enough to avoid the failure mode below:
 
 1. **DONE needs receipts.** A row whose Status is DONE (checkmark) must have a non-empty
    Started, Finished, and Evidence cell.
-2. **A cross-spec dependency isn't jumped.** A roadmap whose header names
+2. **Finished isn't before Started.** Where both are plain `YYYY-MM-DD` dates (every row in
+   this repo's roadmaps already follows that convention), Finished must be on or after
+   Started — a structural sanity check this gate didn't have (found in review).
+3. **A cross-spec dependency isn't jumped.** A roadmap whose header names
    `**Depends on:** [other.md](other.md) merged (P<n> for ...)` may not have any phase
    Started until `other.md`'s own table shows P<n> as DONE. `perl-codegen-roadmap.md`'s
    dependency on `perl-support-roadmap.md`'s P2 is the first case this enforces.
-3. **A roadmap's own header doesn't contradict its own table.** If the phase table already
+4. **A roadmap's own header doesn't contradict its own table.** If the phase table already
    has Evidence in it, the document's top `**Status:**` line can no longer say "no code
    written" or "plan for review" — the two halves of the same file disagreeing is a defect
    nothing but reading both at once catches.
-4. **Every roadmap with a phase table is indexed.** `SPEC-INDEX.md` must link to it.
-5. **Relative links inside a tracked roadmap resolve**, the same rule `docs_audit.py`
+5. **Every roadmap with a phase table is indexed.** `SPEC-INDEX.md` must link to it.
+6. **Relative links inside a tracked roadmap resolve**, the same rule `docs_audit.py`
    applies to the user-facing docs — roadmaps live outside that script's `USER_DOCS` list,
    so nothing was checking them. (Found live: `perl-support-roadmap.md` linked
    `kotlin-support-roadmap.md` twice; that file does not exist in this checkout.)
-6. **A malformed table never fails silently.** A malformed row (wrong column count — most
+7. **A malformed table never fails silently.** A malformed row (wrong column count — most
    often a literal `|` inside a cell's own prose) is skipped rather than treated as the end
    of the table, so rows after it still get collected, and the skip itself is reported. It
    used to be treated as end-of-table: found live, this exact shape (an inline code span
    quoting a table-row example) silently dropped P5 and P6 from this roadmap's own table,
-   with no diagnostic — the review pass that added check 6 caught the *class* of bug; this
-   document's own table was still carrying a live instance of it, caught only when someone
-   asked to see the table rendered.
+   with no diagnostic — the review pass that added this check caught the *class* of bug;
+   this document's own table was still carrying a live instance of it, caught only when
+   someone asked to see the table rendered.
 
 **What this deliberately does not attempt:** classifying whether a spec's free-form prose
 elsewhere agrees with `SPEC-INDEX.md`'s free-form prose about it. `STATE-OF-SPINE.md` §8
 ("CI gate on spec-status drift") tried exactly that, generalised across all ~80 specs, and
 measured 33% precision — two of three flagged mismatches were unrelated status words
 appearing in ordinary prose, and it was withdrawn as "not gate-worthy... the class stays
-human." Checks 1-2 above sidestep that failure mode because they read **structured table
-cells**, not prose; check 3 sidesteps it because it compares a document **against itself**
+human." Checks 1-3 above sidestep that failure mode because they read **structured table
+cells**, not prose; check 4 sidesteps it because it compares a document **against itself**
 (one header line, one boolean fact about its own table) rather than classifying language in
 one free-form document against another's.
 
@@ -175,6 +178,28 @@ def check_evidence_completeness(tables: dict[Path, list[PhaseRow]]) -> list[str]
     return problems
 
 
+_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def check_started_before_finished(tables: dict[Path, list[PhaseRow]]) -> list[str]:
+    """A row with both dates filled in as plain ``YYYY-MM-DD`` (the convention every row in
+    this repo's roadmaps already follows) must have Started on or before Finished — found
+    in review as a gap this gate didn't cover. Anything not in that exact shape (a date
+    range, a note, empty) is left alone rather than guessed at.
+    """
+    problems = []
+    for doc, rows in tables.items():
+        for row in rows:
+            started, finished = row.started.strip(), row.finished.strip()
+            if not (_DATE.fullmatch(started) and _DATE.fullmatch(finished)):
+                continue
+            if finished < started:
+                problems.append(
+                    f"{doc.name}: {row.phase_id} Finished ({finished}) is before Started ({started})"
+                )
+    return problems
+
+
 def check_cross_spec_dependency(tables: dict[Path, list[PhaseRow]]) -> list[str]:
     problems = []
     for doc, rows in tables.items():
@@ -293,6 +318,7 @@ def check_header_found_but_unparsed(tables: dict[Path, list[PhaseRow]]) -> list[
 
 CHECKS = (
     check_evidence_completeness,
+    check_started_before_finished,
     check_cross_spec_dependency,
     check_top_status_freshness,
     check_indexed,

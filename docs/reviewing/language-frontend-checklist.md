@@ -9,6 +9,13 @@ re-deriving the roadmap shape from an existing one. Its living phase table is ch
 `scripts/roadmap-status.py --check`; the real-repository smoke test below is
 `scripts/validate-frontend.py <language> <git-url> [<git-url> ...]`.
 
+**D1 (parser choice) — run `scripts/parse-census.py <grammar-module> <dir>` before writing
+the extractor**, not after: it parses every file of the language with the candidate grammar
+and reports the recall ceiling (files with a parse `ERROR`, lines inside `ERROR` spans,
+declaration counts by CST kind) independent of any extraction logic, so the D1 recall number
+in the roadmap's own evidence is measured before a line of `pkg/<lang>_extractor.py` exists,
+not reverse-engineered from it afterward.
+
 ## Registration (src)
 
 | Site | What | Failure if missed |

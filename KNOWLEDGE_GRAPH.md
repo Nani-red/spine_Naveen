@@ -247,7 +247,7 @@ flowchart LR
   | C++ | ✅ classes/namespaces/inheritance | `pip install 'synaptixs-spine[cpp]'` |
   | Go | ✅ + interface satisfaction (`IMPLEMENTS`) | `pip install 'synaptixs-spine[go]'` |
   | PHP | ✅ + call graph (traits as `IMPLEMENTS`; `$this`/`self`/`parent`/`new`/static-call resolution, incl. typed receivers) + Laravel/Slim/Symfony routes + Eloquent/Doctrine entities | `pip install 'synaptixs-spine[php]'` |
-  | Perl | ✅ comprehension + call graph + routes + data layer (every `package`/5.38 `class` is its own `Type`; inheritance across its five spellings as `IMPLEMENTS`; `$self->`/`SUPER::`/qualified/bare `CALLS` incl. a typed-receiver rule; Mojolicious/Mojolicious::Lite/Dancer2 routes as `Endpoint`+`EXPOSES`; DBIx::Class `__PACKAGE__->table(...)` as `Entity`, `add_columns` as `Field`, `belongs_to`/`has_many`/`might_have` as `REFERENCES`) | `pip install 'synaptixs-spine[perl]'` |
+  | Perl | ✅ comprehension + call graph + routes + data layer (every `package`/5.38 `class` is its own `Type`; inheritance across its five spellings as `IMPLEMENTS`; `$self->`/`SUPER::`/qualified/bare `CALLS` incl. a typed-receiver rule; Mojolicious/Mojolicious::Lite/Dancer2 routes as `Endpoint`+`EXPOSES`; DBIx::Class `__PACKAGE__->table(...)` as `Entity`, `add_columns` as `Field`, `belongs_to`/`has_many`/`might_have`/`has_one` as `REFERENCES`) | `pip install 'synaptixs-spine[perl]'` |
 
   Java lifts JAX-RS / Jakarta REST resource methods into `Endpoint` nodes with
   `EXPOSES` edges to their handlers. Both `javax.ws.rs` and `jakarta.ws.rs`

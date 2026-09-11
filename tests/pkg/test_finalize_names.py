@@ -36,3 +36,24 @@ def test_resolve_or_drop_never_invents_when_nothing_grounds() -> None:
     assert added is False
     assert list(batch.edges) == []
     assert list(batch.nodes) == []  # no external placeholder invented either
+
+
+def test_resolve_or_drop_accepts_a_precomputed_declared_set() -> None:
+    """A caller resolving many candidates across one `finalize()` pass can compute
+    `declared_ids(batch)` once and pass it in, instead of `resolve_or_drop` rescanning
+    the whole node list on every call — found in review: Perl's own D10 pass didn't, and
+    was genuinely quadratic in repo size. The precomputed set must behave identically to
+    the default per-call recompute for the same batch."""
+    batch = FactBatch()
+    batch.add_node(Node("py:m.Second", NodeKind.FUNCTION, "Second", "python", Provenance("m.py", 1)))
+    declared = declared_ids(batch)
+    added = resolve_or_drop(
+        batch,
+        "py:m.caller",
+        ["py:m.First", "py:m.Second"],
+        EdgeKind.CALLS,
+        Provenance("m.py", 5),
+        declared=declared,
+    )
+    assert added is True
+    assert Edge("py:m.caller", "py:m.Second", EdgeKind.CALLS, Provenance("m.py", 5)) in batch.edges

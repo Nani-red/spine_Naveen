@@ -100,6 +100,35 @@ All notable changes to this project are documented here. Format loosely follows
   and two phases were missing. A malformed row is now skipped, not treated as
   end-of-table, so later valid rows are no longer swallowed by an earlier bad one — and
   the skip itself is reported.
+- **A second, deeper maintainer review of the Perl track found and fixed 11 real
+  precision/correctness bugs, all confirmed against the actual code (several against real
+  Perl semantics probed with tree-sitter-perl directly).** `PerlExtractor` leaked facts
+  across repos in a multi-repo run (`finalize()` never reset its own accumulators);
+  `use X qw(f)` imports were treated as file-scoped when Perl scopes them per-package;
+  D10 wrongly resolved a bare call through `@ISA` (real Perl never dispatches a bare call
+  through inheritance); `&Pkg::f()` embedded a literal `&` in its emitted id instead of
+  being excluded like every other ampersand-form call; a fully-qualified `sub
+  Pkg::Sub::name {}` kept the wrong owning package; Dancer2's `del` verb uppercased to
+  "DEL" instead of the real HTTP method "DELETE"; a Mojolicious route registered from a
+  helper method resolved its controller against the helper's own package instead of the
+  app class; a hyphenated controller name (`foo-bar`) produced a literal `::` next to
+  dots in an id, never matching the real declaration; five of nine corpus cases listed an
+  external placeholder as an expected node, silently deflating their own recall numbers
+  (the `plain` control scored 0.33/0.75 against its own claimed "1.00/1.00 by design");
+  Perl was never added to `scoreboard.json`, so a regression to 0.00 precision would not
+  have failed a build; and `exporter_default`'s own fixture set `@EXPORT` without
+  inheriting `Exporter`, so the labelled edge wasn't true of the fixture's own code — D10
+  now verifies the inheritance too. Every corpus case now scores exactly 1.00 precision
+  and 1.00 recall on every node and edge kind except one permanent, predicted known gap.
+  Also closed: a role consumed via `with 'Role'` used to feed the same list `SUPER::`
+  reads as real inheritance (a role never participates in `SUPER::` dispatch in real
+  Perl); `has_one` was missing from the recognized DBIx::Class relations; `use parent`/
+  `use base`/`use Mojo::Base` now also emit `IMPORTS` (they really do load the named
+  class) except when `-norequire` says otherwise; a whole-repo name-resolution helper
+  rebuilt its declared-id set on every single call, genuinely quadratic in repo size, now
+  computed once per pass; and a unit test claiming to exercise the `require`-path-join
+  end-to-end placed the requiring script under `bin/` (walker-ignored), passing by
+  accident for a reason unrelated to what it claimed.
 
 ## 3.33.2 — the SDLC runs as a pipeline, and PHP builds
 

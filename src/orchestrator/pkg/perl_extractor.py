@@ -19,7 +19,10 @@ Functions in an implicit ``main`` (no ``package`` seen yet) key on the file itse
 literal) yields nothing — inheritance in Perl is data, and a guess here would fabricate an
 edge no reader could verify. D4 roles (``with 'Role'`` / ``with qw(A B)``) resolve to the
 same ``IMPLEMENTS`` edge kind — a mixin is the behavioural claim IMPLEMENTS already
-documents.
+documents — but, unlike the five real spellings above, a role never enters ``_TypeRec.bases``
+(found wrong in review: it used to, and ``SUPER::`` — §3.2 row 2 — walks ``bases``, so a
+class consuming a role *and* extending a real parent could dispatch ``SUPER::m()`` through
+the role; real Perl never does, roles flatten into the consumer at composition time).
 
 **D6 — Field is declared accessors only:** Moo/Moose ``has``, ``Class::Accessor``
 ``mk_accessors``, 5.38 ``field``. Never inferred from ``$self->{key}`` — a hash access is
@@ -59,14 +62,22 @@ shapes, each resolved only when *verified*, never guessed:
    third-party — no guessing needed, the qualification *is* the verification.
 5. bare ``f()`` → same-package sub, else an explicit ``use X qw(... f ...)`` import, else
    (D10) a literal ``@EXPORT`` of a first-party package pulled in by a bare ``use X;`` with
-   no list, else an ``@ISA``-inherited first-party sub — **first match wins, priority order
-   matters**, and D10's two steps go through ``finalize_names.resolve_or_drop`` so a
-   candidate that never grounds is dropped, never invented as an external placeholder (a
-   method-shaped target has no backstop — see the front-end checklist).
-6. Never emitted: ``&f``, ``&$code``, ``$self->$m()``, ``$obj->can('m')->()``, ``goto &f``,
-   string ``eval``, ``AUTOLOAD``. None of these produce a ``method``/``function``-typed
-   child in the grammar the way a static name does, so the scanner excludes them by
-   construction rather than by a negative-case check — see ``_scan_calls_in``.
+   no list — **first match wins, priority order matters**, and D10's step goes through
+   ``finalize_names.resolve_or_drop`` so a candidate that never grounds is dropped, never
+   invented as an external placeholder (a method-shaped target has no backstop — see the
+   front-end checklist). **Not** ``@ISA``-inherited (amended in P6 review: ``@ISA`` is
+   consulted for method dispatch only — ``$self->m()``/``Class->m()`` — never for an
+   unqualified ``f()``, which Perl raises "Undefined subroutine" on if it isn't declared or
+   imported in the current package; the earlier version of D10 fabricated exactly that edge).
+6. Never emitted: ``&f``, ``&Pkg::f()`` (the old calling convention, qualified or not —
+   excluded by an explicit leading-``&`` check in ``_handle_function_call``, not by CST
+   shape: the grammar gives both a ``function``-typed node like a static name would,
+   just with a ``varname`` child holding the name *after* the sigil, which used to let a
+   qualified ``&Pkg::f()`` slip past the row-4 qualified-call branch with the literal
+   ``&`` embedded in the emitted id — found in review), ``&$code``, ``$self->$m()``,
+   ``$obj->can('m')->()``, ``goto &f``, string ``eval``, ``AUTOLOAD``. The rest of these
+   produce no ``method``/``function``-typed child the way a static name does, so the
+   scanner excludes them by construction — see ``_scan_calls_in``.
 7. ``$obj->m()`` where ``$obj`` holds a typed/literal-constructor receiver (``my $log =
    Shop::Log->new; $log->write``) — **P3**'s typed-receiver rule: ``_collect_local_constructor_types``
    builds a file-local ``{varname: type_id}`` map per sub, and the receiver resolves through
@@ -89,9 +100,11 @@ Marker: ``__PACKAGE__->table('orders')`` — the one call every DBIx::Class Resu
 make, read literally rather than guessed from base class or shape. ``add_columns(...)``
 (bareword list or ``name => {...}`` hash — only the keys) become ``Field``s on the
 ``Entity`` (``perl:entity:Dotted.Path``, a parallel id alongside the package's own ``Type``
-node). ``belongs_to``/``has_many``/``might_have`` become ``REFERENCES``, ``src`` the
-declaring entity; a target outside the repo still gets the edge, to an external placeholder
-``Entity`` — never silently dropped.
+node). ``belongs_to``/``has_many``/``might_have``/``has_one`` become ``REFERENCES``, ``src``
+the declaring entity; a target outside the repo still gets the edge, to an external
+placeholder ``Entity`` — never silently dropped. (``many_to_many`` deliberately excluded —
+see ``perl_orm.py``'s own comment: its signature names a linking relation, not a target
+class, so the same positional read would be wrong for it.)
 
 **Windows note (not a repo defect):** ``tree_sitter_perl.language()`` returns a bare Python
 ``int`` (``PyLong_FromVoidPtr``), unlike grammars that return a ``PyCapsule``. tree-sitter's
@@ -109,7 +122,7 @@ from typing import TYPE_CHECKING, Any
 
 from orchestrator.pkg.extractor import rel_module_name
 from orchestrator.pkg.facts import Edge, EdgeKind, FactBatch, Node, NodeKind, Provenance
-from orchestrator.pkg.finalize_names import resolve_or_drop
+from orchestrator.pkg.finalize_names import declared_ids, resolve_or_drop
 from orchestrator.pkg.perl_orm import DBIC_RELATIONS
 from orchestrator.pkg.perl_orm import emit_entities as _emit_dbic_entities
 from orchestrator.pkg.perl_routes import HTTP_VERBS, scan_lite_route, scan_mojo_full_app
@@ -198,6 +211,19 @@ def _string_or_wordlist_targets(node: TSNode | None, source: bytes) -> list[str]
     return []
 
 
+def _has_norequire_flag(node: TSNode | None, source: bytes) -> bool:
+    """``use parent -norequire, 'X';`` — the documented flag telling the `parent`/`base`
+    pragma not to `require` the named class (it's already loaded another way). The
+    inheritance itself is still real; only the module-load event isn't."""
+    if node is None:
+        return False
+    if node.type == "autoquoted_bareword":
+        return _text(node, source) == "-norequire"
+    if node.type in ("list_expression", "parenthesized_expression"):
+        return any(_has_norequire_flag(child, source) for child in node.named_children)
+    return False
+
+
 def _literal_array_assignment_targets(rhs: TSNode | None, source: bytes) -> list[str]:
     """``our @ISA = (...)`` / ``our @EXPORT = (...)``'s RHS — ``None``/anything non-literal
     anywhere means "computed", so the whole assignment yields nothing (D5), unlike the
@@ -267,15 +293,30 @@ def _has_field_names(args: TSNode | None, source: bytes) -> list[str]:
 class _Ctx:
     """The package in scope, plus this *file*'s bare-call resolution inputs (P2). Mutated in
     place for statement-form ``package X;`` so the rest of the same sibling loop sees the new
-    owner; block-form gets its own fresh ``_Ctx`` — but ``use_func_map``/``bare_use_targets``
-    are shared across the whole file (a Perl ``use`` is lexically file-scoped from that point
-    on, not package-scoped), so those two are passed down, never copied.
+    owner; block-form gets its own fresh ``_Ctx``.
+
+    ``use X qw(f)`` is a real Perl bug found in review: it runs ``Module->import(...)`` at
+    compile time, and ``Exporter``-style ``import`` installs symbols into whichever package
+    ``caller()`` names *at that line* — package-scoped, not file-scoped. ``package Foo;`` then
+    ``use Bar qw(baz);`` then ``package Qux;`` does **not** give ``Qux`` a ``baz()``. So
+    ``use_func_map``/``bare_use_targets`` are keyed by package in ``file_use_maps``/
+    ``file_bare_targets`` (shared file-wide, by reference, so a *reopened* package still sees
+    what it imported earlier in the same file) and looked up by ``self.package_id`` through
+    the two properties below — never copied verbatim into a child or sibling ``_Ctx``.
     """
 
     package_id: str | None
     package_name: str | None
-    use_func_map: dict[str, str]
-    bare_use_targets: list[str]
+    file_use_maps: dict[str | None, dict[str, str]]
+    file_bare_targets: dict[str | None, list[str]]
+
+    @property
+    def use_func_map(self) -> dict[str, str]:
+        return self.file_use_maps.setdefault(self.package_id, {})
+
+    @property
+    def bare_use_targets(self) -> list[str]:
+        return self.file_bare_targets.setdefault(self.package_id, [])
 
 
 @dataclass
@@ -320,8 +361,13 @@ class PerlExtractor:
     suffixes: tuple[str, ...] = (".pl", ".pm", ".t")
 
     def __init__(self) -> None:
-        # Accumulate across every file in the repo — one instance per RepoCodeExtractor run
-        # (see the module docstring's P2 section).
+        # Accumulate across every file in the repo (see the module docstring's P2
+        # section) — but the extractor instance itself outlives one repo:
+        # `RepoCodeExtractor.__init__` builds it once and a caller looping over several
+        # repos with one `RepoCodeExtractor` (`pkg extract --repos`, multi-repo
+        # `investigate`) reuses it across every `.extract()` call. `finalize()` resets
+        # both to empty once it is done with them (Go's `finalize` does the same for its
+        # own accumulators), or repo A's types/subs leak into repo B's graph.
         self._types: dict[str, _TypeRec] = {}
         self._subs: list[_SubRec] = []
 
@@ -337,7 +383,7 @@ class PerlExtractor:
         batch = FactBatch()
         module_id = f"perl:{module or rel}"
         batch.add_node(Node(module_id, NodeKind.MODULE, module or rel, "perl", Provenance(rel, 1)))
-        ctx = _Ctx(package_id=None, package_name=None, use_func_map={}, bare_use_targets=[])
+        ctx = _Ctx(package_id=None, package_name=None, file_use_maps={}, file_bare_targets={})
         self._walk_siblings(tree.root_node.named_children, module_id, ctx, source, rel, batch)
         return batch
 
@@ -345,10 +391,27 @@ class PerlExtractor:
         """Every file is walked by now: P2's CALLS pass over every sub body, then P4's
         DBIx::Class entities (whole-repo, so a relation target resolves the same way
         regardless of which file declares it or which file references it first).
+
+        Takes local references and resets ``self._types``/``self._subs`` before
+        returning — this instance is reused across repos in a multi-repo run (see
+        ``__init__``), and a resolution pass reading last repo's declarations while
+        grounding this one's calls is exactly the invention this whole track exists to
+        prevent.
+
+        ``declared_ids(batch)`` is computed once here and threaded through every sub's
+        scan, rather than ``resolve_or_drop`` rebuilding it per bare-call resolution
+        attempt — found in review: that was genuinely quadratic in repo size (every
+        candidate check rescanned the whole, only-growing node list). No grounded node is
+        added anywhere in this pass (only external placeholders are, for an unresolved
+        qualified/`SUPER::` target), so the declared set is stable for the whole pass —
+        computing it once is correct, not just faster.
         """
-        for sub in self._subs:
-            self._scan_calls_in(sub, batch)
-        _emit_dbic_entities(self._types, batch)
+        types, subs = self._types, self._subs
+        self._types, self._subs = {}, []
+        declared = declared_ids(batch)
+        for sub in subs:
+            self._scan_calls_in(sub, batch, types, declared)
+        _emit_dbic_entities(types, batch)
         return batch
 
     # --- top-level / block-body dispatch --------------------------------------
@@ -426,8 +489,8 @@ class PerlExtractor:
             child_ctx = _Ctx(
                 package_id=type_id,
                 package_name=name,
-                use_func_map=ctx.use_func_map,
-                bare_use_targets=ctx.bare_use_targets,
+                file_use_maps=ctx.file_use_maps,
+                file_bare_targets=ctx.file_bare_targets,
             )
             self._walk_siblings(block.named_children, module_id, child_ctx, source, rel, batch)
         else:
@@ -474,8 +537,24 @@ class PerlExtractor:
             if ctx.package_id is None:
                 return
             rec = self._types.setdefault(ctx.package_id, _TypeRec(type_id=ctx.package_id))
+            # `use parent`/`use base`/`use Mojo::Base` genuinely load the named base class
+            # as a module dependency — Perl's `parent`/`base` pragma `require`s it — so
+            # this file IMPORTS it too, the same fact a plain `use Shop::Base;` would
+            # record; only IMPLEMENTS (the inheritance itself) was emitted before (found in
+            # review). Except `-norequire` (`use parent -norequire, 'Shop::Base';`), the
+            # documented flag that tells the pragma *not* to load it — the inheritance is
+            # still real (IMPLEMENTS stays unconditional), but there is no load event to
+            # report; emitting IMPORTS there would be the invented fact this codebase's
+            # whole precision discipline forbids, not the gap the review actually asked to
+            # close. The pragma module itself (`parent`/`base`/`Mojo::Base`) stays
+            # unrecorded either way — Perl's own inheritance machinery, not a dependency a
+            # graph consumer would act on.
+            norequire = _has_norequire_flag(args, source)
             for base in _string_or_wordlist_targets(args, source):
                 self._emit_implements(ctx.package_id, rec, base, rel, line, batch)
+                if not norequire:
+                    base_tid = f"perl:{_to_dotted(base)}"
+                    batch.add_edge(Edge(module_id, base_tid, EdgeKind.IMPORTS, Provenance(rel, line)))
             return
         if target[:1].islower():
             return  # a pragma (strict, warnings, utf8, feature, lib, constant, …)
@@ -535,7 +614,9 @@ class PerlExtractor:
                 return
             rec = self._types.setdefault(ctx.package_id, _TypeRec(type_id=ctx.package_id))
             for target in _string_or_wordlist_targets(args, source):
-                self._emit_implements(ctx.package_id, rec, target, rel, line, batch)
+                self._emit_implements(
+                    ctx.package_id, rec, target, rel, line, batch, is_base=fn_text == "extends"
+                )
         elif fn_text == "has":
             if ctx.package_id is None:
                 return
@@ -673,15 +754,34 @@ class PerlExtractor:
         name_node = _first_named_of_type(node, "bareword")
         if name_node is None:
             return
-        name = _text(name_node, source)
+        raw_name = _text(name_node, source)
         line = node.start_point[0] + 1
         end_line = node.end_point[0] + 1
-        owner_id = ctx.package_id or module_id
+
+        if "::" in raw_name:
+            # `sub Shop::Elsewhere::baz {}` / `sub main::top {}` — a fully-qualified sub
+            # name declares straight into *that* package, regardless of which package is
+            # lexically current where the `sub` statement sits. Real, if uncommon, Perl
+            # (legacy code reopening a package without a `package` block) — found wrong in
+            # review: the old code kept the lexically-current package as owner and left
+            # the literal `::` inside the function name, producing a wrong `CONTAINS` edge
+            # and a dotted id with `::` embedded in it (D3 violated either way).
+            pkg_part, _, name = raw_name.rpartition("::")
+            owner_id = f"perl:{_to_dotted(pkg_part)}"
+            self._types.setdefault(owner_id, _TypeRec(type_id=owner_id))
+            batch.add_node(Node(owner_id, NodeKind.TYPE, pkg_part, "perl"))
+            batch.add_edge(Edge(module_id, owner_id, EdgeKind.CONTAINS, Provenance(rel, line)))
+            sub_owner_type_id: str | None = owner_id
+        else:
+            name = raw_name
+            owner_id = ctx.package_id or module_id
+            sub_owner_type_id = ctx.package_id
+
         fid = f"{owner_id}.{name}"
         batch.add_node(Node(fid, NodeKind.FUNCTION, name, "perl", Provenance(rel, line, end_line)))
         batch.add_edge(Edge(owner_id, fid, EdgeKind.CONTAINS, Provenance(rel, line)))
-        if ctx.package_id is not None:
-            rec = self._types.setdefault(ctx.package_id, _TypeRec(type_id=ctx.package_id))
+        if sub_owner_type_id is not None:
+            rec = self._types.setdefault(sub_owner_type_id, _TypeRec(type_id=sub_owner_type_id))
             rec.methods[name] = fid
 
         body = _first_named_of_type(node, "block")
@@ -690,24 +790,34 @@ class PerlExtractor:
                 _SubRec(
                     caller_id=fid,
                     body=body,
-                    owner_type_id=ctx.package_id,
+                    owner_type_id=sub_owner_type_id,
                     use_func_map=ctx.use_func_map,
                     bare_use_targets=ctx.bare_use_targets,
                     rel=rel,
                 )
             )
-            # P3 (§3.3): a Mojolicious full-app route chain can appear in any sub, not only
-            # `startup` — shape-based detection costs nothing extra to run broadly. No
-            # finalize() needed: a target controller sub is an eager external placeholder,
-            # grounded later by ordinary FactBatch dedup, same as every other cross-file
-            # reference in this front-end.
-            app_package = ctx.package_id[len("perl:") :] if ctx.package_id is not None else None
-            scan_mojo_full_app(body, app_package, source, rel, batch)
+            # P3 (§3.3): a Mojolicious full-app route chain can appear in any sub — a route
+            # plugin/helper method (`MyApp::Routes::install`) is a real pattern, not just
+            # `startup` — so the scan itself runs broadly. But the *controller-target*
+            # `EXPOSES` resolution (`->to('orders#index')` -> `App.Controller.Orders.index`)
+            # is gated on ``name`` being literally ``startup`` (see ``scan_mojo_full_app``):
+            # Mojolicious's own required, unambiguous entry-point name for the real app
+            # class. Resolving that namespace from *whichever* sub happens to call ->to()
+            # guessed the app's own name wrong for exactly the helper-method case — found
+            # in review — since a plugin package's own name isn't the app's namespace.
+            app_package = sub_owner_type_id[len("perl:") :] if sub_owner_type_id is not None else None
+            scan_mojo_full_app(body, app_package, name, source, rel, batch)
 
     # --- P2: CALLS -------------------------------------------------------------
 
-    def _scan_calls_in(self, sub: _SubRec, batch: FactBatch) -> None:
-        owner = self._types.get(sub.owner_type_id) if sub.owner_type_id else None
+    def _scan_calls_in(
+        self,
+        sub: _SubRec,
+        batch: FactBatch,
+        types: dict[str, _TypeRec],
+        declared: frozenset[str],
+    ) -> None:
+        owner = types.get(sub.owner_type_id) if sub.owner_type_id else None
         # P3, §3.2 row 7: a file-local typed-receiver map (`my $log = Shop::Log->new`),
         # collected once up front so the shape scan below doesn't care about source order.
         local_types = _collect_local_constructor_types(sub.body)
@@ -715,9 +825,9 @@ class PerlExtractor:
         while stack:
             n = stack.pop()
             if n.type == "method_call_expression":
-                self._handle_method_call(n, sub, owner, local_types, batch)
+                self._handle_method_call(n, sub, owner, local_types, batch, types)
             elif n.type == "function_call_expression":
-                self._handle_function_call(n, sub, owner, batch)
+                self._handle_function_call(n, sub, owner, batch, types, declared)
             # Descend regardless — a call can nest inside another call's arguments, and
             # method_call_expression's own children include the receiver/args to re-walk.
             stack.extend(n.named_children)
@@ -729,6 +839,7 @@ class PerlExtractor:
         owner: _TypeRec | None,
         local_types: dict[str, str],
         batch: FactBatch,
+        types: dict[str, _TypeRec],
     ) -> None:
         children = expr.named_children
         if not children:
@@ -745,7 +856,7 @@ class PerlExtractor:
                 return  # row 2: skip when unresolved
             base_id = owner.bases[0]
             method = mtext[len("SUPER::") :]
-            base_rec = self._types.get(base_id)
+            base_rec = types.get(base_id)
             prov = Provenance(sub.rel, line)
             if base_rec is not None and method in base_rec.methods:
                 batch.add_edge(Edge(sub.caller_id, base_rec.methods[method], EdgeKind.CALLS, prov))
@@ -778,7 +889,7 @@ class PerlExtractor:
         if receiver.type == "bareword" and "::" in receiver_text:
             # Row 3: `Shop::Log->new` — a qualified bareword receiver.
             target_type_id = f"perl:{_to_dotted(receiver_text)}"
-            target_rec = self._types.get(target_type_id)
+            target_rec = types.get(target_type_id)
             prov = Provenance(sub.rel, line)
             if target_rec is not None and mtext in target_rec.methods:
                 batch.add_edge(Edge(sub.caller_id, target_rec.methods[mtext], EdgeKind.CALLS, prov))
@@ -793,7 +904,7 @@ class PerlExtractor:
         if receiver.type == "scalar":
             type_id = local_types.get(receiver_varname)
             if type_id is not None:
-                target_rec = self._types.get(type_id)
+                target_rec = types.get(type_id)
                 if target_rec is not None and mtext in target_rec.methods:
                     prov = Provenance(sub.rel, line)
                     batch.add_edge(Edge(sub.caller_id, target_rec.methods[mtext], EdgeKind.CALLS, prov))
@@ -810,12 +921,26 @@ class PerlExtractor:
             batch.add_edge(Edge(sub.caller_id, target, EdgeKind.CALLS, Provenance(sub.rel, line)))
 
     def _handle_function_call(
-        self, expr: TSNode, sub: _SubRec, owner: _TypeRec | None, batch: FactBatch
+        self,
+        expr: TSNode,
+        sub: _SubRec,
+        owner: _TypeRec | None,
+        batch: FactBatch,
+        types: dict[str, _TypeRec],
+        declared: frozenset[str],
     ) -> None:
         fn_node = _first_named_of_type(expr, "function")
         if fn_node is None:
             return
         fn_text = _bytes_text(fn_node)
+        if fn_text.startswith("&"):
+            # Row 6: `&f`/`&f()` is never emitted — the old calling convention, excluded as
+            # a class regardless of qualification. `&Shop::Util::fmt()` parses with the same
+            # `&`-prefixed `function` node as bare `&f`, and used to fall through into row
+            # 4's qualified-call branch anyway (the "::" check doesn't see the sigil), which
+            # embedded the literal `&` into the emitted id (`perl:&Shop.Util.fmt`) instead of
+            # being excluded like every other ampersand-form call — found in review.
+            return
         line = expr.start_point[0] + 1
 
         if "::" in fn_text:
@@ -838,38 +963,66 @@ class PerlExtractor:
             batch.add_edge(Edge(sub.caller_id, target, EdgeKind.CALLS, Provenance(sub.rel, line)))
             return
 
-        # D10, first sub-step: a literal `@EXPORT` of a first-party package pulled in by a
-        # bare `use X;` with no list. Ambiguous (2+ candidates) is never guessed between.
+        # D10: a literal `@EXPORT` of a first-party package pulled in by a bare `use X;`
+        # with no list. Ambiguous (2+ candidates) is never guessed between. `@EXPORT` is
+        # only ever read by `Exporter`'s own `import()` — a package that sets `@EXPORT`
+        # but never inherits `Exporter` (`our @ISA = qw(Exporter);`, `use parent
+        # 'Exporter'`, ...) has no `import()` reading it at all, `use X;` silently does
+        # nothing, and the "exported" sub is never actually reachable unqualified. Found
+        # in review: the corpus's own fixture had exactly this gap (`@EXPORT` set, no
+        # `Exporter` base), so the labelled edge wasn't true of the code either.
         export_candidates = [
             f"{tid}.{fn_text}"
             for tid in sub.bare_use_targets
-            if fn_text in self._types.get(tid, _TypeRec(type_id=tid)).exports
-            and fn_text in self._types.get(tid, _TypeRec(type_id=tid)).methods
+            if fn_text in types.get(tid, _TypeRec(type_id=tid)).exports
+            and fn_text in types.get(tid, _TypeRec(type_id=tid)).methods
+            and "perl:Exporter" in types.get(tid, _TypeRec(type_id=tid)).bases
         ]
-        if len(export_candidates) == 1 and resolve_or_drop(
-            batch, sub.caller_id, export_candidates, EdgeKind.CALLS, Provenance(sub.rel, line)
-        ):
-            return
-
-        # D10, second sub-step: an @ISA-inherited first-party sub — the enclosing package's
-        # own (direct) bases, in D5 declaration order.
-        if owner is not None and owner.bases:
-            base_candidates = [f"{b}.{fn_text}" for b in owner.bases]
-            resolve_or_drop(batch, sub.caller_id, base_candidates, EdgeKind.CALLS, Provenance(sub.rel, line))
-        # Otherwise: skip. Never a guess.
+        if len(export_candidates) == 1:
+            resolve_or_drop(
+                batch,
+                sub.caller_id,
+                export_candidates,
+                EdgeKind.CALLS,
+                Provenance(sub.rel, line),
+                declared=declared,
+            )
+        # Otherwise: skip. Never a guess. (A bare `f()` does NOT search `@ISA` — that's
+        # method-dispatch-only in real Perl, found wrong in review: `@ISA` is consulted
+        # for `$self->m()`/`Class->m()`, never for an unqualified `f()`, which either
+        # names a sub in the current package/an explicit import, or Perl raises
+        # "Undefined subroutine" at runtime. D10's own second sub-step fabricated exactly
+        # that edge; removed rather than kept as a documented gap, since nothing about it
+        # was ever true of the language.)
 
     # --- shared emitters -------------------------------------------------------
 
     @staticmethod
     def _emit_implements(
-        owner_id: str, rec: _TypeRec, target_name: str, rel: str, line: int, batch: FactBatch
+        owner_id: str,
+        rec: _TypeRec,
+        target_name: str,
+        rel: str,
+        line: int,
+        batch: FactBatch,
+        *,
+        is_base: bool = True,
     ) -> None:
+        """``is_base=False`` is a consumed role (D4, ``with 'Role'``) — real Perl never
+        dispatches ``SUPER::`` through a role (roles flatten their methods into the
+        consuming class at composition time; ``SUPER::``/method resolution only ever
+        walks the real ``@ISA`` chain), so a role must not land in ``rec.bases`` the way
+        real inheritance does — found wrong in review: `with` and `extends` both fed the
+        same list, so a class consuming a role *and* extending a real parent could have
+        ``SUPER::m()`` resolve through the role instead of (or ahead of) the real parent.
+        """
         if not target_name:
             return
         tid = f"perl:{_to_dotted(target_name)}"
         batch.add_node(Node(tid, NodeKind.TYPE, target_name, "perl", external=True))
         batch.add_edge(Edge(owner_id, tid, EdgeKind.IMPLEMENTS, Provenance(rel, line)))
-        rec.bases.append(tid)
+        if is_base:
+            rec.bases.append(tid)
 
     def _emit_field(self, owner_id: str, name: str, rel: str, line: int, batch: FactBatch) -> None:
         clean = _strip_sigil(name)

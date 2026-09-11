@@ -119,6 +119,41 @@ def test_partial_status_is_never_flagged_for_missing_evidence(status: ModuleType
     assert status.check_evidence_completeness(status.phase_tables()) == []
 
 
+def test_finished_before_started_is_flagged(status: ModuleType) -> None:
+    doc = _write(
+        status.ROOT,
+        "x-roadmap.md",
+        f"{_HEADER}\n{_SEP}\n| **P1 Thing** | work | 1d | exit | ✅ | 2026-01-05 | 2026-01-01 | evidence |\n",
+    )
+    problems = status.check_started_before_finished(status.phase_tables())
+    assert len(problems) == 1
+    assert doc.name in problems[0] and "P1" in problems[0]
+
+
+def test_finished_on_or_after_started_passes(status: ModuleType) -> None:
+    _write(
+        status.ROOT,
+        "x-roadmap.md",
+        f"{_HEADER}\n{_SEP}\n"
+        "| **P1 Same day** | work | 1d | exit | ✅ | 2026-01-01 | 2026-01-01 | evidence |\n"
+        "| **P2 Later** | work | 1d | exit | ✅ | 2026-01-01 | 2026-01-05 | evidence |\n",
+    )
+    assert status.check_started_before_finished(status.phase_tables()) == []
+
+
+def test_non_date_started_or_finished_is_left_alone(status: ModuleType) -> None:
+    """Anything that isn't a plain YYYY-MM-DD in both cells (a note, a range, empty) is
+    never guessed at — only the exact, already-established convention is checked."""
+    _write(
+        status.ROOT,
+        "x-roadmap.md",
+        f"{_HEADER}\n{_SEP}\n"
+        "| **P1 Thing** | work | 1d | exit | 🟡 | 2026-01-05 |  |  |\n"
+        "| **P2 Other** | work | 1d | exit | 🟡 | ongoing | see below |  |\n",
+    )
+    assert status.check_started_before_finished(status.phase_tables()) == []
+
+
 def test_dependency_blocks_a_started_phase_until_the_dependency_is_done(status: ModuleType) -> None:
     _write(
         status.ROOT,

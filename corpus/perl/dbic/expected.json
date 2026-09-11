@@ -8,7 +8,6 @@
     { "id": "perl:OrderItem.pm", "kind": "Module" },
     { "id": "perl:App.Schema.Result.Order", "kind": "Type" },
     { "id": "perl:App.Schema.Result.OrderItem", "kind": "Type" },
-    { "id": "perl:DBIx.Class.Core", "kind": "Type" },
     { "id": "perl:entity:App.Schema.Result.Order", "kind": "Entity" },
     { "id": "perl:entity:App.Schema.Result.OrderItem", "kind": "Entity" },
     { "id": "perl:entity:App.Schema.Result.Order.id", "kind": "Field" },
@@ -21,6 +20,8 @@
     { "src": "perl:OrderItem.pm", "dst": "perl:App.Schema.Result.OrderItem", "kind": "CONTAINS" },
     { "src": "perl:App.Schema.Result.Order", "dst": "perl:DBIx.Class.Core", "kind": "IMPLEMENTS" },
     { "src": "perl:App.Schema.Result.OrderItem", "dst": "perl:DBIx.Class.Core", "kind": "IMPLEMENTS" },
+    { "src": "perl:Order.pm", "dst": "perl:DBIx.Class.Core", "kind": "IMPORTS" },
+    { "src": "perl:OrderItem.pm", "dst": "perl:DBIx.Class.Core", "kind": "IMPORTS" },
     { "src": "perl:entity:App.Schema.Result.Order", "dst": "perl:entity:App.Schema.Result.Order.id", "kind": "CONTAINS" },
     { "src": "perl:entity:App.Schema.Result.Order", "dst": "perl:entity:App.Schema.Result.Order.customer_id", "kind": "CONTAINS" },
     { "src": "perl:entity:App.Schema.Result.OrderItem", "dst": "perl:entity:App.Schema.Result.OrderItem.id", "kind": "CONTAINS" },
@@ -32,7 +33,8 @@
   "known_gaps": [],
   "false_positives": [],
   "excluded": [
-    "perl:entity:App.Schema.Result.Customer is not listed as a node — it's external, and an external node stays out of the node ratio while an edge pointing at one still counts (corpus/README.md's decided rule); the REFERENCES edge to it above still does."
+    "perl:entity:App.Schema.Result.Customer is not listed as a node — it's external, and an external node stays out of the node ratio while an edge pointing at one still counts (corpus/README.md's decided rule); the REFERENCES edge to it above still does.",
+    "perl:DBIx.Class.Core is also external — never declared anywhere in this fixture, only referenced via `use base 'DBIx::Class::Core'` — excluded from the node ratio the same way; the IMPLEMENTS and IMPORTS edges to it above still count (found wrong in review: it was listed as an expected node; the IMPORTS edges are a second review fix — `use base`/`use parent`/`use Mojo::Base` genuinely load the named class unless `-norequire` says otherwise, and neither file here uses `-norequire`)."
   ],
   "open_questions": []
 }

@@ -43,6 +43,12 @@ if TYPE_CHECKING:
 # here — D2 excludes verb-less and "matches everything" registrations outright.
 HTTP_VERBS = frozenset({"get", "post", "put", "patch", "delete", "del", "options", "head"})
 
+# `del`'s own uppercase is "DEL", not the real HTTP verb "DELETE" — normalized only here, at
+# the one place an `Endpoint`'s name/id is built, so a cross-language joiner matching against
+# a client's literal `DELETE` request can still find this route (found in review: `del`
+# routes emitted "DEL" and were unjoinable).
+_VERB_DISPLAY = {"del": "DELETE"}
+
 
 def _text(node: TSNode | None, source: bytes) -> str:
     if node is None:
@@ -74,9 +80,14 @@ def _plain_literal(node: TSNode | None, source: bytes) -> str | None:
 
 
 def _camelize(name: str) -> str:
-    """Mojolicious's controller-name convention: ``-`` becomes ``::``, each segment's first
-    letter capitalized (``orders`` -> ``Orders``, ``foo-bar`` -> ``Foo::Bar``)."""
-    return "::".join(seg[:1].upper() + seg[1:] for seg in name.split("-") if seg)
+    """Mojolicious's controller-name convention: ``-`` becomes a namespace separator
+    (``::`` in the real class name), each segment's first letter capitalized (``orders``
+    -> ``Orders``, ``foo-bar`` -> ``Foo.Bar``). Joined with ``.``, not ``::`` — every
+    caller splices this straight into an already-dotted id (D3), and a literal ``::``
+    embedded in it (found in review) never matches the real declaration's own fully-dotted
+    id (`perl_extractor.py`'s ``_to_dotted`` converts every ``::``), leaving a permanently
+    dangling external placeholder beside the real node instead of resolving to it."""
+    return ".".join(seg[:1].upper() + seg[1:] for seg in name.split("-") if seg)
 
 
 def _join(prefix: str, path: str) -> str:
@@ -86,7 +97,8 @@ def _join(prefix: str, path: str) -> str:
 
 
 def _emit_endpoint(verb: str, path: str, rel: str, line: int, batch: FactBatch) -> str:
-    name = f"{verb.upper()} {path}"
+    display_verb = _VERB_DISPLAY.get(verb, verb.upper())
+    name = f"{display_verb} {path}"
     eid = f"perl:endpoint:{name}"
     batch.add_node(Node(eid, NodeKind.ENDPOINT, name, "perl", Provenance(rel, line)))
     return eid
@@ -102,6 +114,7 @@ def _emit_exposes(
 def _resolve_to_handler(
     to_args: TSNode | None,
     app_package: str | None,
+    sub_name: str | None,
     source: bytes,
     rel: str,
     line: int,
@@ -110,10 +123,24 @@ def _resolve_to_handler(
 ) -> None:
     """``->to(...)``'s argument: a ``'controller#action'`` string, a
     ``controller => .., action => ..`` hash, or a closure (Endpoint only — the closure rule).
+
+    The controller *namespace* Mojolicious actually resolves against is the app class, not
+    whichever package happens to call ``->to()`` — a route registered from a helper/plugin
+    method (``MyApp::Routes::install``, say) is real, common Mojolicious, and its own
+    package name is not the app's namespace. Found wrong in review: this used to resolve
+    against ``app_package`` unconditionally. Two ways it's still resolved, both verified
+    rather than guessed: an explicit ``namespace => 'X'`` in the hash form (the developer's
+    own literal override, honoured regardless of which sub calls ``->to()``), or the
+    default resolving against ``app_package`` only when ``sub_name`` is literally
+    ``startup`` — Mojolicious's own required, unambiguous entry-point name for the app
+    class itself. Anything else: `Endpoint` only, no `EXPOSES` — the same treatment an
+    unresolved closure already gets.
     """
     if to_args is None or app_package is None:
         return
     if to_args.type in ("string_literal", "interpolated_string_literal"):
+        if sub_name != "startup":
+            return
         literal = _plain_literal(to_args, source)
         if literal is None or "#" not in literal:
             return
@@ -133,7 +160,14 @@ def _resolve_to_handler(
                     pairs[_text(key, source)] = text
             i += 2
         hash_controller, hash_action = pairs.get("controller"), pairs.get("action")
-        if hash_controller and hash_action:
+        namespace = pairs.get("namespace")
+        if not hash_controller or not hash_action:
+            return
+        if namespace is not None:
+            dotted_ns = namespace.replace("::", ".")
+            target = f"perl:{dotted_ns}.Controller.{_camelize(hash_controller)}.{hash_action}"
+            _emit_exposes(endpoint_id, target, hash_action, rel, line, batch)
+        elif sub_name == "startup":
             target = f"perl:{app_package}.Controller.{_camelize(hash_controller)}.{hash_action}"
             _emit_exposes(endpoint_id, target, hash_action, rel, line, batch)
     # A closure (`sub {...}`) or anything else unresolved: Endpoint only, no EXPOSES.
@@ -189,6 +223,7 @@ def _maybe_route_chain(
     outer: TSNode,
     router_prefix: dict[str, str],
     app_package: str | None,
+    sub_name: str | None,
     source: bytes,
     rel: str,
     batch: FactBatch,
@@ -224,13 +259,22 @@ def _maybe_route_chain(
     line = outer.start_point[0] + 1
     endpoint_id = _emit_endpoint(verb, full_path, rel, line, batch)
     to_args = children[-1] if len(children) > 1 else None
-    _resolve_to_handler(to_args, app_package, source, rel, line, endpoint_id, batch)
+    _resolve_to_handler(to_args, app_package, sub_name, source, rel, line, endpoint_id, batch)
 
 
 def scan_mojo_full_app(
-    body: TSNode, app_package: str | None, source: bytes, rel: str, batch: FactBatch
+    body: TSNode,
+    app_package: str | None,
+    sub_name: str | None,
+    source: bytes,
+    rel: str,
+    batch: FactBatch,
 ) -> None:
-    """Walk one sub body (typically ``sub startup``) for Mojolicious full-app routes.
+    """Walk one sub body for Mojolicious full-app routes — any sub, not only ``startup``:
+    a route plugin/helper method (``MyApp::Routes::install``) is a real, common pattern,
+    and every ``Endpoint`` it registers is just as real. ``sub_name`` only gates the
+    *controller-target* ``EXPOSES`` resolution inside ``_resolve_to_handler``, not whether
+    a route is found at all — see that function's own docstring.
 
     Pre-order, source-order recursion — **not** a LIFO stack: ``my $api = $r->under('/api')``
     must be seen before ``$api->get(...)`` uses it, and a plain stack-pop visits a body's
@@ -243,7 +287,7 @@ def scan_mojo_full_app(
         if n.type == "assignment_expression":
             _maybe_under_binding(n, router_prefix, source)
         elif n.type == "method_call_expression":
-            _maybe_route_chain(n, router_prefix, app_package, source, rel, batch)
+            _maybe_route_chain(n, router_prefix, app_package, sub_name, source, rel, batch)
         for child in n.named_children:
             visit(child)
 
