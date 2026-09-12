@@ -95,7 +95,7 @@ def test_fully_qualified_sub_declares_into_that_package_not_the_current_one(tmp_
     B5 fix in `_handle_sub` left every other test in this file green."""
     batch, _ = _facts(
         tmp_path,
-        src="package Shop::Qual;\nsub Shop::Elsewhere::baz { 1 }\nsub main::top { 1 }\nsub normal { 1 }\n1;\n",
+        "package Shop::Qual;\nsub Shop::Elsewhere::baz { 1 }\nsub main::top { 1 }\nsub normal { 1 }\n1;\n",
         name="Qual.pm",
     )
     ids = {n.id for n in batch.nodes}
